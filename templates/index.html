@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Blog – Feed</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 min-h-screen">
+
+  <!-- Navbar -->
+  <nav class="bg-white border-b border-gray-200 sticky top-0 z-10 shadow-sm">
+    <div class="max-w-2xl mx-auto px-4 py-3 flex items-center justify-between">
+      <div class="flex items-center gap-2">
+        <div class="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center">
+          <span class="text-white font-bold text-sm">B</span>
+        </div>
+        <span class="font-semibold text-gray-800 text-lg">My Blog</span>
+      </div>
+      <a href="{{ url_for('login') }}"
+        class="text-sm text-blue-600 font-medium hover:underline">Admin</a>
+    </div>
+  </nav>
+
+  <!-- Flash messages -->
+  <div class="max-w-2xl mx-auto px-4 mt-4">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% for category, message in messages %}
+        <div class="mb-3 px-4 py-2 rounded text-sm
+          {% if category == 'error' %}bg-red-100 text-red-700{% else %}bg-green-100 text-green-700{% endif %}">
+          {{ message }}
+        </div>
+      {% endfor %}
+    {% endwith %}
+  </div>
+
+  <!-- Feed -->
+  <main class="max-w-2xl mx-auto px-4 py-6 space-y-4">
+    {% if not posts %}
+      <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-8 text-center text-gray-400">
+        <p class="text-lg">No posts yet.</p>
+        <p class="text-sm mt-1">Check back later or <a href="{{ url_for('login') }}" class="text-blue-500 hover:underline">sign in</a> to create one.</p>
+      </div>
+    {% endif %}
+
+    {% for post in posts %}
+    <article class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+      <!-- Card header -->
+      <div class="flex items-center gap-3 px-5 pt-4 pb-2">
+        <div class="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center flex-shrink-0">
+          <span class="text-white font-bold">K</span>
+        </div>
+        <div>
+          <p class="font-semibold text-gray-800 text-sm leading-tight">Kittu Priyatham</p>
+          {% if post.type %}
+            <span class="inline-block text-xs bg-blue-50 text-blue-600 font-medium px-2 py-0.5 rounded-full mr-1">{{ post.type }}</span>
+          {% endif %}
+          <span class="text-xs text-gray-400">{{ post.timestamp }}</span>
+        </div>
+      </div>
+
+      <!-- Content snippet -->
+      <div class="px-5 py-2">
+        <p class="text-gray-700 text-sm leading-relaxed whitespace-pre-wrap">
+          {%- set snippet = post.content[:300] -%}
+          {{ snippet }}{% if post.content | length > 300 %}…
+            <a href="{{ url_for('post_detail', post_id=post.post_id) }}" class="text-blue-500 hover:underline text-xs">see more</a>
+          {% endif %}
+        </p>
+      </div>
+
+      <!-- Media preview (first item only on feed) -->
+      {% if post.media_paths %}
+        {% set first_media = post.media_paths[0] %}
+        {% set ext = first_media.rsplit('.', 1)[-1].lower() %}
+        <div class="px-5 py-2">
+          {% if ext in ['mp4', 'webm', 'ogg'] %}
+            <video controls class="w-full rounded-lg max-h-72 object-cover bg-black">
+              <source src="{{ url_for('serve_media', filename=first_media) }}" />
+            </video>
+          {% else %}
+            <img src="{{ url_for('serve_media', filename=first_media) }}" alt="Post media"
+              class="w-full rounded-lg max-h-72 object-cover" />
+          {% endif %}
+          {% if post.media_paths | length > 1 %}
+            <p class="text-xs text-gray-400 mt-1">+{{ post.media_paths | length - 1 }} more</p>
+          {% endif %}
+        </div>
+      {% endif %}
+
+      <!-- Divider -->
+      <div class="border-t border-gray-100 mx-5"></div>
+
+      <!-- Interaction buttons -->
+      <div class="flex items-center divide-x divide-gray-100 px-2 py-1">
+        <button class="flex-1 flex items-center justify-center gap-1.5 py-2 text-gray-500 hover:bg-gray-50 rounded-lg text-sm font-medium transition">
+          <!-- Thumbs up icon -->
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round"
+              d="M14 9V5a3 3 0 00-3-3l-4 9v11h11.28a2 2 0 002-1.7l1.38-9a2 2 0 00-2-2.3H14z" />
+            <path stroke-linecap="round" stroke-linejoin="round"
+              d="M7 22H4a2 2 0 01-2-2v-7a2 2 0 012-2h3" />
+          </svg>
+          Like
+        </button>
+        <a href="{{ url_for('post_detail', post_id=post.post_id) }}#comments"
+          class="flex-1 flex items-center justify-center gap-1.5 py-2 text-gray-500 hover:bg-gray-50 rounded-lg text-sm font-medium transition">
+          <!-- Comment icon -->
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round"
+              d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" />
+          </svg>
+          Comment
+        </a>
+        <button class="flex-1 flex items-center justify-center gap-1.5 py-2 text-gray-500 hover:bg-gray-50 rounded-lg text-sm font-medium transition">
+          <!-- Share icon -->
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round"
+              d="M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8" />
+            <polyline stroke-linecap="round" stroke-linejoin="round" points="16 6 12 2 8 6" />
+            <line stroke-linecap="round" stroke-linejoin="round" x1="12" y1="2" x2="12" y2="15" />
+          </svg>
+          Share
+        </button>
+      </div>
+    </article>
+    {% endfor %}
+  </main>
+
+</body>
+</html>
