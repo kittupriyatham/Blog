@@ -17,8 +17,14 @@
         </div>
         <span class="font-semibold text-gray-800 text-lg">My Blog</span>
       </div>
-      <a href="{{ url_for('login') }}"
-        class="text-sm text-blue-600 font-medium hover:underline">Admin</a>
+      <div class="flex items-center gap-4">
+        {% if session.get('logged_in') %}
+          <a href="{{ url_for('index') }}" class="text-sm text-blue-600 font-medium hover:underline">Feed</a>
+          <a href="{{ url_for('logout') }}" class="text-sm text-red-500 hover:text-red-700 font-medium transition">Sign Out</a>
+        {% else %}
+          <a href="{{ url_for('login') }}" class="text-sm text-blue-600 font-medium hover:underline">Admin</a>
+        {% endif %}
+      </div>
     </div>
   </nav>
 
@@ -36,10 +42,52 @@
 
   <!-- Feed -->
   <main class="max-w-2xl mx-auto px-4 py-6 space-y-4">
+    {% if session.get('logged_in') %}
+      <!-- Inline Composer -->
+      <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-4 mb-6">
+        <form method="POST" action="{{ url_for('create_post') }}" enctype="multipart/form-data">
+          <div class="flex items-start gap-3">
+            <div class="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center flex-shrink-0">
+              <span class="text-white font-bold">K</span>
+            </div>
+            <div class="flex-1">
+              <textarea name="content" rows="2" placeholder="Start a post..." required
+                class="w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-y"></textarea>
+            </div>
+          </div>
+          <div class="mt-3 flex items-center justify-between pl-[52px]">
+            <div class="flex items-center gap-4">
+              <label for="feed-media-upload" class="cursor-pointer text-gray-500 hover:text-blue-600 text-sm font-medium flex items-center gap-1.5 transition">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
+                </svg>
+                <span>Media</span>
+                <input id="feed-media-upload" type="file" name="media" multiple class="hidden" accept="image/png,image/jpeg,image/gif,image/webp,video/mp4,video/webm,video/ogg">
+              </label>
+              <div class="w-px h-4 bg-gray-300"></div>
+              <a href="{{ url_for('create_article') }}" class="text-gray-500 hover:text-blue-600 text-sm font-medium flex items-center gap-1.5 transition">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z" />
+                </svg>
+                <span>Write article</span>
+              </a>
+            </div>
+            <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white font-medium px-4 py-1.5 rounded-full text-sm transition">
+              Post
+            </button>
+          </div>
+        </form>
+      </div>
+    {% endif %}
+
     {% if not posts %}
       <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-8 text-center text-gray-400">
         <p class="text-lg">No posts yet.</p>
-        <p class="text-sm mt-1">Check back later or <a href="{{ url_for('login') }}" class="text-blue-500 hover:underline">sign in</a> to create one.</p>
+        {% if session.get('logged_in') %}
+          <p class="text-sm mt-1">Use the box above to create your first post.</p>
+        {% else %}
+          <p class="text-sm mt-1">Check back later or <a href="{{ url_for('login') }}" class="text-blue-500 hover:underline">sign in</a> to create one.</p>
+        {% endif %}
       </div>
     {% endif %}
 
@@ -50,37 +98,76 @@
         <div class="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center flex-shrink-0">
           <span class="text-white font-bold">K</span>
         </div>
-        <div>
+        <div class="flex-1">
           <p class="font-semibold text-gray-800 text-sm leading-tight">Kittu Priyatham</p>
           {% if post.type %}
-            <span class="inline-block text-xs bg-blue-50 text-blue-600 font-medium px-2 py-0.5 rounded-full mr-1">{{ post.type }}</span>
+            <span class="inline-block text-xs bg-blue-50 text-blue-600 font-medium px-2 py-0.5 rounded-full mr-1">{{ post.type | capitalize }}</span>
           {% endif %}
-          <span class="text-xs text-gray-400">{{ post.timestamp }}</span>
+          <span class="text-xs text-gray-400">
+            <a href="{{ url_for('post_detail', post_id=post.post_id) }}" class="hover:underline" title="View Full Post">{{ post.timestamp }}</a>
+          </span>
+          {% if post.views %}
+            <span class="text-xs text-gray-400 ml-1">&bull; {{ post.views }} views</span>
+          {% endif %}
         </div>
+        {% if session.get('logged_in') %}
+        <div>
+          <form method="POST" action="{{ url_for('delete_post', post_id=post.post_id) }}" onsubmit="return confirm('Delete this post?');">
+            <button type="submit" class="text-gray-400 hover:text-red-500 transition" title="Delete post">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+              </svg>
+            </button>
+          </form>
+        </div>
+        {% endif %}
       </div>
 
       <!-- Content snippet -->
-      <div class="px-5 py-2">
+      <a href="{{ url_for('post_detail', post_id=post.post_id) }}" class="block px-5 py-2 hover:bg-gray-50 transition cursor-pointer">
+        {% if post.type == 'article' and post.title %}
+           <h2 class="text-xl font-bold text-gray-800 mb-2 hover:text-blue-600 transition">
+             {{ post.title }}
+           </h2>
+        {% endif %}
         <p class="text-gray-700 text-sm leading-relaxed whitespace-pre-wrap">
           {%- set snippet = post.content[:300] -%}
           {{ snippet }}{% if post.content | length > 300 %}…
-            <a href="{{ url_for('post_detail', post_id=post.post_id) }}" class="text-blue-500 hover:underline text-xs">see more</a>
+            <span class="text-blue-500 hover:underline text-xs">see more</span>
           {% endif %}
         </p>
-      </div>
+      </a>
 
       <!-- Media preview (first item only on feed) -->
       {% if post.media_paths %}
         {% set first_media = post.media_paths[0] %}
         {% set ext = first_media.rsplit('.', 1)[-1].lower() %}
+        {% set media_url = url_for('serve_media', filename=first_media) %}
         <div class="px-5 py-2">
-          {% if ext in ['mp4', 'webm', 'ogg'] %}
-            <video controls class="w-full rounded-lg max-h-72 object-cover bg-black">
-              <source src="{{ url_for('serve_media', filename=first_media) }}" />
+          {% if ext in ['mp4', 'webm', 'ogg', 'mov', 'avi', 'mkv', 'wmv'] %}
+            <video controls class="w-full rounded-lg max-h-[500px] object-contain bg-black border border-gray-200">
+              <source src="{{ media_url }}" />
             </video>
+          {% elif ext == 'pdf' %}
+            <div class="w-full border border-gray-200 rounded-lg overflow-hidden relative group" style="min-height: 850px; aspect-ratio: 1 / 1.5;">
+              <embed src="{{ media_url }}#toolbar=0&view=Fit" type="application/pdf" class="absolute inset-0 w-full h-full" />
+              <a href="{{ media_url }}" target="_blank" class="absolute top-3 right-3 bg-white/95 px-3 py-1.5 rounded-lg text-sm font-medium text-gray-700 shadow-sm border border-gray-200 hover:bg-white z-10 transition opacity-0 group-hover:opacity-100">Open Full PDF</a>
+            </div>
+          {% elif ext in ['doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'txt'] %}
+            <a href="{{ media_url }}" target="_blank" class="border border-gray-200 rounded-xl p-4 bg-gray-50 hover:bg-white transition flex items-center gap-4 block cursor-pointer group shadow-sm hover:shadow">
+               <div class="w-12 h-12 bg-white rounded-lg shadow border border-gray-100 flex items-center justify-center flex-shrink-0 group-hover:scale-105 transition duration-200">
+                 <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path></svg>
+               </div>
+               <div class="overflow-hidden">
+                  <p class="text-gray-800 font-medium whitespace-nowrap overflow-hidden text-ellipsis">{{ first_media.split('_', 1)[-1] }}</p>
+                  <p class="text-blue-600 group-hover:text-blue-700 group-hover:underline text-sm font-medium mt-0.5">View {{ ext | upper }} Document</p>
+               </div>
+            </a>
           {% else %}
-            <img src="{{ url_for('serve_media', filename=first_media) }}" alt="Post media"
-              class="w-full rounded-lg max-h-72 object-cover" />
+            <div onclick="openLightbox('{{ media_url }}')" class="block cursor-zoom-in">
+              <img src="{{ media_url }}" alt="Post media"
+                class="w-full rounded-lg max-h-[500px] object-contain bg-gray-50 border border-gray-100" />
+            </div>
           {% endif %}
           {% if post.media_paths | length > 1 %}
             <p class="text-xs text-gray-400 mt-1">+{{ post.media_paths | length - 1 }} more</p>
@@ -92,8 +179,9 @@
       <div class="border-t border-gray-100 mx-5"></div>
 
       <!-- Interaction buttons -->
+      {% set post_url = url_for('post_detail', post_id=post.post_id, _external=True) %}
       <div class="flex items-center divide-x divide-gray-100 px-2 py-1">
-        <button class="flex-1 flex items-center justify-center gap-1.5 py-2 text-gray-500 hover:bg-gray-50 rounded-lg text-sm font-medium transition">
+        <button onclick="likePost('{{ post.post_id }}', this)" class="flex-1 flex items-center justify-center gap-1.5 py-2 text-gray-500 hover:bg-gray-50 rounded-lg text-sm font-medium transition">
           <!-- Thumbs up icon -->
           <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round"
@@ -101,7 +189,7 @@
             <path stroke-linecap="round" stroke-linejoin="round"
               d="M7 22H4a2 2 0 01-2-2v-7a2 2 0 012-2h3" />
           </svg>
-          Like
+          Like <span class="like-count ml-0.5 text-xs text-gray-400 font-normal">{% if post.likes %}({{ post.likes }}){% endif %}</span>
         </button>
         <a href="{{ url_for('post_detail', post_id=post.post_id) }}#comments"
           class="flex-1 flex items-center justify-center gap-1.5 py-2 text-gray-500 hover:bg-gray-50 rounded-lg text-sm font-medium transition">
@@ -112,7 +200,7 @@
           </svg>
           Comment
         </a>
-        <button class="flex-1 flex items-center justify-center gap-1.5 py-2 text-gray-500 hover:bg-gray-50 rounded-lg text-sm font-medium transition">
+        <button onclick="copyLink('{{ post_url }}')" class="flex-1 flex items-center justify-center gap-1.5 py-2 text-gray-500 hover:bg-gray-50 rounded-lg text-sm font-medium transition">
           <!-- Share icon -->
           <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round"
@@ -127,5 +215,59 @@
     {% endfor %}
   </main>
 
+  <!-- Lightbox Modal -->
+  <div id="media-lightbox" class="fixed inset-0 z-50 hidden bg-black bg-opacity-90 flex items-center justify-center p-4">
+    <button onclick="closeLightbox()" class="absolute top-4 right-4 text-white hover:text-gray-300 transition" aria-label="Close lightbox">
+      <svg class="w-8 h-8" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"></path>
+      </svg>
+    </button>
+    <img id="lightbox-img" src="" alt="Expanded media view" class="max-w-full max-h-full object-contain rounded-lg" />
+  </div>
+  
+  <script>
+    function openLightbox(src) {
+      const modal = document.getElementById('media-lightbox');
+      document.getElementById('lightbox-img').src = src;
+      modal.classList.remove('hidden');
+      document.body.style.overflow = 'hidden'; 
+    }
+    
+    function closeLightbox() {
+      const modal = document.getElementById('media-lightbox');
+      modal.classList.add('hidden');
+      document.getElementById('lightbox-img').src = '';
+      document.body.style.overflow = 'auto';
+    }
+
+    document.getElementById('media-lightbox').addEventListener('click', function(e) {
+      if (e.target === this) {
+        closeLightbox();
+      }
+    });
+
+    function copyLink(url) {
+      navigator.clipboard.writeText(url).then(() => {
+        alert("Post link copied to clipboard!");
+      }).catch(err => {
+        console.error("Failed to copy link: ", err);
+      });
+    }
+
+    function likePost(postId, btn) {
+      fetch(`/like/${postId}`, {
+        method: 'POST'
+      })
+      .then(res => res.json())
+      .then(data => {
+        if(data.status === 'success') {
+          btn.querySelector('.like-count').innerText = `(${data.likes})`;
+          btn.classList.add('text-blue-600');
+          btn.querySelector('svg').classList.add('fill-current');
+        }
+      })
+      .catch(console.error);
+    }
+  </script>
 </body>
 </html>

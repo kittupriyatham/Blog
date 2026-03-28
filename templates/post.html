@@ -10,18 +10,28 @@
 
   <!-- Navbar -->
   <nav class="bg-white border-b border-gray-200 sticky top-0 z-10 shadow-sm">
-    <div class="max-w-2xl mx-auto px-4 py-3 flex items-center gap-3">
-      <a href="{{ url_for('index') }}"
-        class="text-gray-500 hover:text-gray-800 transition">
-        <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" />
-        </svg>
-      </a>
-      <div class="flex items-center gap-2">
-        <div class="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center">
-          <span class="text-white font-bold text-sm">B</span>
+    <div class="max-w-2xl mx-auto px-4 py-3 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <a href="{{ url_for('index') }}"
+          class="text-gray-500 hover:text-gray-800 transition">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" />
+          </svg>
+        </a>
+        <div class="flex items-center gap-2">
+          <div class="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center">
+            <span class="text-white font-bold text-sm">B</span>
+          </div>
+          <span class="font-semibold text-gray-800 text-lg">My Blog</span>
         </div>
-        <span class="font-semibold text-gray-800 text-lg">My Blog</span>
+      </div>
+      <div class="flex items-center gap-4">
+        {% if session.get('logged_in') %}
+          <a href="{{ url_for('index') }}" class="text-sm text-blue-600 font-medium hover:underline">Feed</a>
+          <a href="{{ url_for('logout') }}" class="text-sm text-red-500 hover:text-red-700 font-medium transition">Sign Out</a>
+        {% else %}
+          <a href="{{ url_for('login') }}" class="text-sm text-blue-600 font-medium hover:underline">Admin</a>
+        {% endif %}
       </div>
     </div>
   </nav>
@@ -40,44 +50,107 @@
             <span class="inline-block text-xs bg-blue-50 text-blue-600 font-medium px-2 py-0.5 rounded-full mr-1">{{ post.type }}</span>
           {% endif %}
           <span class="text-xs text-gray-400">{{ post.timestamp }}</span>
+          {% if post.views %}
+            <span class="text-xs text-gray-400 ml-1">&bull; {{ post.views }} views</span>
+          {% endif %}
         </div>
       </div>
 
-      <!-- Full content -->
+      <!-- Full content & Media -->
       <div class="px-5 py-3">
-        <p class="text-gray-700 leading-relaxed whitespace-pre-wrap">{{ post.content }}</p>
-      </div>
-
-      <!-- All media -->
-      {% if post.media_paths %}
-        <div class="px-5 pb-4 space-y-3">
-          {% for media in post.media_paths %}
-            {% set ext = media.rsplit('.', 1)[-1].lower() %}
-            {% if ext in ['mp4', 'webm', 'ogg'] %}
-              <video controls class="w-full rounded-lg bg-black">
-                <source src="{{ url_for('serve_media', filename=media) }}" />
-                Your browser does not support the video tag.
-              </video>
-            {% else %}
-              <img src="{{ url_for('serve_media', filename=media) }}" alt="Post media"
-                class="w-full rounded-lg object-contain max-h-[600px]" />
+        {% if post.type == 'article' and post.title %}
+           <h1 class="text-3xl font-bold text-gray-900 mb-6">{{ post.title }}</h1>
+        {% endif %}
+        
+        {% if post.blocks %}
+          <div class="space-y-4">
+          {% for block in post.blocks %}
+            {% if block.type == 'text' %}
+              <p class="text-gray-700 leading-relaxed whitespace-pre-wrap text-[15px]">{{ block.content }}</p>
+            {% elif block.type == 'media' %}
+              <div class="space-y-3 my-4">
+              {% for media in block.media_paths %}
+                {% set ext = media.rsplit('.', 1)[-1].lower() %}
+                {% set media_url = url_for('serve_media', filename=media) %}
+                {% if ext in ['mp4', 'webm', 'ogg', 'mov', 'avi', 'mkv', 'wmv'] %}
+                  <video controls class="w-full rounded-xl bg-black max-h-[600px] border border-gray-200">
+                    <source src="{{ media_url }}" />
+                  </video>
+                {% elif ext == 'pdf' %}
+                  <div class="w-full border border-gray-200 rounded-lg overflow-hidden relative group" style="min-height: 850px; aspect-ratio: 1 / 1.5;">
+                    <embed src="{{ media_url }}#toolbar=0&view=Fit" type="application/pdf" class="absolute inset-0 w-full h-full" />
+                    <a href="{{ media_url }}" target="_blank" class="absolute top-3 right-3 bg-white/95 px-3 py-1.5 rounded-lg text-sm font-medium text-gray-700 shadow-sm border border-gray-200 hover:bg-white z-10 transition opacity-0 group-hover:opacity-100">Open Full PDF</a>
+                  </div>
+                {% elif ext in ['doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'txt'] %}
+                  <a href="{{ media_url }}" target="_blank" class="border border-gray-200 rounded-xl p-5 bg-gray-50 hover:bg-white transition flex items-center gap-4 block cursor-pointer group shadow-sm hover:shadow">
+                     <div class="w-12 h-12 bg-white rounded-lg shadow border border-gray-100 flex items-center justify-center flex-shrink-0 group-hover:scale-105 transition duration-200">
+                       <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path></svg>
+                     </div>
+                     <div class="overflow-hidden">
+                        <p class="text-gray-800 font-medium whitespace-nowrap overflow-hidden text-ellipsis">{{ media.split('_', 1)[-1] }}</p>
+                        <p class="text-blue-600 group-hover:text-blue-700 group-hover:underline text-sm font-medium mt-0.5">View {{ ext | upper }} Document</p>
+                     </div>
+                  </a>
+                {% else %}
+                  <img src="{{ media_url }}" alt="Post media"
+                    class="w-full rounded-xl object-contain bg-gray-50 border border-gray-100 max-h-[600px]" />
+                {% endif %}
+              {% endfor %}
+              </div>
             {% endif %}
           {% endfor %}
-        </div>
-      {% endif %}
+          </div>
+        {% else %}
+          <!-- Legacy Posts Rendering -->
+          <p class="text-gray-700 leading-relaxed whitespace-pre-wrap">{{ post.content }}</p>
+          {% if post.media_paths %}
+            <div class="mt-4 space-y-3 pb-4">
+              {% for media in post.media_paths %}
+                {% set ext = media.rsplit('.', 1)[-1].lower() %}
+                {% set media_url = url_for('serve_media', filename=media) %}
+                {% if ext in ['mp4', 'webm', 'ogg', 'mov', 'avi', 'mkv', 'wmv'] %}
+                  <video controls class="w-full rounded-lg bg-black max-h-[600px] border border-gray-200">
+                    <source src="{{ media_url }}" />
+                  </video>
+                {% elif ext == 'pdf' %}
+                  <div class="w-full border border-gray-200 rounded-lg overflow-hidden relative group" style="min-height: 850px; aspect-ratio: 1 / 1.5;">
+                    <embed src="{{ media_url }}#toolbar=0&view=Fit" type="application/pdf" class="absolute inset-0 w-full h-full" />
+                    <a href="{{ media_url }}" target="_blank" class="absolute top-3 right-3 bg-white/95 px-3 py-1.5 rounded-lg text-sm font-medium text-gray-700 shadow-sm border border-gray-200 hover:bg-white z-10 transition opacity-0 group-hover:opacity-100">Open Full PDF</a>
+                  </div>
+                {% elif ext in ['doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'txt'] %}
+                  <a href="{{ media_url }}" target="_blank" class="border border-gray-200 rounded-xl p-5 bg-gray-50 hover:bg-white transition flex items-center gap-4 block cursor-pointer group shadow-sm hover:shadow">
+                     <div class="w-12 h-12 bg-white rounded-lg shadow border border-gray-100 flex items-center justify-center flex-shrink-0 group-hover:scale-105 transition duration-200">
+                       <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path></svg>
+                     </div>
+                     <div class="overflow-hidden">
+                        <p class="text-gray-800 font-medium whitespace-nowrap overflow-hidden text-ellipsis">{{ media.split('_', 1)[-1] }}</p>
+                        <p class="text-blue-600 group-hover:text-blue-700 group-hover:underline text-sm font-medium mt-0.5">View {{ ext | upper }} Document</p>
+                     </div>
+                  </a>
+                {% else %}
+                  <div onclick="openLightbox('{{ media_url }}')" class="block cursor-zoom-in">
+                    <img src="{{ media_url }}" alt="Post media"
+                      class="w-full rounded-lg object-contain max-h-[600px] border border-gray-100" />
+                  </div>
+                {% endif %}
+              {% endfor %}
+            </div>
+          {% endif %}
+        {% endif %}
+      </div>
 
       <!-- Divider -->
       <div class="border-t border-gray-100 mx-5"></div>
 
       <!-- Interaction buttons -->
       <div class="flex items-center divide-x divide-gray-100 px-2 py-1">
-        <button class="flex-1 flex items-center justify-center gap-1.5 py-2 text-gray-500 hover:bg-gray-50 rounded-lg text-sm font-medium transition">
+        <button onclick="likePost('{{ post.post_id }}', this)" class="flex-1 flex items-center justify-center gap-1.5 py-2 text-gray-500 hover:bg-gray-50 rounded-lg text-sm font-medium transition">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round"
               d="M14 9V5a3 3 0 00-3-3l-4 9v11h11.28a2 2 0 002-1.7l1.38-9a2 2 0 00-2-2.3H14z" />
             <path stroke-linecap="round" stroke-linejoin="round" d="M7 22H4a2 2 0 01-2-2v-7a2 2 0 012-2h3" />
           </svg>
-          Like
+          Like <span class="like-count ml-0.5 text-xs text-gray-400 font-normal">{% if post.likes %}({{ post.likes }}){% endif %}</span>
         </button>
         <button class="flex-1 flex items-center justify-center gap-1.5 py-2 text-gray-500 hover:bg-gray-50 rounded-lg text-sm font-medium transition">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
@@ -86,7 +159,7 @@
           </svg>
           Comment
         </button>
-        <button class="flex-1 flex items-center justify-center gap-1.5 py-2 text-gray-500 hover:bg-gray-50 rounded-lg text-sm font-medium transition">
+        <button onclick="copyLink('{{ url_for('post_detail', post_id=post.post_id, _external=True) }}')" class="flex-1 flex items-center justify-center gap-1.5 py-2 text-gray-500 hover:bg-gray-50 rounded-lg text-sm font-medium transition">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" d="M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8" />
             <polyline stroke-linecap="round" stroke-linejoin="round" points="16 6 12 2 8 6" />
@@ -105,5 +178,59 @@
     </div>
   </main>
 
+  <!-- Lightbox Modal -->
+  <div id="media-lightbox" class="fixed inset-0 z-50 hidden bg-black bg-opacity-90 flex items-center justify-center p-4">
+    <button onclick="closeLightbox()" class="absolute top-4 right-4 text-white hover:text-gray-300 transition" aria-label="Close lightbox">
+      <svg class="w-8 h-8" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"></path>
+      </svg>
+    </button>
+    <img id="lightbox-img" src="" alt="Fullscreen media" class="max-w-full max-h-full object-contain rounded-lg" />
+  </div>
+
+  <script>
+    function openLightbox(src) {
+      const modal = document.getElementById('media-lightbox');
+      document.getElementById('lightbox-img').src = src;
+      modal.classList.remove('hidden');
+      document.body.style.overflow = 'hidden'; 
+    }
+    
+    function closeLightbox() {
+      const modal = document.getElementById('media-lightbox');
+      modal.classList.add('hidden');
+      document.getElementById('lightbox-img').src = '';
+      document.body.style.overflow = 'auto';
+    }
+
+    document.getElementById('media-lightbox').addEventListener('click', function(e) {
+      if (e.target === this) {
+        closeLightbox();
+      }
+    });
+
+    function copyLink(url) {
+      navigator.clipboard.writeText(url).then(() => {
+        alert("Post link copied to clipboard!");
+      }).catch(err => {
+        console.error("Failed to copy link: ", err);
+      });
+    }
+
+    function likePost(postId, btn) {
+      fetch(`/like/${postId}`, {
+        method: 'POST'
+      })
+      .then(res => res.json())
+      .then(data => {
+        if(data.status === 'success') {
+          btn.querySelector('.like-count').innerText = `(${data.likes})`;
+          btn.classList.add('text-blue-600');
+          btn.querySelector('svg').classList.add('fill-current');
+        }
+      })
+      .catch(console.error);
+    }
+  </script>
 </body>
 </html>

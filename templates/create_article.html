@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Write Article - Blog</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-white min-h-screen text-gray-800">
+  <form id="article-form" action="{{ url_for('create_article') }}" method="POST" enctype="multipart/form-data">
+    <nav class="sticky top-0 z-10 bg-white border-b border-gray-200">
+      <div class="max-w-3xl mx-auto px-4 py-3 flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <a href="{{ url_for('index') }}" class="text-gray-500 hover:text-gray-800 transition" aria-label="Back to feed" title="Back to feed">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" />
+            </svg>
+          </a>
+          <span class="font-medium text-gray-600">Drafting Article</span>
+        </div>
+        <button type="submit" id="publish-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-medium px-5 py-1.5 rounded-full text-sm transition">
+          Publish
+        </button>
+      </div>
+    </nav>
+    <main class="max-w-3xl mx-auto px-4 py-8">
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% for category, message in messages %}
+          <div class="mb-4 px-4 py-2 rounded text-sm {% if category == 'error' %}bg-red-100 text-red-700{% else %}bg-green-100 text-green-700{% endif %}">
+            {{ message }}
+          </div>
+        {% endfor %}
+      {% endwith %}
+
+      <input type="text" name="title" id="article-title" placeholder="Article Title" required
+             class="w-full text-4xl font-bold text-gray-900 placeholder-gray-300 focus:outline-none mb-8 bg-transparent">
+             
+      <div id="blocks-container" class="space-y-6">
+        <!-- Initial Text Block -->
+        <div class="block-item group relative" data-type="text">
+          <textarea name="text_block_0" rows="1" placeholder="Write your text here..." 
+            class="w-full text-lg leading-relaxed text-gray-700 placeholder-gray-300 focus:outline-none bg-transparent resize-y min-h-[50px]"></textarea>
+          <button type="button" class="remove-block-btn hidden absolute -left-10 top-2 text-gray-300 hover:text-red-500 transition lg:group-hover:block" title="Remove block">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"></path></svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- Add Block Actions -->
+      <div class="mt-8 relative flex items-center justify-center">
+        <div class="absolute inset-0 flex items-center" aria-hidden="true">
+          <div class="w-full border-t border-gray-200 border-dashed"></div>
+        </div>
+        <div class="relative flex gap-3 bg-white px-4">
+          <button type="button" id="add-text-btn" class="flex items-center gap-1.5 text-sm text-gray-500 hover:text-blue-600 hover:bg-blue-50 px-3 py-1.5 rounded-full border border-gray-200 transition">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"></path></svg>
+            Text
+          </button>
+          <label class="cursor-pointer flex items-center gap-1.5 text-sm text-gray-500 hover:text-blue-600 hover:bg-blue-50 px-3 py-1.5 rounded-full border border-gray-200 transition">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
+            Media
+            <input type="file" id="add-media-input" class="hidden" accept="image/png,image/jpeg,image/gif,image/webp,video/mp4,video/webm,video/ogg">
+          </label>
+        </div>
+      </div>
+    </main>
+  </form>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const container = document.getElementById('blocks-container');
+      const textBtn = document.getElementById('add-text-btn');
+      const mediaInput = document.getElementById('add-media-input');
+      const form = document.getElementById('article-form');
+      let blockCounter = 1;
+
+      const autoResize = (textarea) => {
+        textarea.style.height = 'auto';
+        textarea.style.height = textarea.scrollHeight + 'px';
+      };
+
+      container.addEventListener('input', (e) => {
+        if(e.target.tagName.toLowerCase() === 'textarea') {
+          autoResize(e.target);
+        }
+      });
+
+      container.addEventListener('click', (e) => {
+        const removeBtn = e.target.closest('.remove-block-btn');
+        if (removeBtn) {
+          const block = removeBtn.closest('.block-item');
+          if (container.children.length > 1) {
+            block.remove();
+          }
+        }
+      });
+
+      textBtn.addEventListener('click', () => {
+        const div = document.createElement('div');
+        div.className = 'block-item group relative';
+        div.setAttribute('data-type', 'text');
+        div.innerHTML = `
+          <textarea name="text_block_${blockCounter}" rows="1" placeholder="Write your text here..." 
+            class="w-full text-lg leading-relaxed text-gray-700 placeholder-gray-300 focus:outline-none bg-transparent resize-y min-h-[50px]"></textarea>
+          <button type="button" class="remove-block-btn hidden absolute -left-10 top-2 text-gray-300 hover:text-red-500 transition lg:group-hover:block" title="Remove block">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"></path></svg>
+          </button>
+        `;
+        container.appendChild(div);
+        div.querySelector('textarea').focus();
+        blockCounter++;
+      });
+
+      mediaInput.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const div = document.createElement('div');
+        div.className = 'block-item group relative';
+        div.setAttribute('data-type', 'media');
+        
+        const previewUrl = URL.createObjectURL(file);
+        const isVideo = file.type.startsWith('video/');
+        let mediaHtml = isVideo ? 
+          `<video controls src="${previewUrl}" class="w-full rounded-xl bg-black max-h-[500px]"></video>` :
+          `<img src="${previewUrl}" class="w-full rounded-xl object-contain max-h-[500px]" />`;
+
+        div.innerHTML = `
+          <div class="relative rounded-xl border border-gray-100 overflow-hidden bg-gray-50 flex items-center justify-center p-2">
+            ${mediaHtml}
+          </div>
+          <p class="text-xs text-gray-400 mt-2 text-center filename-disp">${file.name}</p>
+          <button type="button" class="remove-block-btn hidden absolute -left-10 top-2 text-gray-300 hover:text-red-500 transition lg:group-hover:block" title="Remove block">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"></path></svg>
+          </button>
+        `;
+        div.fileData = file;
+        container.appendChild(div);
+        
+        mediaInput.value = '';
+        blockCounter++;
+      });
+
+      form.addEventListener('submit', (e) => {
+        e.preventDefault();
+        
+        const formData = new FormData();
+        formData.append('title', document.getElementById('article-title').value);
+        
+        const blocksMeta = [];
+        const blockItems = container.querySelectorAll('.block-item');
+        let fileIndex = 0;
+
+        blockItems.forEach(item => {
+          const type = item.getAttribute('data-type');
+          if (type === 'text') {
+            const content = item.querySelector('textarea').value.trim();
+            if (content) {
+              blocksMeta.push({ type: 'text', content: content });
+            }
+          } else if (type === 'media') {
+            if (item.fileData) {
+              blocksMeta.push({ type: 'media', fileIndex: fileIndex });
+              formData.append(`file_${fileIndex}`, item.fileData);
+              fileIndex++;
+            }
+          }
+        });
+
+        formData.append('blocks_meta', JSON.stringify(blocksMeta));
+
+        const publishBtn = document.getElementById('publish-btn');
+        publishBtn.disabled = true;
+        publishBtn.innerText = 'Publishing...';
+        
+        fetch(form.action, {
+          method: 'POST',
+          body: formData
+        }).then(response => {
+          if(response.redirected) {
+            window.location.href = response.url;
+          } else {
+            window.location.href = "{{ url_for('index') }}";
+          }
+        }).catch(err => {
+          console.error(err);
+          alert('An error occurred. Please try again.');
+          publishBtn.disabled = false;
+          publishBtn.innerText = 'Publish';
+        });
+      });
+    });
+  </script>
+</body>
+</html>
