@@ -4,13 +4,17 @@ on:
   push:
     branches:
       - main
+
+permissions:
+  contents: write
+
 jobs:
   get_data:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@main
-      - name: Update diagram
+        uses: actions/checkout@v4
+      - name: Update repo diagram
         uses: githubocto/repo-visualizer@0.9.1
         with:
           output_file: "static/images/repo-diagram.svg"
