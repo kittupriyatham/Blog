@@ -134,7 +134,7 @@
                   </div>
                 {% endif %}
               {% endfor %}
-            </div>
+             </div>
           {% endif %}
         {% endif %}
       </div>
@@ -159,7 +159,7 @@
           </svg>
           Comment
         </button>
-        <button onclick="copyLink('{{ url_for('post_detail', post_id=post.post_id, _external=True) }}')" class="flex-1 flex items-center justify-center gap-1.5 py-2 text-gray-500 hover:bg-gray-50 rounded-lg text-sm font-medium transition">
+        <button onclick="copyLink('{{ url_for('article_detail', article_id=post.post_id, _external=True) }}')" class="flex-1 flex items-center justify-center gap-1.5 py-2 text-gray-500 hover:bg-gray-50 rounded-lg text-sm font-medium transition">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" d="M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8" />
             <polyline stroke-linecap="round" stroke-linejoin="round" points="16 6 12 2 8 6" />
@@ -211,7 +211,7 @@
 
     function copyLink(url) {
       navigator.clipboard.writeText(url).then(() => {
-        alert("Post link copied to clipboard!");
+        alert("Article link copied to clipboard!");
       }).catch(err => {
         console.error("Failed to copy link: ", err);
       });

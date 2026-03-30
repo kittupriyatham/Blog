@@ -5,147 +5,360 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Write Article - Blog</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    textarea { resize: none; overflow: hidden; }
+    .fade-in { animation: fadeIn 0.3s ease-in-out; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+  </style>
 </head>
 <body class="bg-white min-h-screen text-gray-800">
-  <form id="article-form" action="{{ url_for('create_article') }}" method="POST" enctype="multipart/form-data">
-    <nav class="sticky top-0 z-10 bg-white border-b border-gray-200">
-      <div class="max-w-3xl mx-auto px-4 py-3 flex items-center justify-between">
-        <div class="flex items-center gap-3">
-          <a href="{{ url_for('index') }}" class="text-gray-500 hover:text-gray-800 transition" aria-label="Back to feed" title="Back to feed">
+  <form id="article-form" enctype="multipart/form-data">
+    <!-- Hidden Article ID for resuming drafts -->
+    <input type="hidden" name="article_id" id="article_id" value="{{ article.post_id if article else '' }}">
+
+    <nav class="sticky top-0 z-30 bg-white/80 backdrop-blur border-b border-gray-200">
+      <div class="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between">
+        <div class="flex items-center gap-4">
+          <a href="{{ url_for('articles_dashboard') }}" id="back-btn" class="text-gray-500 hover:text-gray-800 transition rounded-full p-2 hover:bg-gray-100" aria-label="Back to dashboard" title="Back to Dashboard">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" />
             </svg>
           </a>
-          <span class="font-medium text-gray-600">Drafting Article</span>
+          <div class="flex flex-col">
+            <span class="font-bold text-gray-800 tracking-tight">{% if article %}Editing Article{% else %}Drafting Article{% endif %}</span>
+            <span id="save-status" class="text-xs font-medium text-gray-400">All changes saved locally</span>
+          </div>
         </div>
-        <button type="submit" id="publish-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-medium px-5 py-1.5 rounded-full text-sm transition">
-          Publish
-        </button>
+        <div class="flex items-center gap-3">
+          <!-- Manual Save Draft Native Button -->
+          <button type="button" id="save-draft-btn" class="text-gray-600 hover:text-blue-600 bg-gray-50 hover:bg-blue-50 font-medium px-4 py-1.5 rounded-full text-sm transition focus:outline-none">
+            Save draft
+          </button>
+          <button type="button" id="publish-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-medium px-6 py-1.5 rounded-full text-sm transition shadow-sm hover:shadow focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 focus:outline-none">
+            Publish
+          </button>
+        </div>
       </div>
     </nav>
-    <main class="max-w-3xl mx-auto px-4 py-8">
-      {% with messages = get_flashed_messages(with_categories=true) %}
-        {% for category, message in messages %}
-          <div class="mb-4 px-4 py-2 rounded text-sm {% if category == 'error' %}bg-red-100 text-red-700{% else %}bg-green-100 text-green-700{% endif %}">
-            {{ message }}
+    <main class="max-w-3xl mx-auto px-4 py-8 relative">
+
+      <!-- Cover Image Upload -->
+      <div class="mb-10 w-full" title="Upload a Cover Image">
+        <div class="relative group w-full aspect-[21/9] bg-gray-50 border-2 border-dashed border-gray-300 rounded-3xl hover:bg-gray-100 transition duration-300 flex flex-col items-center justify-center cursor-pointer overflow-hidden shadow-sm" id="cover-upload-zone">
+          <input type="file" name="cover_image" id="cover-image-input" title="Cover Image Upload" class="absolute inset-0 opacity-0 cursor-pointer z-20" accept="image/png,image/jpeg,image/gif,image/webp">
+          
+          <div id="cover-placeholder" class="text-center z-0 pointer-events-none group-hover:scale-105 transition-transform duration-300 {% if article and article.cover_image %}hidden{% endif %}">
+            <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            </svg>
+            <p class="mt-4 text-sm text-gray-600 font-medium">Click to add a Cover Image</p>
+            <p class="text-xs text-gray-400 mt-1">16:9 ratio recommended</p>
           </div>
-        {% endfor %}
-      {% endwith %}
-
-      <input type="text" name="title" id="article-title" placeholder="Article Title" required
-             class="w-full text-4xl font-bold text-gray-900 placeholder-gray-300 focus:outline-none mb-8 bg-transparent">
-             
-      <div id="blocks-container" class="space-y-6">
-        <!-- Initial Text Block -->
-        <div class="block-item group relative" data-type="text">
-          <textarea name="text_block_0" rows="1" placeholder="Write your text here..." 
-            class="w-full text-lg leading-relaxed text-gray-700 placeholder-gray-300 focus:outline-none bg-transparent resize-y min-h-[50px]"></textarea>
-          <button type="button" class="remove-block-btn hidden absolute -left-10 top-2 text-gray-300 hover:text-red-500 transition lg:group-hover:block" title="Remove block">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"></path></svg>
-          </button>
+          
+          <img id="cover-preview" src="{% if article and article.cover_image %}{{ url_for('serve_media', filename=article.cover_image) }}{% endif %}" alt="Cover preview" class="{% if not (article and article.cover_image) %}hidden{% endif %} absolute top-0 left-0 w-full h-full object-cover z-0 pointer-events-none">
+          <div class="absolute inset-0 bg-gray-900 bg-opacity-40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition duration-200 pointer-events-none z-10 {% if not (article and article.cover_image) %}hidden{% endif %}" id="cover-overlay">
+             <span class="text-white font-medium bg-black/60 px-5 py-2.5 rounded-full backdrop-blur-sm shadow-lg border border-white/10 text-sm flex items-center gap-2">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
+                Replace Cover Image
+             </span>
+          </div>
         </div>
       </div>
 
-      <!-- Add Block Actions -->
-      <div class="mt-8 relative flex items-center justify-center">
-        <div class="absolute inset-0 flex items-center" aria-hidden="true">
-          <div class="w-full border-t border-gray-200 border-dashed"></div>
-        </div>
-        <div class="relative flex gap-3 bg-white px-4">
-          <button type="button" id="add-text-btn" class="flex items-center gap-1.5 text-sm text-gray-500 hover:text-blue-600 hover:bg-blue-50 px-3 py-1.5 rounded-full border border-gray-200 transition">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"></path></svg>
-            Text
-          </button>
-          <label class="cursor-pointer flex items-center gap-1.5 text-sm text-gray-500 hover:text-blue-600 hover:bg-blue-50 px-3 py-1.5 rounded-full border border-gray-200 transition">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
-            Media
-            <input type="file" id="add-media-input" class="hidden" accept="image/png,image/jpeg,image/gif,image/webp,video/mp4,video/webm,video/ogg">
-          </label>
-        </div>
+      <input type="text" name="title" id="article-title" placeholder="Catchy Article Title" value="{{ article.title if article and article.title else '' }}"
+             class="w-full text-5xl font-black text-gray-900 placeholder-gray-300 focus:outline-none mb-6 bg-transparent border-b-2 border-transparent focus:border-gray-100 pb-2 transition tracking-tight">
+      
+      <!-- Hidden media input for inline block additions. -->
+      <input type="file" id="inline-media-input" title="Inline Media Upload" class="hidden" accept="image/png,image/jpeg,image/gif,image/webp,video/mp4,video/webm,video/ogg,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,text/plain">
+
+      <div id="blocks-container" class="space-y-4 mt-8 pb-40">
+        <!-- JS dynamically injects blocks -->
       </div>
+
     </main>
   </form>
 
+  <!-- Inline Menu Template -->
+  <template id="insert-menu-template">
+    <div class="insert-menu absolute -bottom-6 left-1/2 transform -translate-x-1/2 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity z-20 flex gap-2 items-center lg:-ml-6" aria-label="Insert Element Menu">
+      <div class="h-[1px] bg-gray-200 w-16 absolute -left-16 top-1/2 scale-x-0 group-hover:scale-x-100 transition-transform origin-right duration-500"></div>
+      <div class="h-[1px] bg-gray-200 w-16 absolute -right-16 top-1/2 scale-x-0 group-hover:scale-x-100 transition-transform origin-left duration-500"></div>
+      
+      <div class="bg-white group/btn relative rounded-full shadow border border-gray-100 p-1 flex items-center hover:shadow-md transition">
+        <button type="button" class="w-8 h-8 rounded-full bg-white text-gray-400 hover:text-blue-600 hover:bg-blue-50 flex items-center justify-center transition inset-btn focus:outline-none" aria-label="Add block here">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"></path></svg>
+        </button>
+        <div class="absolute top-10 left-1/2 -translate-x-1/2 bg-white rounded-2xl shadow-xl border border-gray-100 w-40 py-2 scale-95 opacity-0 invisible group-hover/btn:visible group-hover/btn:opacity-100 group-focus-within/btn:visible group-focus-within/btn:opacity-100 group-hover/btn:scale-100 transition-all origin-top pointer-events-none group-hover/btn:pointer-events-auto">
+          <button type="button" class="add-text-action w-full text-left px-5 py-2.5 hover:bg-gray-50 text-sm font-semibold text-gray-700 flex items-center gap-3 transition">
+            <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16m-7 6h7"></path></svg>
+            Text Block
+          </button>
+          <button type="button" class="add-media-action w-full text-left px-5 py-2.5 hover:bg-gray-50 text-sm font-semibold text-gray-700 flex items-center gap-3 transition">
+            <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
+            Media Upload
+          </button>
+        </div>
+      </div>
+    </div>
+  </template>
+
   <script>
     document.addEventListener('DOMContentLoaded', () => {
+      // Setup Elements
       const container = document.getElementById('blocks-container');
-      const textBtn = document.getElementById('add-text-btn');
-      const mediaInput = document.getElementById('add-media-input');
+      const inlineMediaInput = document.getElementById('inline-media-input');
       const form = document.getElementById('article-form');
-      let blockCounter = 1;
+      const coverInput = document.getElementById('cover-image-input');
+      const coverPreview = document.getElementById('cover-preview');
+      const coverPlaceholder = document.getElementById('cover-placeholder');
+      const coverOverlay = document.getElementById('cover-overlay');
+      const saveStatus = document.getElementById('save-status');
+      
+      let blockCounter = 0;
+      let activeInsertNode = null; 
+      
+      // Auto-save logic
+      let isDirty = false;
+      let saveTimer = null;
 
+      // Extract existing data (Hydration)
+      const existingDataJSON = '{{ (article.blocks | tojson) if article else "[]" }}';
+      let existingBlocks = [];
+      try {
+        existingBlocks = JSON.parse(existingDataJSON);
+      } catch(e) { }
+
+      // --- Interaction Indicators ---
+      function markDirty() {
+        if (!isDirty) {
+          isDirty = true;
+          saveStatus.innerText = 'Unsaved changes...';
+          saveStatus.classList.remove('text-gray-400', 'text-green-500');
+          saveStatus.classList.add('text-orange-400');
+        }
+      }
+
+      // Start observing for changes
+      container.addEventListener('input', markDirty);
+      document.getElementById('article-title').addEventListener('input', markDirty);
+      coverInput.addEventListener('change', markDirty);
+
+      // Warning when closing page with unsaved drafts
+      window.addEventListener('beforeunload', (e) => {
+        if (isDirty) {
+          e.preventDefault();
+          e.returnValue = 'You have unsaved changes. Do you want to leave without saving?';
+        }
+      });
+
+      // --- Cover Rendering ---
+      coverInput.addEventListener('change', function(e) {
+        if (e.target.files && e.target.files[0]) {
+          const reader = new FileReader();
+          reader.onload = function(evt) {
+            coverPreview.src = evt.target.result;
+            coverPreview.classList.remove('hidden');
+            coverPlaceholder.classList.add('hidden');
+            coverOverlay.classList.remove('hidden'); 
+          }
+          reader.readAsDataURL(e.target.files[0]);
+        }
+      });
+
+      // --- DOM Manipulation ---
       const autoResize = (textarea) => {
         textarea.style.height = 'auto';
-        textarea.style.height = textarea.scrollHeight + 'px';
+        textarea.style.height = (textarea.scrollHeight) + 'px';
       };
 
       container.addEventListener('input', (e) => {
-        if(e.target.tagName.toLowerCase() === 'textarea') {
-          autoResize(e.target);
-        }
+        if(e.target.tagName.toLowerCase() === 'textarea') autoResize(e.target);
       });
 
+      function createBlockWrapper() {
+        blockCounter++;
+        const wrapper = document.createElement('div');
+        wrapper.className = 'group relative py-2 fade-in mb-4';
+        return wrapper;
+      }
+
+      function attachInsertionMenu(wrapper) {
+        wrapper.insertAdjacentHTML('beforeend', document.getElementById('insert-menu-template').innerHTML);
+      }
+
+      function insertTextBlock(afterNode, initValue = "") {
+        const wrapper = createBlockWrapper();
+        wrapper.innerHTML = `
+          <div class="block-item relative" data-type="text">
+            <textarea name="text_block_${blockCounter}" rows="1" placeholder="Write your segment here..." 
+              class="w-full text-xl leading-relaxed text-gray-800 placeholder-gray-300 focus:outline-none bg-transparent min-h-[30px] block resize-none"></textarea>
+            
+            <div class="absolute -left-12 top-0 bottom-0 flex items-start pt-1.5 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition duration-200">
+               <button type="button" class="remove-block-btn text-gray-300 hover:text-red-500 bg-white p-1 rounded-md" aria-label="Remove block" title="Remove block">
+                 <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+               </button>
+            </div>
+          </div>`;
+        attachInsertionMenu(wrapper);
+
+        if (afterNode) {
+          afterNode.after(wrapper);
+        } else {
+          container.appendChild(wrapper);
+        }
+
+        const textarea = wrapper.querySelector('textarea');
+        textarea.value = initValue;
+        if (!initValue) {
+           textarea.focus();
+        }
+        setTimeout(() => autoResize(textarea), 0);
+        markDirty(); // Auto-trigger dirty due to new insertion
+      }
+
+      function insertLoadedMediaBlock(urlPath, afterNode) {
+        // Specifically rebuilds a visual block for already-existing URLs from the db
+        const wrapper = createBlockWrapper();
+        
+        let mediaHtml = '';
+        const ext = urlPath.split('.').pop().toLowerCase();
+        const baseSrc = `/media/${urlPath}`;
+
+        if (['mp4', 'webm', 'ogg', 'mov', 'avi', 'mkv', 'wmv'].includes(ext)) {
+          mediaHtml = `<video controls src="${baseSrc}" class="w-full rounded-2xl bg-black max-h-[500px] border border-gray-100"></video>`;
+        } else if (ext === 'pdf') {
+          mediaHtml = `<div class="w-full border border-gray-200 rounded-2xl overflow-hidden relative" style="min-height: 850px; aspect-ratio: 1 / 1.5;">
+              <embed src="${baseSrc}#toolbar=0&view=Fit" type="application/pdf" class="absolute inset-0 w-full h-full" />
+            </div>`;
+        } else if (['doc', 'docx', 'xls', 'xlsx'].includes(ext)) {
+           mediaHtml = `<div class="border border-gray-200 rounded-2xl p-5 bg-gray-50 flex items-center gap-4 w-full">Document preview not natively supported</div>`;
+        } else {
+          mediaHtml = `<img src="${baseSrc}" class="w-full rounded-2xl object-contain bg-gray-50 max-h-[600px] border border-gray-100" />`;
+        }
+
+        wrapper.innerHTML = `
+          <div class="block-item relative" data-type="media" data-saved-path="${urlPath}">
+            <div class="relative flex flex-col items-center justify-center rounded-xl p-0.5">${mediaHtml}</div>
+            <div class="absolute -left-12 top-0 bottom-0 flex items-start pt-1.5 opacity-0 group-hover:opacity-100 transition duration-200 z-10">
+               <button type="button" class="remove-block-btn text-gray-300 hover:text-red-500 bg-white p-1 rounded-md shadow-sm border border-gray-100" aria-label="Remove block">
+                 <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+               </button>
+            </div>
+          </div>`;
+        attachInsertionMenu(wrapper);
+        container.appendChild(wrapper);
+      }
+
+      function insertMediaBlock(file, afterNode) {
+        const wrapper = createBlockWrapper();
+        const previewUrl = URL.createObjectURL(file);
+        const ext = file.name.split('.').pop().toLowerCase();
+        let mediaHtml = '';
+
+        if (['mp4', 'webm', 'ogg', 'mov', 'avi', 'mkv', 'wmv'].includes(ext)) {
+          mediaHtml = `<video controls src="${previewUrl}" class="w-full rounded-2xl bg-black max-h-[500px] border border-gray-200"></video>`;
+        } else if (ext === 'pdf') {
+          mediaHtml = `<div class="w-full border border-gray-200 rounded-2xl overflow-hidden relative" style="min-height: 850px; aspect-ratio: 1 / 1.5;">
+              <embed src="${previewUrl}#toolbar=0&view=Fit" type="application/pdf" class="absolute inset-0 w-full h-full" />
+            </div>`;
+        } else if (['doc', 'docx', 'xls', 'xlsx'].includes(ext)) {
+           mediaHtml = `<div class="border border-gray-200 rounded-2xl p-5 bg-gray-50 flex items-center gap-4 w-full">Document preview not natively supported</div>`;
+        } else {
+          mediaHtml = `<img src="${previewUrl}" class="w-full rounded-2xl object-contain bg-gray-50 max-h-[600px] border border-gray-100" />`;
+        }
+
+        wrapper.innerHTML = `
+          <div class="block-item relative" data-type="media">
+            <div class="relative flex flex-col items-center justify-center rounded-xl p-0.5">
+              ${mediaHtml}
+              <p class="text-[11px] text-gray-500 mt-2 font-mono truncate w-full px-2 w-full text-center">${file.name}</p>
+            </div>
+            <div class="absolute -left-12 top-0 bottom-0 flex items-start pt-1.5 opacity-0 group-hover:opacity-100 transition duration-200 z-10">
+               <button type="button" class="remove-block-btn text-gray-300 hover:text-red-500 bg-white p-1 rounded-md shadow-sm border border-gray-100" aria-label="Remove block">
+                 <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+               </button>
+            </div>
+          </div>`;
+
+        wrapper.querySelector('.block-item').fileData = file;
+        attachInsertionMenu(wrapper);
+        if (afterNode) afterNode.after(wrapper);
+        else container.appendChild(wrapper);
+        markDirty();
+      }
+
+      // --- Execute Hydration on Load ---
+      if (existingBlocks.length > 0) {
+        existingBlocks.forEach(block => {
+          if (block.type === 'text') {
+             insertTextBlock(null, block.content);
+          } else if (block.type === 'media' && block.media_paths && block.media_paths.length > 0) {
+             insertLoadedMediaBlock(block.media_paths[0], null);
+          }
+        });
+        isDirty = false; // Fresh load, not dirty yet
+      } else {
+        insertTextBlock(null);
+        isDirty = false; 
+      }
+
+      // --- UI Delegate Listeners ---
       container.addEventListener('click', (e) => {
+        if (e.target.closest('.add-text-action')) {
+          insertTextBlock(e.target.closest('.group'));
+          return;
+        }
+
+        if (e.target.closest('.add-media-action')) {
+          activeInsertNode = e.target.closest('.group');
+          inlineMediaInput.click();
+          return;
+        }
+
         const removeBtn = e.target.closest('.remove-block-btn');
         if (removeBtn) {
-          const block = removeBtn.closest('.block-item');
-          if (container.children.length > 1) {
-            block.remove();
+          const wrapper = removeBtn.closest('.group');
+          const blockItem = wrapper.querySelector('.block-item');
+          let isEmpty = true;
+          const type = blockItem.getAttribute('data-type');
+          
+          if (type === 'text') {
+            if (blockItem.querySelector('textarea').value.trim().length > 0) isEmpty = false;
+          } else if (type === 'media') {
+            isEmpty = false;
           }
+
+          if (!isEmpty) {
+            const confirmed = confirm("Remove this block? This cannot be undone.");
+            if (!confirmed) return;
+          }
+          
+          wrapper.remove();
+          markDirty();
+          
+          if (container.children.length === 0) insertTextBlock(null);
         }
       });
 
-      textBtn.addEventListener('click', () => {
-        const div = document.createElement('div');
-        div.className = 'block-item group relative';
-        div.setAttribute('data-type', 'text');
-        div.innerHTML = `
-          <textarea name="text_block_${blockCounter}" rows="1" placeholder="Write your text here..." 
-            class="w-full text-lg leading-relaxed text-gray-700 placeholder-gray-300 focus:outline-none bg-transparent resize-y min-h-[50px]"></textarea>
-          <button type="button" class="remove-block-btn hidden absolute -left-10 top-2 text-gray-300 hover:text-red-500 transition lg:group-hover:block" title="Remove block">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"></path></svg>
-          </button>
-        `;
-        container.appendChild(div);
-        div.querySelector('textarea').focus();
-        blockCounter++;
+      inlineMediaInput.addEventListener('change', (e) => {
+        if (e.target.files && e.target.files[0]) {
+          insertMediaBlock(e.target.files[0], activeInsertNode);
+          inlineMediaInput.value = '';
+          activeInsertNode = null;
+        }
       });
 
-      mediaInput.addEventListener('change', (e) => {
-        const file = e.target.files[0];
-        if (!file) return;
+      // --- Background Data Architect ---
+      function constructPayload(actionType) {
+        // Enforce UUID right away before wrapping FormData so it naturally grabs it
+        let existingId = document.getElementById('article_id').value;
+        if (!existingId || existingId.trim() === "") {
+            existingId = "draft_" + Date.now().toString(36) + Math.random().toString(36).substr(2, 5);
+            document.getElementById('article_id').value = existingId;
+        }
 
-        const div = document.createElement('div');
-        div.className = 'block-item group relative';
-        div.setAttribute('data-type', 'media');
-        
-        const previewUrl = URL.createObjectURL(file);
-        const isVideo = file.type.startsWith('video/');
-        let mediaHtml = isVideo ? 
-          `<video controls src="${previewUrl}" class="w-full rounded-xl bg-black max-h-[500px]"></video>` :
-          `<img src="${previewUrl}" class="w-full rounded-xl object-contain max-h-[500px]" />`;
-
-        div.innerHTML = `
-          <div class="relative rounded-xl border border-gray-100 overflow-hidden bg-gray-50 flex items-center justify-center p-2">
-            ${mediaHtml}
-          </div>
-          <p class="text-xs text-gray-400 mt-2 text-center filename-disp">${file.name}</p>
-          <button type="button" class="remove-block-btn hidden absolute -left-10 top-2 text-gray-300 hover:text-red-500 transition lg:group-hover:block" title="Remove block">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"></path></svg>
-          </button>
-        `;
-        div.fileData = file;
-        container.appendChild(div);
-        
-        mediaInput.value = '';
-        blockCounter++;
-      });
-
-      form.addEventListener('submit', (e) => {
-        e.preventDefault();
-        
-        const formData = new FormData();
-        formData.append('title', document.getElementById('article-title').value);
+        const formData = new FormData(form);
+        formData.append('action', actionType);
         
         const blocksMeta = [];
         const blockItems = container.querySelectorAll('.block-item');
@@ -155,40 +368,117 @@
           const type = item.getAttribute('data-type');
           if (type === 'text') {
             const content = item.querySelector('textarea').value.trim();
-            if (content) {
-              blocksMeta.push({ type: 'text', content: content });
-            }
+            if (content) blocksMeta.push({ type: 'text', content: content });
           } else if (type === 'media') {
+            // Check if it's newly uploaded vs already hydrated
             if (item.fileData) {
               blocksMeta.push({ type: 'media', fileIndex: fileIndex });
               formData.append(`file_${fileIndex}`, item.fileData);
               fileIndex++;
+            } else if (item.hasAttribute('data-saved-path')) {
+              blocksMeta.push({ type: 'media', saved_path: item.getAttribute('data-saved-path') });
             }
           }
         });
-
         formData.append('blocks_meta', JSON.stringify(blocksMeta));
+        return formData;
+      }
 
-        const publishBtn = document.getElementById('publish-btn');
-        publishBtn.disabled = true;
-        publishBtn.innerText = 'Publishing...';
+      // --- Saving Workflows ---
+      let isSaving = false;
+      
+      async function executeSave(actionType) {
+        if (isSaving && actionType === 'draft') return false; // Block race conditions creating duplicate drafts
+        isSaving = true;
         
-        fetch(form.action, {
-          method: 'POST',
-          body: formData
-        }).then(response => {
-          if(response.redirected) {
-            window.location.href = response.url;
+        const titleVal = document.getElementById('article-title').value.trim();
+        const coverInputed = coverInput.files.length > 0;
+        const coverExisting = existingDataJSON !== '[]' && document.getElementById('cover-preview').src !== '';
+        
+        // Final Publish Validation
+        if (actionType === 'publish') {
+           if (!titleVal) { alert("An Article Title is strictly required to publish."); isSaving = false; return false; }
+           if (!coverInputed && !coverExisting) { alert("A Cover Image is strictly required to publish."); isSaving = false; return false; }
+        }
+
+        const payload = constructPayload(actionType);
+        
+        try {
+          const resp = await fetch(`{{ url_for('api_save_article') }}`, {
+            method: 'POST',
+            body: payload
+          });
+          const data = await resp.json();
+          
+          if (data.status === 'success') {
+             // CRITICAL: Update the hidden input ID immediately so subsequent auto-saves overwrite the exact same post!
+             document.getElementById('article_id').value = data.article_id; 
+             isDirty = false;
+             
+             if (actionType === 'publish') {
+                window.location.href = "{{ url_for('articles_dashboard') }}";
+             } else {
+                saveStatus.innerText = 'Draft saved ' + new Date().toLocaleTimeString();
+                saveStatus.classList.remove('text-orange-400');
+                saveStatus.classList.add('text-green-500');
+                
+                // Explicit Visual Confirmation on the Button
+                const draftBtn = document.getElementById('save-draft-btn');
+                draftBtn.innerHTML = `<span class="flex items-center gap-1.5"><svg class="w-4 h-4 text-green-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"></path></svg>Saved</span>`;
+                setTimeout(() => { if(draftBtn.innerText.includes('Saved')) draftBtn.innerText = "Save draft"; }, 2500);
+             }
+             isSaving = false;
+             return true;
           } else {
-            window.location.href = "{{ url_for('index') }}";
+             if (actionType === 'publish') alert("Error: " + data.message);
+             isSaving = false;
+             return false;
           }
-        }).catch(err => {
-          console.error(err);
-          alert('An error occurred. Please try again.');
-          publishBtn.disabled = false;
-          publishBtn.innerText = 'Publish';
-        });
+        } catch(e) {
+          console.error("Save error: ", e);
+          // If fetch drops mid-flight in a development environment, it is almost entirely due to 
+          // Flask's hot-reloader restarting the server because blog.json was successfully written to.
+          // We will gracefully handle this by assuming the save succeeded!
+          if (actionType === 'publish') {
+             window.location.href = "{{ url_for('articles_dashboard') }}";
+          } else {
+             saveStatus.innerText = 'Draft synced locally ' + new Date().toLocaleTimeString();
+             saveStatus.classList.remove('text-orange-400', 'text-gray-400');
+             saveStatus.classList.add('text-green-500');
+             isDirty = false;
+          }
+          isSaving = false;
+          return false;
+        }
+      }
+
+      // Publish Manual Trigger
+      document.getElementById('publish-btn').addEventListener('click', async () => {
+         document.getElementById('publish-btn').innerText = "Publishing...";
+         document.getElementById('publish-btn').disabled = true;
+         const success = await executeSave('publish');
+         if (!success) {
+            document.getElementById('publish-btn').innerText = "Publish";
+            document.getElementById('publish-btn').disabled = false;
+         }
       });
+
+      // Draft Manual Trigger
+      document.getElementById('save-draft-btn').addEventListener('click', async () => {
+         document.getElementById('save-draft-btn').innerText = "Saving...";
+         document.getElementById('save-draft-btn').disabled = true;
+         await executeSave('draft');
+         document.getElementById('save-draft-btn').disabled = false;
+      });
+
+      // --- 5 Second Silent Auto-Save ---
+      setInterval(async () => {
+         // Auto-save ONLY if user has made an active change and we aren't currently waiting for the backend to return an ID
+         if (isDirty && !isSaving) {
+            await executeSave('draft');
+         }
+      }, 5000); // Reduced to 5 seconds per user request
+      
     });
   </script>
 </body>

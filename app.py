@@ -45,15 +45,26 @@ def load_posts():
         return []
     with open(BLOG_JSON, "r", encoding="utf-8") as f:
         try:
-            return json.load(f)
+            data = json.load(f)
+            if isinstance(data, dict):
+                # Reconstruct flat list for routing logic natively
+                return data.get("published", []) + data.get("drafts", [])
+            return data
         except json.JSONDecodeError:
             return []
 
 
 def save_posts(posts):
-    """Persist the list of posts to blog.json."""
+    """Persist the list of posts physically separated into blog.json."""
+    # Separate strictly for on-disk readability
+    published = [p for p in posts if p.get("status") != "draft"]
+    drafts = [p for p in posts if p.get("status") == "draft"]
+    
     with open(BLOG_JSON, "w", encoding="utf-8") as f:
-        json.dump(posts, f, indent=2, ensure_ascii=False)
+        json.dump({
+            "published": published,
+            "drafts": drafts
+        }, f, indent=2, ensure_ascii=False)
 
 
 def generate_post_id(length=8):
@@ -82,12 +93,31 @@ def secure_name(filename):
 # Routes — public
 # ---------------------------------------------------------------------------
 
+import re
+
 @app.route("/")
 def index():
     posts = load_posts()
+    
+    # Map out articles for fast lookup
+    all_articles = {p["post_id"]: p for p in posts if p.get("type") == "article"}
+    
+    # Isolate standard posts for organic timeline
+    feed_posts = [p for p in posts if p.get("type", "post") != "article"]
+    
+    # Detect internal article links
+    pattern = re.compile(r"/(?:post|article)/([a-zA-Z0-9_.-]+)")
+    for p in feed_posts:
+        content = p.get("content", "")
+        match = pattern.search(content)
+        if match:
+            article_id = match.group(1)
+            if article_id in all_articles:
+                p["embedded_article"] = all_articles[article_id]
+                
     # Show newest first
-    posts = sorted(posts, key=lambda p: p.get("timestamp", ""), reverse=True)
-    return render_template("index.html", posts=posts)
+    feed_posts = sorted(feed_posts, key=lambda p: p.get("timestamp", ""), reverse=True)
+    return render_template("index.html", posts=feed_posts)
 
 
 @app.route("/feed")
@@ -113,6 +143,23 @@ def post_detail(post_id):
     save_posts(posts)
     
     return render_template("post.html", post=post)
+
+@app.route("/article/<article_id>")
+def article_detail(article_id):
+    posts = load_posts()
+    article = next((p for p in posts if p["post_id"] == article_id and p.get("type") == "article"), None)
+    if article is None:
+        abort(404)
+        
+    # Enforce Draft Privacy
+    if article.get("status") == "draft" and not session.get("logged_in"):
+        abort(404)
+        
+    # Analytics: Increment view count
+    article["views"] = article.get("views", 0) + 1
+    save_posts(posts)
+    
+    return render_template("article.html", post=article)
 
 
 @app.route("/like/<post_id>", methods=["POST"])
@@ -207,36 +254,110 @@ def create_post():
     return redirect(url_for("index"))
 
 
-@app.route("/create_article", methods=["GET", "POST"])
+@app.route("/articles")
+def articles_dashboard():
+    posts = load_posts()
+    # Filter only articles and sort by newest
+    all_articles = [p for p in posts if p.get("type") == "article"]
+    all_articles = sorted(all_articles, key=lambda p: p.get("timestamp", ""), reverse=True)
+    
+    # Bucket into published vs drafts (default to published for legacy)
+    published = [p for p in all_articles if p.get("status", "published") == "published"]
+    drafts = [p for p in all_articles if p.get("status", "published") == "draft"]
+    
+    return render_template("articles.html", published=published, drafts=drafts)
+
+
+@app.route("/posts")
+def posts_dashboard():
+    posts = load_posts()
+    all_articles = {p["post_id"]: p for p in posts if p.get("type", "") == "article"}
+    posts_list = [p for p in posts if p.get("type", "post") == "post"]
+    
+    # Detect internal article links
+    pattern = re.compile(r"/(?:post|article)/([a-zA-Z0-9_.-]+)")
+    for p in posts_list:
+        content = p.get("content", "")
+        match = pattern.search(content)
+        if match:
+            article_id = match.group(1)
+            if article_id in all_articles:
+                p["embedded_article"] = all_articles[article_id]
+                
+    posts_list = sorted(posts_list, key=lambda p: p.get("timestamp", ""), reverse=True)
+    return render_template("posts.html", posts_list=posts_list)
+
+
+@app.route("/create_article", methods=["GET"])
 def create_article():
     if not session.get("logged_in"):
         return redirect(url_for("login"))
+    return render_template("create_article.html", article=None)
 
-    if request.method == "POST":
-        title = request.form.get("title", "").strip()
-        if not title:
-            flash("Article title is required.", "error")
-            return redirect(url_for("create_article"))
-            
-        blocks_meta_str = request.form.get("blocks_meta", "[]")
-        try:
-            blocks_meta = json.loads(blocks_meta_str)
-        except json.JSONDecodeError:
-            blocks_meta = []
 
-        final_blocks = []
+@app.route("/edit_article/<article_id>", methods=["GET"])
+def edit_article(article_id):
+    if not session.get("logged_in"):
+        return redirect(url_for("login"))
+    posts = load_posts()
+    article = next((p for p in posts if p.get("post_id") == article_id and p.get("type") == "article"), None)
+    if not article:
+        abort(404)
+    return render_template("create_article.html", article=article)
+
+
+@app.route("/api/save_article", methods=["POST"])
+def api_save_article():
+    if not session.get("logged_in"):
+        return jsonify({"status": "error", "message": "Unauthorized"}), 401
+
+    title = request.form.get("title", "").strip()
+    action = request.form.get("action", "draft")  # expected "draft" or "publish"
+    article_id = request.form.get("article_id", "").strip()
+    
+    if not title and action == "publish":
+        return jsonify({"status": "error", "message": "Article title is required to publish."}), 400
+
+    posts = load_posts()
+    existing_article = next((p for p in posts if p.get("post_id") == article_id), None)
+    
+    cover_image_file = request.files.get("cover_image")
+    cover_image_name = existing_article.get("cover_image") if existing_article else None
+
+    # Enforce Cover Image rules (Drafts accept None)
+    if cover_image_file and cover_image_file.filename and allowed_file(cover_image_file.filename):
         os.makedirs(MEDIA_FOLDER, exist_ok=True)
-        
-        fallback_text_parts = []
-        fallback_media_paths = []
+        safe_filename = secure_name(cover_image_file.filename)
+        unique = "".join(random.choices(string.ascii_lowercase + string.digits, k=6))
+        cover_image_name = f"cover_{unique}_{safe_filename}"
+        cover_image_file.save(os.path.join(MEDIA_FOLDER, cover_image_name))
+    elif action == "publish" and not cover_image_name:
+        return jsonify({"status": "error", "message": "A cover image is required to publish."}), 400
 
-        for block in blocks_meta:
-            if block.get("type") == "text":
-                content = block.get("content", "").strip()
-                if content:
-                    final_blocks.append({"type": "text", "content": content})
-                    fallback_text_parts.append(content)
-            elif block.get("type") == "media":
+    blocks_meta_str = request.form.get("blocks_meta", "[]")
+    try:
+        blocks_meta = json.loads(blocks_meta_str)
+    except json.JSONDecodeError:
+        blocks_meta = []
+
+    final_blocks = []
+    fallback_text_parts = []
+    fallback_media_paths = []
+    os.makedirs(MEDIA_FOLDER, exist_ok=True)
+
+    for block in blocks_meta:
+        if block.get("type") == "text":
+            content = block.get("content", "").strip()
+            if content:
+                final_blocks.append({"type": "text", "content": content})
+                fallback_text_parts.append(content)
+        elif block.get("type") == "media":
+            # Preserve existing loaded media arrays if no new file is uploaded
+            if block.get("saved_path"):
+                saved_path = block.get("saved_path")
+                final_blocks.append({"type": "media", "media_paths": [saved_path]})
+                fallback_media_paths.append(saved_path)
+            else:
                 file_key = f"file_{block.get('fileIndex')}"
                 f = request.files.get(file_key)
                 if f and f.filename and allowed_file(f.filename):
@@ -249,27 +370,72 @@ def create_article():
                     final_blocks.append({"type": "media", "media_paths": [saved_name]})
                     fallback_media_paths.append(saved_name)
 
-        if not final_blocks:
-            flash("Article must contain at least some content.", "error")
-            return redirect(url_for("create_article"))
+    if not final_blocks and action == "publish":
+        return jsonify({"status": "error", "message": "Article must contain content to publish."}), 400
 
+    current_time = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
+
+    if existing_article:
+        existing_article["title"] = title
+        existing_article["cover_image"] = cover_image_name
+        existing_article["blocks"] = final_blocks
+        existing_article["content"] = "\n\n".join(fallback_text_parts)
+        existing_article["media_paths"] = fallback_media_paths
+        
+        # Handle ID restructuring when transitioning out of a draft state or upgrading a legacy article
+        if action == "publish":
+            old_id = existing_article["post_id"]
+            new_id = old_id
+            
+            if old_id.startswith("draft_"):
+                new_id = old_id.replace("draft_", "article_", 1)
+            elif not old_id.startswith("article_"):
+                new_id = "article_" + old_id
+                
+            if new_id != old_id:
+                existing_article["post_id"] = new_id
+                # Link Auto-Healer: Retroactively update all embedded feed posts referring to the old ID
+                for p in posts:
+                    if p.get("type", "post") == "post" and old_id in p.get("content", ""):
+                        p["content"] = p["content"].replace(old_id, new_id)
+        
+        # User defined: "when clicked publish use published time, not first draft time"
+        if action == "publish" and existing_article.get("status") != "published":
+            existing_article["timestamp"] = current_time
+            
+        existing_article["status"] = "published" if action == "publish" else action
+        saved_post = existing_article
+    else:
+        raw_new_id = article_id if article_id else ("draft_" + generate_post_id())
+        
+        if action == "publish":
+            if raw_new_id.startswith("draft_"):
+                raw_new_id = raw_new_id.replace("draft_", "article_", 1)
+            elif not raw_new_id.startswith("article_"):
+                raw_new_id = "article_" + raw_new_id
+                
         new_post = {
-            "post_id": generate_post_id(),
+            "post_id": raw_new_id,
             "type": "article",
             "title": title,
+            "cover_image": cover_image_name,
             "blocks": final_blocks,
-            "timestamp": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S"),
+            "timestamp": current_time,
             "content": "\n\n".join(fallback_text_parts),
             "media_paths": fallback_media_paths,
+            "status": "published" if action == "publish" else action
         }
-
-        posts = load_posts()
         posts.append(new_post)
-        save_posts(posts)
-        flash("Article published successfully!", "success")
-        return redirect(url_for("index"))
+        saved_post = new_post
 
-    return render_template("create_article.html")
+    save_posts(posts)
+    return jsonify({
+        "status": "success",
+        "action": action,
+        "article_id": saved_post["post_id"],
+        "message": "Article published successfully!" if action == "publish" else "Draft saved."
+    })
+
 
 
 @app.route("/delete/<post_id>", methods=["POST"])
