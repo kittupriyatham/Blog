@@ -1,2 +1,14 @@
+# Web Server
 flask>=2.3.0,<4.0.0
 gunicorn
+
+# Database (Cosmos DB / MongoDB)
+pymongo
+dnspython
+
+# Cloud Storage (Azure Blob Storage)
+azure-storage-blob
+
+# Environment & Utilities
+python-dotenv
+Werkzeug

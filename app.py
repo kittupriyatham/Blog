@@ -17,12 +17,12 @@ from flask import (
 )
 
 app = Flask(__name__)
-app.secret_key = os.environ.get("SECRET_KEY", "blog-secret-key-change-in-production")
+app.secret_key = os.environ.get("SECRET_KEY")
 
 BLOG_JSON = os.path.join(os.path.dirname(__file__), "blog.json")
 MEDIA_FOLDER = os.path.join(os.path.dirname(__file__), "media")
-ADMIN_USERNAME = os.environ.get("ADMIN_USERNAME", "admin")
-ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "KittuBlog@2026!")
+ADMIN_USERNAME = os.environ.get("ADMIN_USERNAME")
+ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD")
 ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg", "gif", "webp", "mp4", "webm", "ogg", "mov", "avi", "mkv", "wmv", "pdf", "doc", "docx", "xls", "xlsx", "ppt", "pptx", "txt"}
 ALLOWED_MIMETYPES = {
     "image/png", "image/jpeg", "image/gif", "image/webp",
