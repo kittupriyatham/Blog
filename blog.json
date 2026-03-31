@@ -17,10 +17,6 @@
         }
       ],
       "timestamp": "2026-03-28 07:12:16",
-      "content": "Hi there every one, this is a test post.",
-      "media_paths": [
-        "io7zgi_1000087711.jpg"
-      ],
       "views": 7
     },
     {
@@ -41,10 +37,6 @@
         }
       ],
       "timestamp": "2026-03-29 18:00:22",
-      "content": ";lkj",
-      "media_paths": [
-        "eo0zfo_190050110.jpg"
-      ],
       "status": "published",
       "views": 9
     },
@@ -59,8 +51,6 @@
         }
       ],
       "timestamp": "2026-03-29 18:20:08",
-      "content": "http://127.0.0.1:5000/article/article_mnc2ds8gg8tal\r\n\r\nPlease view my article in the above link.",
-      "media_paths": [],
       "views": 3
     }
   ],

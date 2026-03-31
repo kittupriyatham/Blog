@@ -48,17 +48,41 @@ def load_posts():
             data = json.load(f)
             if isinstance(data, dict):
                 # Reconstruct flat list for routing logic natively
-                return data.get("published", []) + data.get("drafts", [])
-            return data
+                posts = data.get("published", []) + data.get("drafts", [])
+            else:
+                posts = data
+
+            # Inject dynamically to avoid redundancy in blog.json
+            for p in posts:
+                if "blocks" in p:
+                    text_parts = []
+                    media_paths = []
+                    for b in p["blocks"]:
+                        if b.get("type") == "text" and b.get("content"):
+                            text_parts.append(b.get("content").strip())
+                        elif b.get("type") == "media" and b.get("media_paths"):
+                            media_paths.extend(b.get("media_paths"))
+                    p["content"] = "\n\n".join(text_parts)
+                    p["media_paths"] = media_paths
+
+            return posts
         except json.JSONDecodeError:
             return []
 
 
 def save_posts(posts):
     """Persist the list of posts physically separated into blog.json."""
+    clean_posts = []
+    for p in posts:
+        cp = dict(p)
+        if "blocks" in cp:
+            cp.pop("content", None)
+            cp.pop("media_paths", None)
+        clean_posts.append(cp)
+
     # Separate strictly for on-disk readability
-    published = [p for p in posts if p.get("status") != "draft"]
-    drafts = [p for p in posts if p.get("status") == "draft"]
+    published = [p for p in clean_posts if p.get("status") != "draft"]
+    drafts = [p for p in clean_posts if p.get("status") == "draft"]
     
     with open(BLOG_JSON, "w", encoding="utf-8") as f:
         json.dump({
