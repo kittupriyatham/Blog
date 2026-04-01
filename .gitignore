@@ -5,3 +5,6 @@ __pycache__/
 .venv
 venv/
 migrate.py
+migrate_to_azure.py
+verify_cloud_data.py
+envazure.py
