@@ -1,0 +1,68 @@
+{#- Social syndication icons.
+
+    Each icon is a link to this post's copy on that platform, opened in a new
+    tab. A platform with no posted URL still renders, dimmed and non-clickable,
+    so the row reads as "where this lives" rather than jumping around.
+
+    Every platform in the row renders whether or not it was syndicated: YouTube
+    too, dimmed when the post has no YouTube copy. Seeing the icon greyed out is
+    more useful than the icon silently vanishing.
+
+    Requires `post` in context. Renders nothing when no platform posted.
+
+    Set `social_icons_compact` before including to get the tighter variant used
+    on the /posts grid cards. -#}
+
+{% set _compact = social_icons_compact|default(false) %}
+{% set _icon = 'w-4 h-4' if _compact else 'w-5 h-5' %}
+{% set _gap = 'gap-2' if _compact else 'gap-3' %}
+{% set _heading = 'text-[10px] text-slate-400 dark:text-slate-500' if _compact
+                  else 'text-xs text-slate-500 dark:text-slate-400' %}
+{% set _sep = 'mt-3 pt-3' if _compact else 'mt-5 pt-4' %}
+{% set _intro = 'Also on:' if _compact else 'Also published on:' %}
+
+{% set _posted = (post.syndications or []) | selectattr('status', 'equalto', 'posted') | list %}
+{% set _urls = {} %}
+{% for _s in _posted %}
+  {% set _ = _urls.update({_s.platform: _s.url}) %}
+{% endfor %}
+
+{% if _posted %}
+<div class="{{ _sep }} border-t border-slate-100 dark:border-slate-800">
+  <div class="flex items-center {{ _gap }} flex-wrap">
+    <span class="font-medium {{ _heading }}">{{ _intro }}</span>
+    {% for _pid in ['linkedin', 'facebook', 'instagram', 'youtube', 'twitter', 'bluesky', 'pinterest', 'medium'] %}
+        {% set _u = _urls.get(_pid) %}
+        {% set _names = {'linkedin': 'LinkedIn', 'facebook': 'Facebook', 'instagram': 'Instagram',
+                         'youtube': 'YouTube', 'twitter': 'X', 'bluesky': 'Bluesky',
+                         'pinterest': 'Pinterest', 'medium': 'Medium'} %}
+        {% if _u %}
+          <a href="{{ _u }}" target="_blank" rel="noopener"
+             title="{{ _names[_pid] }}"
+             class="text-slate-500 dark:text-slate-400 hover:text-brand-600 dark:hover:text-brand-400 transition">
+        {% else %}
+          <span title="{{ _names[_pid] }} — not syndicated"
+                class="text-slate-300 dark:text-slate-700 cursor-default">
+        {% endif %}
+          {% if _pid == 'linkedin' %}
+            <svg class="{{ _icon }}" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 1 1 0-4.124 2.062 2.062 0 0 1 0 4.124zM7.119 20.452H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>
+          {% elif _pid == 'facebook' %}
+            <svg class="{{ _icon }}" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M24 12.073C24 5.446 18.627.073 12 .073S0 5.446 0 12.073c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
+          {% elif _pid == 'instagram' %}
+            <svg class="{{ _icon }}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"/><circle cx="12" cy="12" r="4.2"/><circle cx="17.4" cy="6.6" r="1.1" fill="currentColor" stroke="none"/></svg>
+          {% elif _pid == 'youtube' %}
+            <svg class="{{ _icon }}" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
+          {% elif _pid == 'twitter' %}
+            <svg class="{{ _icon }}" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+          {% elif _pid == 'bluesky' %}
+            <svg class="{{ _icon }}" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 10.8c-1.087-2.114-4.046-6.053-6.798-7.995C2.566.944 1.561 1.266.902 1.565.139 1.908 0 3.08 0 3.768c0 .69.378 5.65.624 6.479.815 2.736 3.713 3.66 6.383 3.364.136-.02.275-.039.415-.056-.138.022-.276.04-.415.056-3.912.58-4.204 3.058-2.83 4.417 1.465 1.454 4.05-.354 5.823-1.88.379-.328.379-.328.758 0 1.773 1.526 4.358 3.334 5.823 1.88 1.374-1.359 1.082-3.837-2.83-4.417-.139-.016-.277-.034-.415-.056.14.017.279.036.415.056 2.67.296 5.568-.628 6.383-3.364.246-.829.624-5.789.624-6.479 0-.688-.139-1.86-.902-2.203-.659-.299-1.664-.621-4.3 1.24C16.046 4.747 13.087 8.686 12 10.8z"/></svg>
+          {% elif _pid == 'pinterest' %}
+            <svg class="{{ _icon }}" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 0C5.373 0 0 5.372 0 12c0 5.084 3.163 9.426 7.627 11.174-.105-.949-.2-2.405.042-3.441.218-.937 1.407-5.965 1.407-5.965s-.359-.719-.359-1.782c0-1.668.967-2.914 2.171-2.914 1.023 0 1.518.769 1.518 1.69 0 1.029-.655 2.568-.994 3.995-.283 1.194.599 2.169 1.777 2.169 2.133 0 3.772-2.249 3.772-5.495 0-2.873-2.064-4.882-5.012-4.882-3.414 0-5.418 2.561-5.418 5.207 0 1.031.397 2.138.893 2.738a.36.36 0 0 1 .083.345l-.333 1.36c-.053.22-.174.267-.402.161-1.499-.698-2.436-2.889-2.436-4.649 0-3.785 2.75-7.262 7.929-7.262 4.163 0 7.398 2.967 7.398 6.931 0 4.136-2.607 7.464-6.227 7.464-1.216 0-2.359-.631-2.75-1.378l-.748 2.853c-.271 1.043-1.002 2.35-1.492 3.146C9.57 23.812 10.763 24 12 24c6.627 0 12-5.373 12-12S18.627 0 12 0z"/></svg>
+          {% elif _pid == 'medium' %}
+            <svg class="{{ _icon }}" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M13.54 12a6.8 6.8 0 0 1-6.77 6.82A6.8 6.8 0 0 1 0 12a6.8 6.8 0 0 1 6.77-6.82A6.8 6.8 0 0 1 13.54 12zM20.96 12c0 3.54-1.51 6.42-3.38 6.42-1.87 0-3.39-2.88-3.39-6.42s1.52-6.42 3.39-6.42 3.38 2.88 3.38 6.42M24 12c0 3.17-.53 5.75-1.19 5.75-.66 0-1.19-2.58-1.19-5.75s.53-5.75 1.19-5.75S24 8.83 24 12z"/></svg>
+          {% endif %}
+        {% if _u %}</a>{% else %}</span>{% endif %}
+    {% endfor %}
+  </div>
+</div>
+{% endif %}

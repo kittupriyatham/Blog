@@ -1,0 +1,153 @@
+{% if syndication_platforms %}
+{#- Platforms that will not publish a text-only post. Instagram and Pinterest
+    need an image OR video; YouTube needs a video specifically. This mirrors
+    REQUIRES_MEDIA / REQUIRES_VIDEO in src/syndication/socialapi.py. -#}
+{% set _needs = {'instagram': 'image', 'pinterest': 'image', 'youtube': 'video'} %}
+<div class="flex items-center gap-3 flex-wrap">
+  <span class="text-xs font-medium text-slate-500 dark:text-slate-400">Share to:</span>
+  {% for p in syndication_platforms %}
+    <label class="inline-flex items-center gap-1.5 text-xs text-slate-600 dark:text-slate-300 {{ '' if p.configured else 'opacity-50 cursor-not-allowed' }}"
+           title="{{ 'Syndicate to ' + p.label if p.configured else p.label + ' not configured' }}">
+      <input type="checkbox" name="platforms" value="{{ p.id }}" data-needs="{{ _needs.get(p.id, '') }}"
+             data-label="{{ p.label }}" data-limit="{{ p.limit if p.limit else '' }}"
+             class="rounded border-slate-300 dark:border-slate-600" {% if not p.configured %}disabled{% endif %}>
+      {{ p.label }}
+    </label>
+  {% endfor %}
+</div>
+<div class="mt-2 flex items-baseline gap-2 flex-wrap text-xs">
+  <span id="char-count" class="font-medium text-slate-500 dark:text-slate-400"></span>
+  <span id="char-note" class="text-amber-600 dark:text-amber-400"></span>
+</div>
+<div id="syndication-guard" data-text-card="{{ '1' if text_card_available else '0' }}" data-link-reserve="{{ link_reserve or 0 }}" class="hidden mt-2 px-3 py-2 rounded-lg text-xs bg-red-50 dark:bg-red-950/40 text-red-600 dark:text-red-400"></div>
+<script>
+(function () {
+  // YouTube can never be satisfied from text: it needs a real video.
+  var HARD = { youtube: 'a video' };
+  // Instagram/Pinterest need an image, but we can render a text card for them -
+  // so they only require a manual attachment when no card can be produced
+  // (no Pillow, or no public base URL to serve the card from).
+  var CARDED = { instagram: 'an image or video', pinterest: 'an image or video' };
+  var WATCHED = Object.keys(HARD).concat(Object.keys(CARDED));
+  var VIDEO_EXT = ['mp4', 'webm', 'ogg', 'mov', 'avi', 'mkv', 'wmv'];
+  var IMAGE_EXT = ['png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp', 'svg', 'avif'];
+
+  // Editors expose window.collectSyndicationMedia(), returning what is really
+  // attached. Entries are {kind:'image'|'video'} or a filename/URL string, so
+  // saved media can be classified by extension without a File object.
+  window.classifySyndicationItem = function (it) {
+    if (!it) return '';
+    if (typeof it === 'object') {
+      // MIME first: editors pass File objects as {type: f.type}.
+      var t = it.type || '';
+      if (t.indexOf('video/') === 0) return 'video';
+      if (t.indexOf('image/') === 0) return 'image';
+      if (it.kind === 'video' || it.kind === 'image') return it.kind;
+      it = it.path || it.name || '';
+    }
+    var ext = String(it).split('?')[0].split('.').pop().toLowerCase();
+    if (VIDEO_EXT.indexOf(ext) >= 0) return 'video';
+    if (IMAGE_EXT.indexOf(ext) >= 0) return 'image';
+    return '';
+  };
+
+  function attachments() {
+    // Deliberately does NOT count attach-article / attach-post / code blocks:
+    // those never become media the publisher can send to a platform.
+    var items = (typeof window.collectSyndicationMedia === 'function')
+      ? (window.collectSyndicationMedia() || []) : [];
+    var have = { image: false, video: false };
+    items.forEach(function (it) {
+      var k = window.classifySyndicationItem(it);
+      if (k === 'image') have.image = true;
+      if (k === 'video') have.video = true;
+    });
+    return have;
+  }
+
+  function textCardsUsable() {
+    var box = document.getElementById('syndication-guard');
+    return !!(box && box.getAttribute('data-text-card') === '1');
+  }
+
+  window.syndicationBlockReason = function () {
+    var have = attachments();
+    var canCard = textCardsUsable();
+    var missing = [];
+    Array.prototype.slice.call(document.querySelectorAll('input[name="platforms"]:checked'))
+      .forEach(function (cb) {
+        var pid = cb.value;
+        if (WATCHED.indexOf(pid) < 0) return;
+        if (HARD[pid]) {
+          if (!have.video) missing.push(pid + ' (' + HARD[pid] + ')');
+          return;
+        }
+        if (CARDED[pid]) {
+          if (canCard) return; // a text card will be rendered for this platform
+          if (!have.image && !have.video) missing.push(pid + ' (' + CARDED[pid] + ')');
+        }
+      });
+    if (!missing.length) return null;
+    return 'needs a real file attachment - ' + missing.join(', ') +
+           '. Code blocks, attached articles and attached posts do not count.';
+  };
+
+  function refresh() {
+    var box = document.getElementById('syndication-guard');
+    if (!box) return;
+    var why = window.syndicationBlockReason();
+    if (why) {
+      box.textContent = 'This post cannot publish to ' + why;
+      box.classList.remove('hidden');
+    } else {
+      box.textContent = '';
+      box.classList.add('hidden');
+    }
+  }
+
+  // Live character count. The canonical link is appended at publish time, so its
+  // length is reserved here - a count that ignored it would report the post as
+  // fitting when the composed text actually overflows.
+  function editorText() {
+    var ta = document.getElementById('post-content');
+    return ta ? ta.value : '';
+  }
+
+  function refreshCount() {
+    var el = document.getElementById('char-count');
+    var note = document.getElementById('char-note');
+    var guard = document.getElementById('syndication-guard');
+    if (!el) return;
+    var typed = editorText().length;
+    var reserve = parseInt((guard && guard.getAttribute('data-link-reserve')) || '0', 10) || 0;
+    var total = typed + reserve;
+    el.textContent = typed + ' character' + (typed === 1 ? '' : 's') +
+      (reserve ? ' (+' + reserve + ' reserved for the link)' : '');
+
+    var over = [];
+    Array.prototype.slice.call(document.querySelectorAll('input[name="platforms"]:checked'))
+      .forEach(function (cb) {
+        var lim = parseInt(cb.getAttribute('data-limit') || '', 10);
+        if (lim > 0 && total > lim) {
+          over.push((cb.getAttribute('data-label') || cb.value) + ' at ' + lim);
+        }
+      });
+    note.textContent = over.length
+      ? '\u00b7 over ' + over.join(', ') + ' - the post will be rewritten to fit there'
+      : '';
+  }
+
+  window.refreshSyndicationGuard = refresh;
+  document.addEventListener('input', refreshCount);
+  document.addEventListener('change', function (e) {
+    var t = e.target;
+    if (t && (t.name === 'platforms' || t.type === 'file')) refresh();
+    refreshCount();
+  });
+  document.addEventListener('DOMContentLoaded', function () {
+    refresh();
+    refreshCount();
+  });
+})();
+</script>
+{% endif %}

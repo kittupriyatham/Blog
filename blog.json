@@ -1,58 +1,132 @@
 {
   "published": [
     {
-      "post_id": "LzaG10sr",
+      "post_id": "welcome_post",
       "type": "post",
-      "title": null,
+      "timestamp": "2026-09-18 10:00:00",
+      "likes": 5,
+      "views": 42,
       "blocks": [
         {
           "type": "text",
-          "content": "Hi there every one, this is a test post."
-        },
-        {
-          "type": "media",
-          "media_paths": [
-            "io7zgi_1000087711.jpg"
-          ]
+          "content": "Welcome to my blog! 👋\n\nThis is where I'll be sharing everything — posts, long-form articles, photos, videos and the occasional song. It's still early days, but I wanted to get the first post out the door.\n\nStick around!"
         }
-      ],
-      "timestamp": "2026-03-28 07:12:16",
-      "views": 7
+      ]
     },
     {
-      "post_id": "article_mnc2ds8gg8tal",
+      "post_id": "flask_article_share",
+      "type": "post",
+      "timestamp": "2026-09-19 14:30:00",
+      "likes": 9,
+      "views": 77,
+      "blocks": [
+        {
+          "type": "text",
+          "content": "Just published a new article on getting started with Flask. It walks through the whole setup from scratch — routing, templates and a tiny bit of MongoDB.\n\n/article/article_flask_intro\n\nLet me know what you think!"
+        }
+      ]
+    },
+    {
+      "post_id": "weekend_media_work",
+      "type": "post",
+      "timestamp": "2026-09-20 20:05:00",
+      "likes": 3,
+      "views": 31,
+      "blocks": [
+        {
+          "type": "text",
+          "content": "Spent the weekend wiring up media uploads. Images, video and audio all render inline now, and articles support mixed text and media blocks.\n\nFeels good to finally publish the way I actually write."
+        }
+      ]
+    },
+    {
+      "post_id": "article_flask_intro",
       "type": "article",
-      "title": "asdf",
-      "cover_image": "cover_y0rt85_boarding-pass.jpg",
+      "title": "Getting Started with Flask",
+      "timestamp": "2026-09-18 09:00:00",
+      "likes": 14,
+      "views": 120,
+      "cover_image": null,
       "blocks": [
         {
           "type": "text",
-          "content": ";lkj"
+          "content": "Flask is a tiny Python web framework that gets out of your way. You can have a working site in a single file, which makes it perfect for a project like this blog."
         },
         {
-          "type": "media",
-          "media_paths": [
-            "eo0zfo_190050110.jpg"
-          ]
+          "type": "text",
+          "content": "The core ideas are simple: routes map URLs to Python functions, and Jinja templates render the HTML. Everything else — the database, file uploads, authentication — you layer on as you need it."
+        },
+        {
+          "type": "text",
+          "content": "In this post I'll cover the setup I'm using: Flask for the app, MongoDB for storage, and a media folder for uploads. Each piece is small enough to understand on its own."
         }
-      ],
-      "timestamp": "2026-03-29 18:00:22",
-      "status": "published",
-      "views": 9
+      ]
     },
     {
-      "post_id": "pNAf1iyb",
-      "type": "post",
-      "title": null,
+      "post_id": "article_why_blog",
+      "type": "article",
+      "title": "Why I'm Building This Blog",
+      "timestamp": "2026-09-19 08:00:00",
+      "likes": 11,
+      "views": 88,
+      "cover_image": null,
       "blocks": [
         {
           "type": "text",
-          "content": "http://127.0.0.1:5000/article/article_mnc2ds8gg8tal\r\n\r\nPlease view my article in the above link."
+          "content": "I've wanted a place of my own for a while — somewhere that isn't an algorithm deciding who sees what I write."
+        },
+        {
+          "type": "text",
+          "content": "The goal is simple: write, publish, and let it live here. Short posts for quick thoughts, articles for the longer pieces."
+        },
+        {
+          "type": "text",
+          "content": "Eventually I'd like to cross-post to other platforms automatically, but for now this is the home base."
         }
-      ],
-      "timestamp": "2026-03-29 18:20:08",
-      "views": 3
+      ]
+    },
+    {
+      "post_id": "article_deploy_azure",
+      "type": "article",
+      "title": "Deploying a Flask App to Azure",
+      "timestamp": "2026-09-20 11:00:00",
+      "likes": 7,
+      "views": 54,
+      "cover_image": null,
+      "blocks": [
+        {
+          "type": "text",
+          "content": "Deploying a Flask app to Azure Web Apps is mostly about the right configuration. A GitHub Actions workflow builds the app, installs the requirements, and pushes it up."
+        },
+        {
+          "type": "text",
+          "content": "The two things that trip people up: keeping secrets in application settings rather than the repo, and picking a startup command that points at your WSGI app."
+        },
+        {
+          "type": "text",
+          "content": "Once it's wired up, every push to main ships automatically."
+        }
+      ]
     }
   ],
-  "drafts": []
+  "drafts": [
+    {
+      "post_id": "draft_article_media",
+      "type": "article",
+      "title": "Working with Video and Audio in Flask",
+      "timestamp": "2026-09-21 16:00:00",
+      "likes": 0,
+      "views": 0,
+      "blocks": [
+        {
+          "type": "text",
+          "content": "Notes for an article on handling media uploads: storing files, serving them back, and rendering the right element based on file type."
+        },
+        {
+          "type": "text",
+          "content": "TODO: add a section on thumbnails and poster images."
+        }
+      ]
+    }
+  ]
 }

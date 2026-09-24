@@ -1,10 +1,25 @@
-__pycache__/
+__pycache__/**
 *.pyc
 *.pyo
-.env
-.venv
-venv/
+*.env
+.venv/**    
+venv/**
+.vscode/**
+.commandcode/**
+media/**
+.playwright-cli/**
 migrate.py
 migrate_to_azure.py
 verify_cloud_data.py
 envazure.py
+Modelfile
+prompt.txt
+*.png
+cmdc
+
+# Playwright storage-state files hold live session cookies (Medium, Meta, ...).
+# Never commit these - they are credentials.
+*_auth.json
+auth.json
+storage_state*.json
+query

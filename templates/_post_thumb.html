@@ -1,0 +1,26 @@
+{% set first_media_block = post.blocks | selectattr("type", "equalto", "media") | first %}
+
+{% if post.embedded_article and post.embedded_article.cover_image %}
+   <img src="{{ post.embedded_article.cover_image }}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" alt="Article Preview">
+{% elif first_media_block and first_media_block.media_paths %}
+   {% set thumb = first_media_block.media_paths[0] %}
+   {% if thumb.rsplit('.', 1)[-1].lower() in ['mp4', 'webm', 'ogg', 'mov', 'avi', 'mkv', 'wmv'] %}
+      <div class="w-full h-full flex items-center justify-center bg-slate-900 text-white">
+         <svg class="w-12 h-12" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+      </div>
+   {% elif thumb.rsplit('.', 1)[-1].lower() in ['mp3', 'wav', 'm4a', 'aac', 'flac', 'oga'] %}
+      <div class="w-full h-full flex items-center justify-center bg-gradient-to-br from-brand-500 to-blue-600 text-white">
+         <svg class="w-12 h-12" fill="currentColor" viewBox="0 0 24 24"><path d="M12 3v10.55A4 4 0 1014 17V7h4V3h-6z"/></svg>
+      </div>
+   {% elif thumb.rsplit('.', 1)[-1].lower() in ['png', 'jpg', 'jpeg', 'gif', 'webp'] %}
+      <img src="{{ thumb }}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" alt="Post media">
+   {% else %}
+      <div class="w-full h-full flex items-center justify-center bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-600">
+         <svg class="w-12 h-12" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path></svg>
+      </div>
+   {% endif %}
+{% else %}
+   <div class="w-full h-full flex items-center justify-center bg-gradient-to-br from-brand-50 to-blue-50 dark:from-slate-800 dark:to-slate-800">
+      <svg class="w-12 h-12 text-brand-200 dark:text-slate-600" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16m-7 6h7"></path></svg>
+   </div>
+{% endif %}

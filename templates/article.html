@@ -3,52 +3,133 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Blog - {{ post.type }}</title>
+  <title>{% if post.title %}{{ post.title }} – My Blog{% else %}Blog - {{ post.type }}{% endif %}</title>
+  {% set _desc = (post.blocks | selectattr('type', 'equalto', 'text') | map(attribute='content') | join(' ')) | striptags | truncate(200, true) %}
+  <link rel="canonical" href="{{ canonical('article_detail', article_id=post.post_id) }}">
+  <meta name="description" content="{{ _desc }}">
+  <meta property="og:type" content="article">
+  <meta property="og:site_name" content="My Blog">
+  <meta property="og:title" content="{{ post.title or 'My Blog article' }}">
+  <meta property="og:description" content="{{ _desc }}">
+  <meta property="og:url" content="{{ canonical('article_detail', article_id=post.post_id) }}">
+  {% if post.cover_image %}<meta property="og:image" content="{{ post.cover_image if post.cover_image.startswith('http') else site_url + post.cover_image }}">{% endif %}
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="{{ post.title or 'My Blog article' }}">
+  <meta name="twitter:description" content="{{ _desc }}">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>✍️</text></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
   <script src="https://cdn.tailwindcss.com"></script>
+  <script src="{{ url_for('static', filename='js/theme.js') }}"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: { sans: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'] },
+          colors: { brand: { 50:'#eef2ff',100:'#e0e7ff',400:'#818cf8',500:'#6366f1',600:'#4f46e5',700:'#4338ca' } },
+          boxShadow: { soft: '0 2px 10px -2px rgb(0 0 0 / 0.06), 0 12px 32px -12px rgb(0 0 0 / 0.12)' },
+        },
+      },
+    };
+  </script>
+  <style>body { font-family: 'Inter', ui-sans-serif, system-ui, sans-serif; }</style>
 </head>
-<body class="bg-gray-100 min-h-screen">
-  <nav class="bg-white border-b border-gray-200 sticky top-0 z-10 shadow-sm">
-    <div class="max-w-2xl mx-auto px-4 py-3 flex items-center justify-between">
+<body class="bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-200 min-h-screen antialiased">
+  <nav class="bg-white/80 dark:bg-slate-900/80 backdrop-blur-lg border-b border-slate-200/70 dark:border-slate-800/70 sticky top-0 z-10">
+    <div class="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
       <div class="flex items-center gap-3">
-        <a href="{{ url_for('index') }}" aria-label="Go back" class="text-gray-500 hover:text-gray-800 transition">
+        <a href="{{ url_for('articles_dashboard') }}" aria-label="Go back" class="text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white transition">
           <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" /></svg>
         </a>
         <div class="flex items-center gap-2">
-          <div class="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center"><span class="text-white font-bold text-sm">B</span></div>
-          <span class="font-semibold text-gray-800 text-lg">My Blog</span>
+          <div class="w-8 h-8 rounded-xl bg-gradient-to-br from-brand-500 to-blue-600 flex items-center justify-center shadow-soft"><span class="text-white font-extrabold text-sm">B</span></div>
+          <span class="font-bold text-slate-900 dark:text-white text-lg tracking-tight">My Blog</span>
         </div>
       </div>
+      <button type="button" data-theme-toggle onclick="toggleTheme()" class="p-2 rounded-full text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition" title="Toggle theme" aria-label="Toggle theme">
+        <svg data-icon-moon class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>
+        <svg data-icon-sun class="w-5 h-5 hidden" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path stroke-linecap="round" d="M12 2v2m0 16v2M4.93 4.93l1.41 1.41m11.32 11.32l1.41 1.41M2 12h2m16 0h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
+      </button>
     </div>
   </nav>
 
-  <main class="max-w-2xl mx-auto px-4 py-6">
-    <article class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+  <main class="max-w-5xl mx-auto px-4 py-6">
+    <article class="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden">
+      {% if post.cover_image %}
+        <div class="w-full aspect-[21/9] bg-slate-100 dark:bg-slate-800 overflow-hidden">
+          <img src="{{ post.cover_image }}" alt="Cover" class="w-full h-full object-cover" />
+        </div>
+      {% endif %}
+
       <div class="flex items-center gap-3 px-5 pt-5 pb-3">
-        <div class="w-12 h-12 rounded-full bg-blue-600 flex items-center justify-center flex-shrink-0"><span class="text-white font-bold text-lg">K</span></div>
+        <div class="w-12 h-12 rounded-full bg-gradient-to-br from-brand-500 to-blue-600 flex items-center justify-center flex-shrink-0 shadow-sm"><span class="text-white font-bold text-lg">K</span></div>
         <div>
-          <p class="font-semibold text-gray-800 leading-tight">Kittu Priyatham</p>
-          <span class="text-xs text-gray-400">{{ post.timestamp }} &bull; {{ post.views }} views</span>
+          <p class="font-semibold text-slate-800 dark:text-slate-100 leading-tight">Kittu Priyatham</p>
+          <span class="text-xs text-slate-400 dark:text-slate-500">{{ post.timestamp }} &bull; {{ post.views }} views</span>
         </div>
       </div>
 
-      <div class="px-5 py-3">
+      <div class="px-5 py-3 pb-8">
         {% if post.type == 'article' and post.title %}
-           <h1 class="text-3xl font-bold text-gray-900 mb-6">{{ post.title }}</h1>
+           <h1 class="text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight mb-6">{{ post.title }}</h1>
         {% endif %}
-        
+
         <div class="space-y-4">
         {% for block in post.blocks %}
           {% if block.type == 'text' %}
-            <p class="text-gray-700 leading-relaxed whitespace-pre-wrap text-[15px]">{{ block.content }}</p>
+            <div class="text-slate-700 dark:text-slate-300 leading-relaxed whitespace-pre-wrap text-[16px]">{{ block.content | rich_text }}</div>
           {% elif block.type == 'media' %}
             {% for media in block.media_paths %}
-              {# FIX: Direct Azure URL usage #}
               {% set media_url = media %}
-              <img src="{{ media_url }}" alt="Article media" class="w-full rounded-xl object-contain bg-gray-50 border border-gray-100 max-h-[600px] my-4" />
+              {% set ext = media.rsplit('.', 1)[-1].lower() %}
+              {% if ext in ['mp4', 'webm', 'ogg', 'mov', 'avi', 'mkv', 'wmv'] %}
+                <video controls class="w-full rounded-xl bg-black max-h-[600px] border border-slate-200 dark:border-slate-700 my-4"><source src="{{ media_url }}" /></video>
+              {% elif ext in ['mp3', 'wav', 'm4a', 'aac', 'flac', 'oga'] %}
+                <audio controls src="{{ media_url }}" class="w-full my-4"></audio>
+              {% elif ext == 'pdf' %}
+                <div class="w-full border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden relative my-4" style="min-height: 850px; aspect-ratio: 1 / 1.5;">
+                  <embed src="{{ media_url }}#toolbar=0&view=Fit" type="application/pdf" class="absolute inset-0 w-full h-full" />
+                </div>
+              {% elif ext == 'txt' %}
+                <iframe src="{{ media_url }}" class="w-full h-[500px] rounded-xl border border-slate-200 dark:border-slate-700 bg-white my-4" title="Text preview"></iframe>
+              {% elif ext in ['doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx'] %}
+                <a href="{{ media_url }}" target="_blank" class="border border-slate-200 dark:border-slate-700 rounded-xl p-4 bg-slate-50 dark:bg-slate-800 hover:bg-white dark:hover:bg-slate-800/60 transition flex items-center gap-3 my-4">
+                  <svg class="w-6 h-6 text-brand-600 dark:text-brand-400 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path></svg>
+                  <span class="text-brand-600 dark:text-brand-400 font-medium text-sm">Open {{ ext | upper }} document</span>
+                </a>
+              {% else %}
+                <img src="{{ media_url }}" alt="Article media" class="w-full rounded-xl object-contain bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 max-h-[600px] my-4" />
+              {% endif %}
             {% endfor %}
           {% endif %}
         {% endfor %}
         </div>
+        {% if post.tags %}
+          <div class="mt-6 flex flex-wrap gap-2">
+            {% for t in post.tags %}
+              <a href="{{ url_for('tag_view', tag=t) }}" class="text-xs px-2.5 py-1 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-brand-50 dark:hover:bg-slate-700 transition">#{{ t }}</a>
+            {% endfor %}
+          </div>
+        {% endif %}
+        {% include '_social_icons.html' %}
+        {% if session.get('logged_in') %}
+          <div class="mt-4 pt-4 border-t border-slate-100 dark:border-slate-800">
+            <button type="button"
+                    onclick="navigator.clipboard.writeText('{{ canonical('article_detail', article_id=post.post_id) }}').catch(function(){}); window.open('https://medium.com/p/import', '_blank', 'noopener');"
+                    class="text-xs px-3 py-1.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-brand-50 dark:hover:bg-slate-700 transition">
+              Publish to Medium — opens Medium's importer, blog URL copied to clipboard
+            </button>
+          </div>
+        {% endif %}
+        {% if session.get('logged_in') %}
+          {% for s in post.syndications if s.status != 'posted' %}
+            <div class="mt-2 px-3 py-2 rounded-lg text-xs bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300">
+              Syndication → {{ s.label or s.platform }}: <strong>{{ s.status }}</strong>{% if s.error %} — {{ s.error }}{% endif %}
+            </div>
+          {% endfor %}
+        {% endif %}
       </div>
     </article>
   </main>

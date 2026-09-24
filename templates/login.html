@@ -3,47 +3,82 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Login – Blog Admin</title>
+  <title>Sign in – My Blog</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>✍️</text></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
   <script src="https://cdn.tailwindcss.com"></script>
+  <script src="{{ url_for('static', filename='js/theme.js') }}"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: { sans: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'] },
+          colors: { brand: { 50:'#eef2ff',100:'#e0e7ff',400:'#818cf8',500:'#6366f1',600:'#4f46e5',700:'#4338ca' } },
+          boxShadow: { soft: '0 2px 10px -2px rgb(0 0 0 / 0.06), 0 12px 32px -12px rgb(0 0 0 / 0.12)' },
+        },
+      },
+    };
+  </script>
+  <style>body { font-family: 'Inter', ui-sans-serif, system-ui, sans-serif; }</style>
 </head>
-<body class="bg-gray-100 min-h-screen flex items-center justify-center">
-  <div class="bg-white rounded-xl shadow-md w-full max-w-sm p-8">
-    <!-- Logo / Brand -->
-    <div class="flex flex-col items-center mb-6">
-      <div class="w-14 h-14 rounded-full bg-blue-600 flex items-center justify-center mb-3">
-        <span class="text-white text-2xl font-bold">B</span>
+<body class="bg-slate-50 dark:bg-slate-950 min-h-screen flex items-center justify-center px-4 antialiased">
+
+  <button type="button" data-theme-toggle onclick="toggleTheme()" class="fixed top-4 right-4 z-50 p-2 rounded-full text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition" title="Toggle theme" aria-label="Toggle theme">
+    <svg data-icon-moon class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>
+    <svg data-icon-sun class="w-5 h-5 hidden" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path stroke-linecap="round" d="M12 2v2m0 16v2M4.93 4.93l1.41 1.41m11.32 11.32l1.41 1.41M2 12h2m16 0h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
+  </button>
+
+  <div class="absolute inset-0 overflow-hidden pointer-events-none">
+    <div class="absolute -top-24 -left-24 w-72 h-72 bg-brand-200 dark:bg-brand-900/40 rounded-full blur-3xl opacity-40"></div>
+    <div class="absolute -bottom-24 -right-24 w-72 h-72 bg-blue-200 dark:bg-blue-900/30 rounded-full blur-3xl opacity-40"></div>
+  </div>
+
+  <div class="relative w-full max-w-sm">
+    <div class="bg-white dark:bg-slate-900 rounded-3xl shadow-soft border border-slate-100 dark:border-slate-800 p-8">
+      <div class="flex flex-col items-center mb-7">
+        <div class="w-14 h-14 rounded-2xl bg-gradient-to-br from-brand-500 to-blue-600 flex items-center justify-center mb-4 shadow-soft">
+          <span class="text-white text-2xl font-extrabold">B</span>
+        </div>
+        <h1 class="text-xl font-bold text-slate-900 dark:text-white tracking-tight">Sign in to Blog Admin</h1>
+        <p class="text-sm text-slate-400 dark:text-slate-500 mt-1">Manage your posts and articles</p>
       </div>
-      <h1 class="text-xl font-semibold text-gray-800">Sign in to Blog Admin</h1>
+
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% for category, message in messages %}
+          <div class="mb-5 px-4 py-2.5 rounded-xl text-sm font-medium
+            {% if category == 'error' %}bg-red-50 text-red-600 dark:bg-red-950/50 dark:text-red-400{% else %}bg-emerald-50 text-emerald-600 dark:bg-emerald-950/50 dark:text-emerald-400{% endif %}">
+            {{ message }}
+          </div>
+        {% endfor %}
+      {% endwith %}
+
+      <form method="POST" action="{{ url_for('login') }}" class="space-y-4">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div>
+          <label class="block text-sm font-medium text-slate-600 dark:text-slate-300 mb-1.5" for="username">Username</label>
+          <input id="username" name="username" type="text" required autocomplete="username"
+            class="w-full border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500 transition" />
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-slate-600 dark:text-slate-300 mb-1.5" for="password">Password</label>
+          <input id="password" name="password" type="password" required autocomplete="current-password"
+            class="w-full border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500 transition" />
+        </div>
+        <button type="submit"
+          class="w-full bg-gradient-to-r from-brand-600 to-blue-600 hover:from-brand-700 hover:to-blue-700 text-white font-semibold py-2.5 rounded-xl text-sm transition shadow-soft hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-brand-500/40 focus:ring-offset-2">
+          Sign In
+        </button>
+      </form>
     </div>
 
-    {% with messages = get_flashed_messages(with_categories=true) %}
-      {% for category, message in messages %}
-        <div class="mb-4 px-4 py-2 rounded text-sm
-          {% if category == 'error' %}bg-red-100 text-red-700{% else %}bg-green-100 text-green-700{% endif %}">
-          {{ message }}
-        </div>
-      {% endfor %}
-    {% endwith %}
-
-    <form method="POST" action="{{ url_for('login') }}" class="space-y-4">
-      <div>
-        <label class="block text-sm font-medium text-gray-700 mb-1" for="username">Username</label>
-        <input id="username" name="username" type="text" required autocomplete="username"
-          class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
-      </div>
-      <div>
-        <label class="block text-sm font-medium text-gray-700 mb-1" for="password">Password</label>
-        <input id="password" name="password" type="password" required autocomplete="current-password"
-          class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
-      </div>
-      <button type="submit"
-        class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 rounded-lg text-sm transition">
-        Sign In
-      </button>
-    </form>
-
-    <p class="mt-4 text-center text-xs text-gray-400">
-      <a href="{{ url_for('index') }}" class="hover:underline text-blue-500">← Back to feed</a>
+    <p class="mt-6 text-center text-sm text-slate-400 dark:text-slate-500">
+      <a href="{{ url_for('index') }}" class="hover:text-brand-600 dark:hover:text-brand-400 transition inline-flex items-center gap-1">
+        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" /></svg>
+        Back to feed
+      </a>
     </p>
   </div>
 </body>
