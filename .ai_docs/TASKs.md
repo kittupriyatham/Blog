@@ -13,7 +13,7 @@ Ordered ledger. Companions: `GOAL.md` (why), `CONTEXT.md` (where we are).
 | 2 | **Permanent domain** | Point `kittupriyatham.com` → `blog.kittupriyatham.com` (the current domain is good for ≥1 year). |
 | 3 | **Clear a stale `SITE_URL` env var** if the public URL reverts | `Remove-Item Env:SITE_URL`, or `load_dotenv(override=True)`. |
 
-### Task 2 — YouTube (design)
+### Task 1 — YouTube (design)
 The SocialAPI adapter sends only `text`/`targets`/`media`; `_platform_data()` is `None` outside Instagram, so
 YouTube gets no metadata. Add: (a) `media_for(doc)` attaches `static/video/video_<post_id>.<ext>`
 (`_media_kind` already classifies it as `video`; `REQUIRES_VIDEO={"youtube"}` already gates it);
