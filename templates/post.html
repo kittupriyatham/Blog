@@ -20,6 +20,25 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="{{ url_for('static', filename='js/theme.js') }}"></script>
+  <script>window.ANALYTICS = {page:'post', post_id: {{ post.post_id | tojson }}, type:'post'};</script>
+  <script src="{{ url_for('static', filename='js/analytics.js') }}"></script>
+  <!-- Meta Pixel Code -->
+<script>
+!function(f,b,e,v,n,t,s)
+{if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+n.queue=[];t=b.createElement(e);t.async=!0;
+t.src=v;s=b.getElementsByTagName(e)[0];
+s.parentNode.insertBefore(t,s)}(window, document,'script',
+'https://connect.facebook.net/en_US/fbevents.js');
+fbq('init', '2092273818327635');
+fbq('track', 'PageView');
+</script>
+<noscript><img height="1" width="1" style="display:none"
+src="https://www.facebook.com/tr?id=2092273818327635&ev=PageView&noscript=1"
+/></noscript>
+<!-- End Meta Pixel Code -->
   <script>
     tailwind.config = {
       darkMode: 'class',
@@ -126,15 +145,14 @@
 
     {% include '_social_icons.html' %}
 
-    {% if session.get('logged_in') %}
-      <div class="mt-3">
-        <button type="button"
-                onclick="navigator.clipboard.writeText('{{ canonical('post_detail', post_id=post.post_id) }}').catch(function(){}); window.open('https://medium.com/p/import', '_blank', 'noopener');"
-                class="text-xs px-3 py-1.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-brand-50 dark:hover:bg-slate-700 transition">
-          Publish to Medium — opens Medium's importer, blog URL copied to clipboard
-        </button>
-      </div>
-    {% endif %}
+    <div class="mt-3">
+      <button type="button"
+              data-share="medium_import"
+              onclick="navigator.clipboard.writeText('{{ canonical('post_detail', post_id=post.post_id) }}').catch(function(){}); window.open('https://medium.com/p/import', '_blank', 'noopener');"
+              class="text-xs px-3 py-1.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-brand-50 dark:hover:bg-slate-700 transition">
+        Publish to Medium — opens Medium's importer, blog URL copied to clipboard
+      </button>
+    </div>
     {% if session.get('logged_in') %}
       {% set _failed = post.syndications | selectattr('status', 'equalto', 'failed') | list %}
       {% for s in post.syndications if s.status != 'posted' %}

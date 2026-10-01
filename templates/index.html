@@ -11,6 +11,25 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="{{ url_for('static', filename='js/theme.js') }}"></script>
+  <script>window.ANALYTICS = {page:'feed', post_id: null, type: null};</script>
+  <script src="{{ url_for('static', filename='js/analytics.js') }}"></script>
+  <!-- Meta Pixel Code -->
+<script>
+!function(f,b,e,v,n,t,s)
+{if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+n.queue=[];t=b.createElement(e);t.async=!0;
+t.src=v;s=b.getElementsByTagName(e)[0];
+s.parentNode.insertBefore(t,s)}(window, document,'script',
+'https://connect.facebook.net/en_US/fbevents.js');
+fbq('init', '2092273818327635');
+fbq('track', 'PageView');
+</script>
+<noscript><img height="1" width="1" style="display:none"
+src="https://www.facebook.com/tr?id=2092273818327635&ev=PageView&noscript=1"
+/></noscript>
+<!-- End Meta Pixel Code -->
   <script>
     tailwind.config = {
       darkMode: 'class',
@@ -46,6 +65,7 @@
         <a href="{{ url_for('posts_dashboard') }}" class="px-3 py-1.5 rounded-full text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition">Posts</a>
         <a href="{{ url_for('articles_dashboard') }}" class="px-3 py-1.5 rounded-full text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition">Articles</a>
         {% if session.get('logged_in') %}
+          <a href="{{ url_for('analytics_dashboard') }}" class="px-3 py-1.5 rounded-full text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition">Analytics</a>
           <form method="POST" action="{{ url_for('logout') }}" class="ml-2 pl-3 border-l border-slate-200 dark:border-slate-700">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <button type="submit" class="text-red-500 hover:text-red-600 font-medium transition">Sign Out</button>
@@ -278,7 +298,7 @@
           </svg>
           Comment
         </a>
-        <button onclick="copyLink('{{ post_url }}')" class="flex-1 flex items-center justify-center gap-1.5 py-2 text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg text-sm font-medium transition">
+        <button onclick="copyLink('{{ post_url }}')" data-share="copy_link" data-post-id="{{ post.post_id }}" class="flex-1 flex items-center justify-center gap-1.5 py-2 text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg text-sm font-medium transition">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round"
               d="M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8" />

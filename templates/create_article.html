@@ -10,6 +10,23 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="{{ url_for('static', filename='js/theme.js') }}"></script>
+  <!-- Meta Pixel Code -->
+<script>
+!function(f,b,e,v,n,t,s)
+{if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+n.queue=[];t=b.createElement(e);t.async=!0;
+t.src=v;s=b.getElementsByTagName(e)[0];
+s.parentNode.insertBefore(t,s)}(window, document,'script',
+'https://connect.facebook.net/en_US/fbevents.js');
+fbq('init', '2092273818327635');
+fbq('track', 'PageView');
+</script>
+<noscript><img height="1" width="1" style="display:none"
+src="https://www.facebook.com/tr?id=2092273818327635&ev=PageView&noscript=1"
+/></noscript>
+<!-- End Meta Pixel Code -->
   <script>
     tailwind.config = {
       darkMode: 'class',
@@ -252,9 +269,9 @@
 
         let mediaHtml = '';
         const ext = urlPath.split('.').pop().toLowerCase();
-        // urlPath is the value saved in the DB, which is already a full URL
-        // ("/media/filename" for local storage, or a full https:// URL for
-        // Azure) — use it as-is instead of re-prefixing.
+        // urlPath is the value saved in the DB, which is already a browser-usable
+        // URL ("/media/filename" for local storage, or a full https:// URL for a
+        // cloud provider) — use it as-is instead of re-prefixing.
         const baseSrc = urlPath;
 
         if (['mp4', 'webm', 'ogg', 'mov', 'avi', 'mkv', 'wmv'].includes(ext)) {
@@ -520,7 +537,7 @@
         } catch(e) {
           console.error("Save error: ", e);
           // If fetch drops mid-flight in a development environment, it is almost entirely due to
-          // Flask's hot-reloader restarting the server because blog.json was successfully written to.
+          // Flask's hot-reloader restarting the server right after the save.
           // We will gracefully handle this by assuming the save succeeded!
           if (actionType === 'publish') {
              window.location.href = "{{ url_for('articles_dashboard') }}";

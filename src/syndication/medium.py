@@ -54,7 +54,7 @@ _IMG_EXT = {"png", "jpg", "jpeg", "gif", "webp", "bmp", "avif", "svg"}
 
 def _cfg() -> dict:
     repo = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-    state = os.environ.get("MEDIUM_STATE_FILE", "medium_auth.json").strip() or "medium_auth.json"
+    state = os.environ.get("MEDIUM_STATE_FILE", "data/medium_auth.json").strip() or "data/medium_auth.json"
     if not os.path.isabs(state):
         state = os.path.join(repo, state)
     return {

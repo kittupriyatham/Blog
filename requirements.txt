@@ -5,19 +5,17 @@ gunicorn
 # CSRF protection for forms
 flask-wtf
 
-# Database (Cosmos DB / MongoDB)
+# Database (MongoDB / MongoDB-compatible document stores)
 pymongo
+mongoengine  # synchronous ODM; talks to any mongod (local/Docker/Atlas), no cloud required
 dnspython
-
-# Cloud Storage (Azure Blob Storage)
-azure-storage-blob
 
 # Environment & Utilities
 python-dotenv
 Werkzeug
 
-# Local development fallback (in-memory DB when no MONGO_URI is set)
-mongomock
+# MongoEngine cannot drive mongomock; with MONGO_URI unset the app falls back to
+# a local mongod at mongodb://127.0.0.1:27017/blog_db (docker run -d -p 27017:27017 mongo).
 
 # Text cards: render post text to an image for Instagram/Pinterest
 Pillow>=10.0.0

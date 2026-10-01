@@ -23,3 +23,13 @@ cmdc
 auth.json
 storage_state*.json
 query
+# Runtime analytics event log (file store; created on demand).
+analytics.jsonl
+*.bak
+
+# Local runtime data (file analytics log + Playwright/Medium session state).
+data/
+
+# README images are versioned (moved out of the repo root into static/images/readme/).
+!static/images/readme/
+!static/images/readme/*

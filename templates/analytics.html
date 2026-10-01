@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Analytics — My Blog</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📊</text></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="{{ url_for('static', filename='js/theme.js') }}"></script>
+  <!-- Meta Pixel Code -->
+<script>
+!function(f,b,e,v,n,t,s)
+{if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+n.queue=[];t=b.createElement(e);t.async=!0;
+t.src=v;s=b.getElementsByTagName(e)[0];
+s.parentNode.insertBefore(t,s)}(window, document,'script',
+'https://connect.facebook.net/en_US/fbevents.js');
+fbq('init', '2092273818327635');
+fbq('track', 'PageView');
+</script>
+<noscript><img height="1" width="1" style="display:none"
+src="https://www.facebook.com/tr?id=2092273818327635&ev=PageView&noscript=1"
+/></noscript>
+<!-- End Meta Pixel Code -->
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: { sans: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'] },
+          colors: { brand: { 50:'#eef2ff',100:'#e0e7ff',400:'#818cf8',500:'#6366f1',600:'#4f46e5',700:'#4338ca' } },
+          boxShadow: { soft: '0 2px 10px -2px rgb(0 0 0 / 0.06), 0 12px 32px -12px rgb(0 0 0 / 0.12)' },
+        },
+      },
+    };
+  </script>
+  <style>body { font-family: 'Inter', ui-sans-serif, system-ui, sans-serif; }</style>
+</head>
+<body class="bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-200 min-h-screen antialiased">
+
+  <nav class="bg-white/80 dark:bg-slate-900/80 backdrop-blur-lg border-b border-slate-200/70 dark:border-slate-800/70 sticky top-0 z-10">
+    <div class="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <a href="{{ url_for('index') }}" aria-label="Back to blog" class="text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white transition">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" /></svg>
+        </a>
+        <div class="w-8 h-8 rounded-xl bg-gradient-to-br from-brand-500 to-blue-600 flex items-center justify-center shadow-soft"><span class="text-white font-extrabold text-sm">B</span></div>
+        <span class="font-bold text-slate-900 dark:text-white text-lg tracking-tight">My Blog</span>
+      </div>
+      <div class="flex items-center gap-3">
+        <span class="text-sm font-medium text-slate-600 dark:text-slate-300">Analytics</span>
+        <button type="button" data-theme-toggle onclick="toggleTheme()" class="p-2 rounded-full text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition" title="Toggle theme" aria-label="Toggle theme">
+          <svg data-icon-moon class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>
+          <svg data-icon-sun class="w-5 h-5 hidden" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path stroke-linecap="round" d="M12 2v2m0 16v2M4.93 4.93l1.41 1.41m11.32 11.32l1.41 1.41M2 12h2m16 0h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
+        </button>
+        {% if session.get('logged_in') %}
+        <form method="POST" action="{{ url_for('logout') }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button type="submit" class="text-sm text-red-500 hover:text-red-600 font-medium transition">Sign Out</button></form>
+        {% endif %}
+      </div>
+    </div>
+  </nav>
+
+  <main class="max-w-5xl mx-auto px-4 py-6">
+    <script>window.ANALYTICS_DATA = {{ data|tojson }};</script>
+
+    <div class="flex items-center justify-between mb-6">
+      <h1 class="text-2xl font-bold text-slate-900 dark:text-white">Web analytics</h1>
+      <span class="text-xs text-slate-400 dark:text-slate-500">Store: <code class="bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded">{{ analytics_store }}</code></span>
+    </div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <div class="mb-4 space-y-2">
+          {% for cat, msg in messages %}
+          <div class="text-xs px-3 py-2 rounded border
+            {% if cat == 'error' %}border-red-200 bg-red-50 text-red-800 dark:border-red-800 dark:bg-red-900/20 dark:text-red-300
+            {% else %}border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-800 dark:bg-emerald-900/20 dark:text-emerald-300{% endif %}">{{ msg }}</div>
+          {% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
+
+    {# --- summary cards --- #}
+    {% set t = data.totals %}
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
+      <div class="bg-white dark:bg-slate-900 rounded-xl shadow p-4 text-center border border-slate-200 dark:border-slate-800"><div class="text-2xl font-bold">{{ t.view }}</div><div class="text-xs text-slate-400 dark:text-slate-500">Views</div></div>
+      <div class="bg-white dark:bg-slate-900 rounded-xl shadow p-4 text-center border border-slate-200 dark:border-slate-800"><div class="text-2xl font-bold">{{ t.likes }}</div><div class="text-xs text-slate-400 dark:text-slate-500">Likes</div></div>
+      <div class="bg-white dark:bg-slate-900 rounded-xl shadow p-4 text-center border border-slate-200 dark:border-slate-800"><div class="text-2xl font-bold">{{ t.comments }}</div><div class="text-xs text-slate-400 dark:text-slate-500">Comments</div></div>
+      <div class="bg-white dark:bg-slate-900 rounded-xl shadow p-4 text-center border border-slate-200 dark:border-slate-800"><div class="text-2xl font-bold">{{ t.shares }}</div><div class="text-xs text-slate-400 dark:text-slate-500">Shares</div></div>
+      <div class="bg-white dark:bg-slate-900 rounded-xl shadow p-4 text-center border border-slate-200 dark:border-slate-800"><div class="text-2xl font-bold">{{ t.click_out }}</div><div class="text-xs text-slate-400 dark:text-slate-500">Click-outs</div></div>
+      <div class="bg-white dark:bg-slate-900 rounded-xl shadow p-4 text-center border border-slate-200 dark:border-slate-800"><div class="text-2xl font-bold">{{ t.reach_in }}</div><div class="text-xs text-slate-400 dark:text-slate-500">Reach-in</div></div>
+      <div class="bg-white dark:bg-slate-900 rounded-xl shadow p-4 text-center border border-slate-200 dark:border-slate-800"><div class="text-xl font-bold">{{ '%d:%02d'|format(t.time_spent_ms // 60000, (t.time_spent_ms % 60000) // 1000) }}</div><div class="text-xs text-slate-400 dark:text-slate-500">Time on posts</div></div>
+      <div class="bg-white dark:bg-slate-900 rounded-xl shadow p-4 text-center border border-slate-200 dark:border-slate-800"><div class="text-xl font-bold">{{ '%d:%02d'|format(t.time_on_blog_ms // 60000, (t.time_on_blog_ms % 60000) // 1000) }}</div><div class="text-xs text-slate-400 dark:text-slate-500">Time on blog</div></div>
+    </div>
+
+    {# --- charts --- #}
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
+      <div class="bg-white dark:bg-slate-900 rounded-xl shadow p-4 border border-slate-200 dark:border-slate-800">
+        <h2 class="font-semibold text-slate-800 dark:text-slate-200 mb-2 text-sm">Views by day</h2>
+        <div id="chart-views" class="h-36"></div>
+      </div>
+      <div class="bg-white dark:bg-slate-900 rounded-xl shadow p-4 border border-slate-200 dark:border-slate-800">
+        <h2 class="font-semibold text-slate-800 dark:text-slate-200 mb-2 text-sm">Time on blog by day</h2>
+        <div id="chart-time" class="h-36"></div>
+      </div>
+    </div>
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
+      <div class="bg-white dark:bg-slate-900 rounded-xl shadow p-4 border border-slate-200 dark:border-slate-800">
+        <h2 class="font-semibold text-slate-800 dark:text-slate-200 mb-2 text-sm">Shares by method</h2>
+        <div id="bar-method"></div>
+      </div>
+      <div class="bg-white dark:bg-slate-900 rounded-xl shadow p-4 border border-slate-200 dark:border-slate-800">
+        <h2 class="font-semibold text-slate-800 dark:text-slate-200 mb-2 text-sm">Click-outs by platform</h2>
+        <div id="bar-platform"></div>
+      </div>
+    </div>
+
+    {# --- geo bars (only populated when ANALYTICS_GEO=1) --- #}
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
+      <div class="bg-white dark:bg-slate-900 rounded-xl shadow p-4 border border-slate-200 dark:border-slate-800">
+        <h2 class="font-semibold text-slate-800 dark:text-slate-200 mb-2 text-sm">Top countries</h2>
+        <div id="bar-country"></div>
+      </div>
+      <div class="bg-white dark:bg-slate-900 rounded-xl shadow p-4 border border-slate-200 dark:border-slate-800">
+        <h2 class="font-semibold text-slate-800 dark:text-slate-200 mb-2 text-sm">Top states / regions</h2>
+        <div id="bar-region"></div>
+      </div>
+    </div>
+
+    {# --- per-post table --- #}
+    <div class="bg-white dark:bg-slate-900 rounded-xl shadow border border-slate-200 dark:border-slate-800 p-4 mb-6">
+      <h2 class="font-semibold text-slate-800 dark:text-slate-200 mb-3">Posts (most views first)</h2>
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm text-left">
+          <thead><tr class="text-xs text-slate-400 dark:text-slate-500 uppercase">
+            <th class="pb-2">Post</th><th class="pb-2">Type</th><th class="pb-2">Views</th><th class="pb-2">Likes</th>
+            <th class="pb-2">Comments</th><th class="pb-2">Shares</th><th class="pb-2">Clicks</th><th class="pb-2">Opened</th><th class="pb-2">Time on post</th>
+          </tr></thead>
+          <tbody>
+            {% for p in data.per_post %}
+            <tr class="border-t border-slate-100 dark:border-slate-800">
+              <td class="py-1.5 pr-2 font-mono text-xs text-slate-600 dark:text-slate-400">{{ p.post_id }}</td>
+              <td class="py-1.5 pr-2">{{ p.type | capitalize if p.type else '' }}</td>
+              <td class="py-1.5 pr-2">{{ p.view }}</td>
+              <td class="py-1.5 pr-2">{{ p.likes }}</td>
+              <td class="py-1.5 pr-2">{{ p.comments }}</td>
+              <td class="py-1.5 pr-2">{{ p.shares }}</td>
+              <td class="py-1.5 pr-2">{{ p.click_out }}</td>
+              <td class="py-1.5 pr-2">{{ p.post_opened }}</td>
+              <td class="py-1.5 pr-2">{{ '%d:%02d'|format(p.time_spent_ms // 60000, (p.time_spent_ms % 60000) // 1000) }}</td>
+            </tr>
+            {% else %}
+            <tr><td colspan="9" class="py-6 text-center text-sm text-slate-400">No analytics events yet.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    {# --- recent events --- #}
+    <div class="bg-white dark:bg-slate-900 rounded-xl shadow border border-slate-200 dark:border-slate-800 p-4 mb-6">
+      <h2 class="font-semibold text-slate-800 dark:text-slate-200 mb-3">Recent events (latest 50)</h2>
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm text-left">
+          <thead><tr class="text-xs text-slate-400 dark:text-slate-500 uppercase">
+            <th class="pb-2">Time</th><th class="pb-2">Event</th><th class="pb-2">Post</th><th class="pb-2">Detail</th><th class="pb-2">Session</th>
+          </tr></thead>
+          <tbody>
+            {% for e in data.recent %}
+            <tr class="border-t border-slate-100 dark:border-slate-800">
+              <td class="py-1 pr-2 text-xs text-slate-500 dark:text-slate-400">{{ e.ts[:19] | replace('T', ' ') if e.ts else '' }}</td>
+              <td class="py-1 pr-2 font-mono text-xs">{{ e.event }}</td>
+              <td class="py-1 pr-2 font-mono text-xs text-slate-600 dark:text-slate-400 truncate max-w-[100px]" title="{{ e.post_id }}">{{ e.post_id if e.post_id else '—' }}</td>
+              <td class="py-1 pr-2 text-xs text-slate-500 dark:text-slate-400">
+                {% if e.event == 'shares' %}{{ e.method }}
+                {% elif e.event == 'click_out' %}{{ e.platform }}
+                {% elif e.event in ('time_spent', 'time_on_blog') %}{{ '%d:%02d'|format(e.milliseconds // 60000, (e.milliseconds % 60000) // 1000) }}
+                {% elif e.event == 'view' %}view {{ e.page }}
+                {% else %}—{% endif %}
+              </td>
+              <td class="py-1 pr-2 text-xs text-slate-500 dark:text-slate-400 font-mono">{{ (e.session_id)[:8] if e.session_id else '—' }}</td>
+            </tr>
+            {% else %}
+            <tr><td colspan="5" class="py-6 text-center text-sm text-slate-400">No events yet.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+  <script src="{{ url_for('static', filename='js/analytics-dashboard.js') }}"></script>
+</body>
+</html>

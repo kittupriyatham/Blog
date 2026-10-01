@@ -1,0 +1,63 @@
+"""Configuration package: env vars + constants (see settings.py).
+
+This `__init__.py` is the package's public API: callers import
+`from src.config import SECRET_KEY, MEDIA_FOLDER, ...` and never reach into
+settings.py directly.
+"""
+from .settings import (
+    ADMIN_PASSWORD,
+    ADMIN_USERNAME,
+    ALLOWED_EXTENSIONS,
+    ANALYTICS_GEO,
+    ANALYTICS_IP_SALT,
+    ANALYTICS_LOG_FILE,
+    ANALYTICS_STORE,
+    DB_BACKEND,
+    DEFAULT_BACKEND,
+    MEDIA_ADAPTER,
+    MEDIA_AUTH_HEADER,
+    MEDIA_BACKEND,
+    MEDIA_FOLDER,
+    MEDIA_FORM_FIELD,
+    MEDIA_PUBLIC_BASE,
+    MEDIA_TOKEN,
+    MEDIA_UPLOAD_METHOD,
+    MEDIA_UPLOAD_URL,
+    MONGO_URI,
+    ROOT,
+    SECRET_KEY,
+    SITE_URL,
+    SITE_URL_ALT,
+    TELEGRAM_BOT_TOKEN,
+    TELEGRAM_CHAT_ID,
+    UPLOAD_TOKEN,
+)
+
+__all__ = [
+    "ROOT",
+    "SECRET_KEY",
+    "ADMIN_USERNAME",
+    "ADMIN_PASSWORD",
+    "ALLOWED_EXTENSIONS",
+    "MEDIA_FOLDER",
+    "UPLOAD_TOKEN",
+    "DEFAULT_BACKEND",
+    "MEDIA_BACKEND",
+    "DB_BACKEND",
+    "MEDIA_ADAPTER",
+    "MEDIA_UPLOAD_URL",
+    "MEDIA_UPLOAD_METHOD",
+    "MEDIA_AUTH_HEADER",
+    "MEDIA_TOKEN",
+    "MEDIA_FORM_FIELD",
+    "MEDIA_PUBLIC_BASE",
+    "MONGO_URI",
+    "SITE_URL",
+    "SITE_URL_ALT",
+    "ANALYTICS_STORE",
+    "ANALYTICS_IP_SALT",
+    "ANALYTICS_LOG_FILE",
+    "ANALYTICS_GEO",
+    "TELEGRAM_BOT_TOKEN",
+    "TELEGRAM_CHAT_ID",
+]

@@ -8,74 +8,65 @@ social post carries the blog post's URL → the blog post shows back-links to wh
 This is POSSE: *Publish Own Site, Syndicate Elsewhere.* The blog is home; social is distribution; links
 point both ways.
 
-**Status: the north star is now met for five platforms** — LinkedIn, Facebook, Instagram, Bluesky and
-Pinterest all publish from the blog, each returning a permalink that the post page renders as
-"Also published on". The remaining work is reach, robustness and polish, not the core loop.
-
-## Vision
-
-A personal content hub — posts, long-form articles, photos, videos and songs — that behaves like a
-publishing platform, not a website with a "share" button. You write in one place, and it appears
-everywhere it should, with the canonical link intact and a way to see where each piece landed.
+**Status:** the north star is met for five platforms — LinkedIn, Facebook, Instagram, Bluesky and
+Pinterest — each returning a permalink that the page renders as "Also published on…". Remaining work is
+reach, robustness and **portability**.
 
 ---
 
 ## Principles
 
-- **Blog is canonical.** Every social post links back to the blog, and the blog records where it went.
+- **Blog is canonical.** Every social post links back; the blog records where it went.
 - **Bidirectional references.** "Also published on…" is part of the post, not an afterthought.
-- **Publishing never blocks.** Slow/flaky platform APIs run on a background worker; the UI stays usable.
-- **Idempotent by design.** Re-publishing never double-posts — already-sent platforms are skipped, and
-  retry only ever touches failures.
-- **Pluggable adapters.** Each network is one module behind a common interface; swapping providers is a
-  one-file change.
-- **Fit the platform, don't mutilate the post.** Where a platform is smaller than the post, rewrite it
-  down rather than cutting it off mid-thought.
-- **Adapt to the platform's constraints, not the author's patience.** Downscale, re-encode and pad
-  media automatically; the author should never have to prepare a file per network.
-- **Free-path testability.** Anything that can be checked without spending a credit should be.
+- **Publishing never blocks.** Slow/flaky platform APIs run on a background worker.
+- **Idempotent by design.** Re-publishing never double-posts; retry only touches failures.
+- **Pluggable adapters.** Each network is one module behind a common interface.
+- **Fit the platform, don't mutilate the post.** Rewrite-down rather than cut off.
+- **Adapt to the platform's constraints.** Downscale/re-encode/pad media automatically.
+- **Free-path testability.** Anything checkable without spending a credit should be.
+- **Storage is provider-agnostic.** Nothing is hard-coded to one cloud (see below).
 
 ---
 
-## Milestones
+## Achieved
 
-### Achieved
-
-1. **Syndication core** — canonical `SITE_URL`, `syndications` on each doc, per-post platform selection,
+1. **Syndication core** — canonical `SITE_URL`, `syndications` per doc, per-post platform selection,
    background worker, back-reference rendering, idempotent re-publish.
-2. **LinkedIn** — own adapter, publishing text **and images**, with delete and read-only token check.
-3. **SocialAPI platforms** — Facebook, Instagram, Bluesky, Pinterest live; YouTube available.
-4. **Media pipeline** — automatic JPEG conversion, downscaling and byte budgeting for every upload;
-   aspect-ratio fitting for Instagram; text cards for text-only posts.
-5. **Per-platform text** — each platform composed at its own limit, with LLM rewrite-to-fit instead of
-   truncation.
-6. **Permanent public URL** — named Cloudflare tunnel on `blog.potluri-krishna-priyatham.tech`, so
-   syndicated links don't rot.
-7. **Free dry-run validation** — validate any post against every platform's rules without spending a
-   post credit.
+2. **LinkedIn** (text **and** images) + **SocialAPI platforms** (Facebook, Instagram, Bluesky, Pinterest).
+3. **Media pipeline** — JPEG conversion, downscaling, byte budgeting, Instagram aspect fit, text cards.
+4. **Per-platform text** + **LLM rewrite-to-fit** instead of truncation.
+5. **Permanent public URL** — Cloudflare **named** tunnel as an auto-start **boot service**.
+6. **Free dry-run validation** (`POST /v1/posts/validate`).
+7. **ORM data layer** — MongoEngine Documents in `src/db/`; `syndications` is a declared field, so it can
+   never be silently dropped.
+8. **Thin `app.py`** — routes + Flask init + run only; all logic lives in `src/` packages.
+9. **Root hygiene** — notes in `.ai_docs/`, README images in `static/images/readme/`, runtime in `data/`.
 
-### Next
+---
 
-8. **Medium** — one-click import link (the public URL now makes this viable), optionally a Playwright
-   worker later.
-9. **LinkedIn refresh-token flow** — replace the short-lived portal token so it stops expiring.
-10. **X** — a config change plus a platform id via SocialAPI, not a new integration.
-11. **Threads** — its connector has been broken (`platform.threads.auth`); revisit now the other
-    Meta platforms work.
-12. **Tunnel durability** — auto-start the named tunnel so a reboot doesn't take the blog offline.
+## Next
 
-### Later / ideas
+10. **Cloud data-layer abstraction** — one **common provider interface**; **media and database each
+    independently selectable** across providers, with a **shared default/fallback** provider. (Spec in
+    `TASKs.md`; design first.)
+11. **Medium** import link; **LinkedIn** refresh-token flow; **X**; **Threads**; **YouTube** video path.
+12. Per-platform text overrides; scheduling; metrics read-back.
 
-13. **Video path for YouTube** — the one platform the current pipeline can never satisfy, since it
-    needs real video rather than an image.
-14. **Per-platform text overrides** — let the author hand-write the short version instead of always
-    accepting the generated one.
-15. **Scheduling** — SocialAPI supports `scheduled_at`; the blog currently always publishes immediately.
-16. **Metrics read-back** — likes/comments per platform could flow back onto the post page.
+---
 
-## Non-goals (for now)
+## Later / ideas
 
-- Multi-user accounts (single admin from env).
-- Moderated comments (the comment system is deliberately open and unmoderated).
-- Publishing to **personal** Facebook profiles — not possible via any permitted API; a Page is the
-  supported route and the connector is Page-only by design.
+- Video path for YouTube; per-platform hand-written overrides; `scheduled_at`; metrics read-back.
+- **Multi-user accounts** — today it is a single admin taken from the environment.
+- **Moderated comments** — comments are deliberately open and unmoderated for now.
+- **Publishing to personal Facebook profiles** — not possible via any permitted API; a Page is the route.
+
+---
+
+## Architecture direction
+
+- **Data access** goes through MongoEngine Documents in `src/db/`.
+- **Storage abstraction (next).** A provider layer so the app is not fixed to one cloud: a single
+  **common provider class** defines the contract; concrete providers (local filesystem, Azure Blob, S3,
+  GCS, MongoDB, …) register into it and are selected by config. **Media and database are chosen
+  separately**, and each can fall back to a **shared default** provider.
