@@ -41,16 +41,18 @@ reach, robustness and **portability**.
    never be silently dropped.
 8. **Thin `app.py`** — routes + Flask init + run only; all logic lives in `src/` packages.
 9. **Root hygiene** — notes in `.ai_docs/`, README images in `static/images/readme/`, runtime in `data/`.
+10. **Provider-agnostic storage** — a `local`/`cloud` selector per data type (media, database); cloud media
+    via a plug-in HTTP upload adapter (no SDK), cloud database = any MongoDB-compatible URL.
+11. **LinkedIn refresh-token flow** — the token now renews itself instead of expiring.
 
 ---
 
 ## Next
 
-10. **Cloud data-layer abstraction** — one **common provider interface**; **media and database each
-    independently selectable** across providers, with a **shared default/fallback** provider. (Spec in
-    `TASKs.md`; design first.)
-11. **Medium** import link; **LinkedIn** refresh-token flow; **X**; **Threads**; **YouTube** video path.
-12. Per-platform text overrides; scheduling; metrics read-back.
+12. **YouTube video path** — attach `static/video/video_<post_id>` and send the video's metadata
+    (title/description/tags/category/privacy) to YouTube. (Design in `TASKs.md`.)
+13. **Permanent domain** — `kittupriyatham.com` → `blog.kittupriyatham.com`.
+14. Per-platform text overrides; scheduling; metrics read-back; expand the Attach menu.
 
 ---
 

@@ -12,6 +12,7 @@ import urllib.request
 from datetime import datetime, timezone
 
 from .base import CheckResult, Syndicator, SyndicationError
+from . import linkedin_token
 
 
 def _recent_versions(count: int = 12) -> list[str]:
@@ -37,7 +38,7 @@ class LinkedinSyndicator(Syndicator):
     _working_version: str | None = None  # remembered once discovered (per process)
 
     def is_configured(self) -> bool:
-        return bool(os.environ.get("LINKEDIN_ACCESS_TOKEN") and os.environ.get("LINKEDIN_AUTHOR_URN"))
+        return bool(linkedin_token.has_credentials() and os.environ.get("LINKEDIN_AUTHOR_URN"))
 
     def text_limit(self) -> int | None:
         """LinkedIn member posts accept 3000 characters (the commentary cap)."""
@@ -113,7 +114,7 @@ class LinkedinSyndicator(Syndicator):
 
         LinkedIn member posts carry a single image, so only the first is used.
         """
-        token = os.environ.get("LINKEDIN_ACCESS_TOKEN")
+        token = linkedin_token.access_token()
         author = os.environ.get("LINKEDIN_AUTHOR_URN")
         if not token or not author:
             raise SyndicationError("LinkedIn is not configured (missing token or author URN).")
@@ -161,7 +162,7 @@ class LinkedinSyndicator(Syndicator):
 
     def delete(self, url: str) -> None:
         """Delete a post this app created (author-only). Raises on failure."""
-        token = os.environ.get("LINKEDIN_ACCESS_TOKEN")
+        token = linkedin_token.access_token()
         if not token:
             raise SyndicationError("LinkedIn is not configured (missing token).")
         urn = url.rstrip("/").split("/")[-1]
@@ -194,10 +195,10 @@ class LinkedinSyndicator(Syndicator):
 
     def check(self) -> CheckResult:
         """Read-only token validation - does NOT post anything."""
-        token = os.environ.get("LINKEDIN_ACCESS_TOKEN")
+        token = linkedin_token.access_token()
         author = os.environ.get("LINKEDIN_AUTHOR_URN")
         if not token:
-            return CheckResult(ok=False, detail="No LINKEDIN_ACCESS_TOKEN set.")
+            return CheckResult(ok=False, detail="No LinkedIn token available (set LINKEDIN_ACCESS_TOKEN, or run the OAuth setup).")
         if not author:
             return CheckResult(ok=False, detail="No LINKEDIN_AUTHOR_URN set.")
         req = urllib.request.Request("https://api.linkedin.com/v2/userinfo",
