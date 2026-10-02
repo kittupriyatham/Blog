@@ -1,7 +1,7 @@
 # TASKs
 
 Ordered ledger. Companions: `GOAL.md` (why), `CONTEXT.md` (where we are).
-**Sessions 6–8 are committed and pushed.**
+**Sessions 6–8 are committed and pushed. Session 9's work is UNCOMMITTED** (the user pushes it).
 
 ---
 
@@ -9,20 +9,39 @@ Ordered ledger. Companions: `GOAL.md` (why), `CONTEXT.md` (where we are).
 
 | # | Task | Why / done looks like |
 |---|------|------------------------|
-| 1 | **YouTube video path** | Attach `static/video/video_<post_id>` via `media_for()`; emit a `youtube` metadata block from `_platform_data()` (title/description/tags from the doc; category/privacy from env; madeForKids=false). Confirm the field names against SocialAPI's YouTube API. |
-| 2 | **Permanent domain** | Point `kittupriyatham.com` → `blog.kittupriyatham.com` (the current domain is good for ≥1 year). |
-| 3 | **Clear a stale `SITE_URL` env var** if the public URL reverts | `Remove-Item Env:SITE_URL`, or `load_dotenv(override=True)`. |
+| 1 | **LinkedIn engagement via SocialAPI — blocked on their reply** | LinkedIn posting is settled: it publishes **natively** as the personal profile (official API, so no SocialAPI post credit is spent). Its *metrics* need SocialAPI's `linkedin_page` beta + `connection_type: "personal"` (that variant grants `r_member_postAnalytics` / `r_member_profileAnalytics`, which LinkedIn denies our own app). Emailed `support@social-api.ai`; reply expected **Mon** (approval not required to act on it). **On reply:** set `SOCIALAPI_METRIC_PLATFORMS = {"linkedin"}` in `socialapi_metrics.py` (one line, already staged) and verify the live read. **Open question:** can SocialAPI read a member post by URN (`urn:li:share:<id>`) that it did not publish? |
+| 2 | **Threads / X for long-form** | X stays short-post-only until `TWITTER_SUBSCRIPTION=1`; Threads is not pursued at all. |
 
-### Task 1 — YouTube (design)
-The SocialAPI adapter sends only `text`/`targets`/`media`; `_platform_data()` is `None` outside Instagram, so
-YouTube gets no metadata. Add: (a) `media_for(doc)` attaches `static/video/video_<post_id>.<ext>`
-(`_media_kind` already classifies it as `video`; `REQUIRES_VIDEO={"youtube"}` already gates it);
-(b) `_platform_data(media, doc)` emits `{"youtube": {title, description, tags, category, privacy,
-madeForKids:false}}` — title from `doc.title`/first line (≤100), description = text + canonical URL, tags =
-`doc.tags`, category/privacy from env (`YOUTUBE_CATEGORY`/`YOUTUBE_PRIVACY`); `publish_detailed` already
-receives `doc` (currently ignored). Optional: per-post overrides. Confirm the exact SocialAPI field names.
+**Dropped:** permanent domain — the user will update `SITE_URL` manually when the domain is ready.
+**Deferred (do later):** scheduling (`scheduled_at`), multi-user accounts, moderated comments.
 
 ---
+
+## Done (session 9)
+
+- **LinkedIn posts as the personal profile** — `LINKEDIN_ORGANIZATION_URN` blanked; `author_urn()` resolves to
+  the member URN; the token store was re-minted with `w_member_social` **and** the org scopes (one consent
+  covers both targets, so switching later needs no new re-auth). Verified: post author, `is_configured`, 30 routes.
+- **LinkedIn *member* metrics are API-gated (proven live)** — `memberCreatorPostAnalytics` and `socialActions`
+  both return `403 partnerApi…`; they need `r_member_postAnalytics` = the Community Management API, which must
+  be an app's *only* product. `linkedin_metrics.py`'s no-org branch is now a neutral hint, not a "set the org URN" nag.
+- **SocialAPI LinkedIn metrics path staged (inactive)** — `socialapi_metrics.SOCIALAPI_METRIC_PLATFORMS`
+  (empty today) routes a *natively-published* platform's metrics to SocialAPI; `socialapi.py` records that
+  LinkedIn is deliberately not a SocialAPI publishing platform (no post credit, no id collision).
+  Rationale: **post through the official API, read metrics from SocialAPI** (SocialAPI posting costs credits).
+- **YouTube video path built** — a dedicated `/youtube/<post_id>` page (+ an inline composer panel) collects the
+  full upload metadata into `doc["youtube"]`; the SocialAPI adapter sends it as the `platform_data.youtube`
+  block; a video-only post is valid. *(Not yet exercised end-to-end with a real upload — that spends a credit.)*
+- **Per-platform text — rigorously tested, no bugs** — 100+ checks: per-platform limits, link suffix,
+  exact-fit vs over-limit boundaries, per-platform independence, empty body, article-vs-post, CRLF, non-public
+  URL, `_preview_shortened` mirroring `compose_text`, and `/api/syndication/preview` (auth, shape,
+  preview↔publish consistency, Medium correctly dropped for posts). What exists is the **auto per-platform
+  compose + preview**; a *hand-written* per-platform override is still the "Later" item.
+- **Stale `SITE_URL` fixed in code** — `src/config/settings.py` now prefers the `.env` value for `SITE_URL` and
+  writes it back into `os.environ`, so a stale OS-level variable can no longer shadow the configured public URL
+  (it used to win, because `load_dotenv()` never overrides a real env var). Verified with a simulated stale var.
+- **Analytics + editor (built earlier this session)** — per-post × per-platform social metrics + first-party
+  blog analytics; the editor gained per-platform preview, 14 rich blocks, attachment remove/reorder.
 
 ## Done (session 8)
 

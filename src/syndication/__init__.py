@@ -5,9 +5,17 @@ package and registering it below.
 
 Public surface used by app.py:
     available_platforms(), label_for(), get(),
-    publish_to(), compose_text(), is_public_url()
+    publish_to(), compose_text(), is_public_url(),
+    media_for(), video_for(), attached_video_for(), video_path_for()
+
+`socialapi_metrics` is the read-only sibling of the SocialAPI adapter: it pulls
+each platform's own likes/comments/views for the analytics dashboard. It is
+exposed as an attribute (and importable as `src.syndication.socialapi_metrics`)
+rather than re-exported function-by-function, so its many helpers cannot collide
+with the names above.
 """
 import ipaddress
+import os
 import re
 from urllib.parse import urlparse
 
@@ -18,7 +26,15 @@ from .socialapi import (SocialApiSyndicator, build_platforms, TEXT_CARD_PLATFORM
                         twitter_has_subscription)
 from . import textcard
 from . import rewrite
+# Read-only SocialAPI metrics for the analytics dashboard. Imported after
+# `.socialapi` because it subclasses that adapter to reuse its auth.
+from . import socialapi_metrics
 
+# LinkedIn: published natively as your personal profile via the official API (see
+# linkedin.py) - so no SocialAPI post credit is spent. Its engagement metrics are
+# read from SocialAPI instead; turn that on in
+# socialapi_metrics.SOCIALAPI_METRIC_PLATFORMS once the `linkedin_page` beta is
+# enabled on the SocialAPI account.
 register(LinkedinSyndicator())
 # Medium: no write API, and its importer cannot reach localhost, so this drives
 # the editor in a browser instead (see medium.py).
@@ -76,6 +92,75 @@ def publish_detailed_to(platform_id, text, url, media=None, doc=None):
     return s.publish_detailed(text, url, media, doc)
 
 
+# --- Dedicated YouTube video -------------------------------------------------
+# The dedicated /youtube/<post_id> page uploads one video per post and stores it
+# beside the other static assets as `<repo>/static/video/video_<post_id>.<ext>`.
+# Keeping it out of `media/` lets the naming be deterministic (one video per
+# post, replaceable in place) while still being a plain local file the SocialAPI
+# adapter can upload and publish by `media_id`.
+#
+# Repo root: <root>/src/syndication/__init__.py -> <root>.
+_REPO_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+VIDEO_DIR = os.path.join(_REPO_ROOT, "static", "video")
+
+# Same set `_media_kind` classifies as video in socialapi.py.
+VIDEO_EXTENSIONS = {"mp4", "mov", "webm", "mkv", "avi", "wmv"}
+
+
+def video_path_for(post_id):
+    """Absolute path of the dedicated YouTube video for a post, or None.
+
+    Only a real video extension counts, so a stray `video_<id>.txt` cannot
+    satisfy the YouTube video requirement.
+    """
+    if not post_id:
+        return None
+    # A directory scan rather than a glob: post ids are opaque strings, and a
+    # glob would treat any `[`/`*`/`?` in one as a pattern.
+    prefix = "video_%s." % post_id
+    try:
+        names = os.listdir(VIDEO_DIR)
+    except FileNotFoundError:
+        return None
+    for name in sorted(names):
+        if not name.startswith(prefix):
+            continue
+        ext = name.rsplit(".", 1)[-1].lower() if "." in name else ""
+        if ext in VIDEO_EXTENSIONS:
+            return os.path.join(VIDEO_DIR, name)
+    return None
+
+
+def attached_video_for(doc):
+    """A video attached to the doc's own media blocks (a URL/path), or None.
+
+    This is the YouTube source when no dedicated
+    `<repo>/static/video/video_<post_id>.<ext>` has been uploaded through the
+    /youtube page: a video attached in the composer or the editor is then what
+    YouTube publishes, instead of making the author upload the same file twice.
+    """
+    for block in (doc or {}).get("blocks", []) or []:
+        if block.get("type") != "media":
+            continue
+        for path in block.get("media_paths", []) or []:
+            ext = path.rsplit(".", 1)[-1].lower() if "." in path else ""
+            if ext in VIDEO_EXTENSIONS:
+                return path
+    return None
+
+
+def video_for(doc):
+    """The video YouTube should publish for `doc`, or None.
+
+    Prefers the dedicated upload from /youtube
+    (`<repo>/static/video/video_<post_id>.<ext>`); falls back to a video already
+    attached to the doc's media blocks, so an attached video counts as the
+    YouTube source rather than forcing a re-upload on the YouTube page.
+    """
+    post_id = doc.get("post_id") if hasattr(doc, "get") else None
+    return video_path_for(post_id) or attached_video_for(doc)
+
+
 def media_for(doc):
     """Media attached to a doc - local or remote.
 
@@ -87,17 +172,30 @@ def media_for(doc):
 
     The cover image counts too: it is a real image upload, and Instagram and
     Pinterest require at least one image to publish at all.
+
+    The dedicated YouTube video (uploaded through /youtube/<post_id>) is placed
+    FIRST when it exists: YouTube's schema takes exactly one video and the
+    adapter keeps the first video in the list, so the video explicitly chosen on
+    the YouTube page wins over a video that merely sits in a media block. When
+    there is no dedicated video, a video attached in the composer/editor is
+    already in the list (from the media blocks below) and is used as-is.
     """
+    doc = doc or {}
     out = []
-    for block in (doc or {}).get("blocks", []):
+    dedicated = video_path_for(doc.get("post_id"))
+    if dedicated:
+        out.append(dedicated)
+    for block in doc.get("blocks", []):
         if block.get("type") != "media":
             continue
         for path in block.get("media_paths", []) or []:
             if path and path not in out:
                 out.append(path)
-    cover = (doc or {}).get("cover_image")
+    cover = doc.get("cover_image")
     if isinstance(cover, str) and cover and cover not in out:
         out.append(cover)
+    # No dedicated video: an attached video (from the media blocks above) is the
+    # YouTube source and is already in `out`, so nothing extra is added here.
     return out
 
 

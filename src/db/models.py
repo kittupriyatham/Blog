@@ -29,6 +29,17 @@ class Post(Document):
     tags = ListField(StringField())
     blocks = ListField(DictField())
     syndications = ListField(DictField())
+    # YouTube upload metadata collected by the /youtube/<post_id> page
+    # (title/description/visibility/tags/category_id/... and the stored video
+    # filename). Declared so the schema is explicit; strict=False means a
+    # raw-collection $set also works without tripping MongoEngine.
+    youtube = DictField()
+    # Each social platform's own engagement counts, cached by the analytics
+    # refresh route (POST /admin/analytics/refresh) so the dashboard never has to
+    # call SocialAPI to render. Keyed by platform slug -> {likes, comments,
+    # views, permalink, synced_at, ...}, with a reserved `_meta` key holding the
+    # fetch timestamp and any errors. See src/syndication/socialapi_metrics.py.
+    platform_metrics = DictField()
 
     meta = {
         "collection": "posts",

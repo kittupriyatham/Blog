@@ -23,9 +23,18 @@ One-time setup - do this once, after which the token refreshes itself:
            python -m src.syndication.linkedin_token <code>
 
 Then `LinkedinSyndicator` reads the stored token through `access_token()`, which
-refreshes it automatically as it nears expiry. The app must request the
-`w_member_social` scope (alongside `openid profile`) or LinkedIn will not hand
-back a refresh token.
+refreshes it automatically as it nears expiry.
+
+Scopes - this token is now requested for the Organization (Company Page):
+`openid profile email w_organization_social r_organization_social` (see SCOPE).
+The app must have the "Advertising API (Development Tier)" product so LinkedIn
+grants those org scopes, and it must still be a scope-bearing request so LinkedIn
+returns a refresh token. **A token minted against the old member-only scope
+(`w_member_social`) predates the org scopes and cannot publish as the Page or read
+Page analytics** - re-run the authorization step (delete/replace the stored token,
+then repeat steps 1-2 above) so the authorize URL carries the org scopes and the
+store holds a token that does. LinkedIn only returns the scopes actually granted
+in the consent screen.
 
 Env:
   LINKEDIN_CLIENT_ID       OAuth app client id (needed for any OAuth action)
@@ -42,10 +51,22 @@ import urllib.error
 import urllib.parse
 import urllib.request
 
+from dotenv import load_dotenv
+
+# The setup CLI runs as `python -m src.syndication.linkedin_token` without the app,
+# so load ".env" here (no override, so a real environment variable still wins).
+load_dotenv()
+
 TOKEN_URL = "https://www.linkedin.com/oauth/v2/accessToken"
 AUTHORIZE_URL = "https://www.linkedin.com/oauth/v2/authorization"
-# `w_member_social` is what makes LinkedIn return a refresh token.
-SCOPE = "openid profile w_member_social"
+# Organization (Company Page) publishing + analytics. `w_organization_social`
+# posts as the Page (the author URN is the organization URN - see
+# linkedin.py:author_urn) and `r_organization_social` reads
+# organizationalEntityShareStatistics (linkedin_metrics.py). Both need the app's
+# "Advertising API / Development Tier" product and an org-scoped OAuth consent:
+# re-run the authorize step after changing this so LinkedIn hands back a token
+# carrying the new scopes (a token granted the old scopes will 403 on the Page).
+SCOPE = "openid profile email w_member_social w_organization_social r_organization_social rw_organization_admin"
 
 # Refresh a little *before* the token actually dies, so a call never races against
 # expiry (the app may sit idle for hours between page renders and publishes).

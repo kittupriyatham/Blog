@@ -9,7 +9,7 @@
   <input id="attach-file-input" type="file" name="media" multiple class="hidden"
          accept="image/png,image/jpeg,image/gif,image/webp,video/mp4,video/webm,video/ogg,audio/mpeg,audio/wav,audio/mp4,audio/aac,audio/flac,audio/ogg,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation,text/plain">
 
-  <div id="attach-menu" class="hidden absolute bottom-full mb-2 left-0 w-44 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl py-1 z-30">
+  <div id="attach-menu" class="hidden absolute bottom-full mb-2 left-0 w-56 max-h-80 overflow-y-auto bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl py-1 z-30">
     <button type="button" id="attach-file" class="w-full text-left px-4 py-2 text-sm font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 flex items-center gap-2">
       <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
       File upload
@@ -26,6 +26,11 @@
       <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"></path></svg>
       Code block
     </button>
+    {#- Insertable rich-text blocks. Clicking an entry inserts its snippet at the
+        cursor in #post-content (wired by static/js/blocks.js). -#}
+    <div class="my-1 border-t border-slate-100 dark:border-slate-700"></div>
+    <p class="px-4 pt-1 pb-1 text-[10px] font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500">Insert block</p>
+    {% include '_rich_blocks_menu.html' %}
   </div>
 
   <div id="article-picker" class="hidden absolute bottom-full mb-2 left-0 w-72 max-h-72 overflow-y-auto bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl py-1 z-40">

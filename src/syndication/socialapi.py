@@ -47,6 +47,12 @@ DEFAULT_PLATFORMS = [
     # Pinterest is image-only; the local REQUIRES_MEDIA guard blocks text posts
     # before a post credit is spent.
     ("pinterest", "Pinterest"),
+    # LinkedIn is NOT registered here on purpose. LinkedIn POSTS go out through our
+    # own native adapter (linkedin.py) via the official API, so no SocialAPI post
+    # credit is spent. We only want SocialAPI to READ LinkedIn engagement, which is
+    # enabled separately in socialapi_metrics.SOCIALAPI_METRIC_PLATFORMS - never by
+    # registering a publishing adapter here (that would collide with the native
+    # `linkedin` id and double-post).
 ]
 
 # Conservative per-platform text caps; the provider validates too and returns a
@@ -68,6 +74,23 @@ REQUIRES_VIDEO = {"youtube"}
 # rather than asking the author for an image. YouTube is NOT here - it needs a
 # real video, which cannot be synthesised from text.
 TEXT_CARD_PLATFORMS = {"instagram", "pinterest"}
+
+# --- YouTube upload schema ---------------------------------------------------
+# SocialAPI's YouTube target takes a top-level {title, text, visibility, media,
+# first_comment} plus a `platform_data.youtube` block for everything else. The
+# values come from `doc["youtube"]`, the metadata the /youtube/<post_id> page
+# stores, and only the fields actually set are sent so YouTube's own defaults
+# (private vs unlisted, etc.) are never overridden by a blank string.
+YOUTUBE_DEFAULT_CATEGORY = "22"      # "People & Blogs"
+YOUTUBE_DEFAULT_VISIBILITY = "public"
+YOUTUBE_TEXT_BYTES = 5000            # description cap, in bytes not characters
+YOUTUBE_TITLE_LEN = 100
+
+# The `platform_data.youtube` fields that are plain booleans.
+YOUTUBE_BOOL_FIELDS = ("made_for_kids", "embeddable", "public_stats_viewable",
+                       "contains_synthetic_media", "notify_subscribers")
+# The `platform_data.youtube` fields that are plain strings (sent only if set).
+YOUTUBE_STR_FIELDS = ("default_language", "license", "recording_date", "playlist_id")
 
 # X/Twitter needs two separate things, so they are two separate switches:
 #   * API credit - X has no free tier (pay-per-use since Feb 2026). Without
@@ -291,6 +314,10 @@ class SocialApiSyndicator(Syndicator):
         about: sending the untouched original elsewhere is exactly what came back
         as nginx `413 Request Entity Too Large`.
         """
+        # YouTube's schema takes exactly ONE video and nothing else: a post's
+        # block images must not be sent alongside it. Keep only the first video.
+        if self.id in REQUIRES_VIDEO:
+            media = [m for m in (media or []) if self._media_kind(m) == "video"][:1]
         bounds = self.ASPECT_BOUNDS.get(self.id)
         out = []
         for src in media or []:
@@ -303,6 +330,116 @@ class SocialApiSyndicator(Syndicator):
                 out.append({"source": src, "source_type": "url", "type": self._media_kind(src)})
         return out
 
+    # --- YouTube ----------------------------------------------------------
+    @staticmethod
+    def _youtube_meta(doc: dict | None) -> dict:
+        """The `doc["youtube"]` metadata dict, or {} when the doc has none."""
+        if not doc or not hasattr(doc, "get"):
+            return {}
+        yt = doc.get("youtube")
+        return yt if isinstance(yt, dict) else {}
+
+    @staticmethod
+    def _clamp_bytes(text: str, limit: int = YOUTUBE_TEXT_BYTES) -> str:
+        """Trim `text` to `limit` UTF-8 bytes without splitting a character."""
+        text = text or ""
+        data = text.encode("utf-8")
+        if len(data) <= limit:
+            return text
+        return data[:limit].decode("utf-8", "ignore")
+
+    def _youtube_platform_data(self, doc: dict | None) -> dict:
+        """Build the `platform_data.youtube` block from `doc["youtube"]`.
+
+        Only fields that are actually set are included (bar the booleans, which
+        are explicit form choices): a missing default_language must be omitted
+        rather than sent as "", so YouTube keeps its own default.
+        """
+        yt = self._youtube_meta(doc)
+        out: dict = {}
+
+        title = (yt.get("title") or (doc or {}).get("title") or "").strip()
+        if title:
+            out["title"] = title[:YOUTUBE_TITLE_LEN]
+
+        # category_id has a documented default; always send a concrete value.
+        category = yt.get("category_id")
+        category = str(category).strip() if category is not None else ""
+        out["category_id"] = category or YOUTUBE_DEFAULT_CATEGORY
+
+        tags = yt.get("tags")
+        if isinstance(tags, str):
+            tags = [t.strip() for t in tags.split(",") if t.strip()]
+        if tags:
+            out["tags"] = [str(t) for t in tags]
+
+        for field in YOUTUBE_STR_FIELDS:
+            val = yt.get(field)
+            if isinstance(val, str):
+                val = val.strip()
+            if val:
+                out[field] = val
+
+        for field in YOUTUBE_BOOL_FIELDS:
+            out[field] = bool(yt.get(field))
+
+        # publish_at is only accepted when the video is private.
+        visibility = (yt.get("visibility") or YOUTUBE_DEFAULT_VISIBILITY).strip()
+        publish_at = yt.get("publish_at")
+        publish_at = publish_at.strip() if isinstance(publish_at, str) else ""
+        if publish_at and visibility == "private":
+            out["publish_at"] = publish_at
+
+        return out
+
+    def _build_payload(self, text: str, url: str, media: list[str] | None = None,
+                       doc: dict | None = None, account_id: str = "",
+                       for_validate: bool = False) -> dict:
+        """Build the SocialAPI request body (no network I/O).
+
+        Shared by `publish_detailed` (POST /posts) and `validate`
+        (POST /posts/validate) so the two can never drift apart. YouTube needs
+        its title/description/visibility lifted to the TOP level, while
+        Instagram's content_type stays inside `platform_data`; both live here.
+        """
+        limit = TEXT_LIMITS.get(self.id, DEFAULT_TEXT_LIMIT)
+        body: dict = {
+            "text": (text or "")[:limit],
+            "targets": [self._target(account_id or self._account_id())],
+        }
+        if for_validate:
+            body["platforms"] = [self.id]
+        else:
+            body["publish_now"] = True
+
+        if self.id == "youtube":
+            yt = self._youtube_meta(doc)
+            title = (yt.get("title") or (doc or {}).get("title") or "").strip()
+            if title:
+                body["title"] = title[:YOUTUBE_TITLE_LEN]
+            # The description is the YouTube "text"; fall back to the composed
+            # social text when the form did not carry one.
+            description = yt.get("description")
+            description = description.strip() if isinstance(description, str) else ""
+            if description:
+                body["text"] = self._clamp_bytes(description)
+            else:
+                body["text"] = self._clamp_bytes(text)
+            body["visibility"] = (yt.get("visibility") or YOUTUBE_DEFAULT_VISIBILITY).strip() \
+                or YOUTUBE_DEFAULT_VISIBILITY
+            first_comment = yt.get("first_comment")
+            first_comment = first_comment.strip() if isinstance(first_comment, str) else ""
+            if first_comment:
+                body["first_comment"] = first_comment
+
+        media_items = self._media_payload(media)
+        if media_items:
+            body["media"] = media_items
+        platform_data = self._platform_data(media, doc)
+        if platform_data:
+            body["platform_data"] = platform_data
+        return body
+
     def validate(self, text: str, url: str, media: list[str] | None = None,
                  doc: dict | None = None) -> dict:
         """Dry-run this post against the platform's rules. Costs no credits.
@@ -311,18 +448,7 @@ class SocialApiSyndicator(Syndicator):
         does and returns errors/warnings instead of publishing, so a post can be
         checked as often as needed without spending the monthly allowance.
         """
-        limit = TEXT_LIMITS.get(self.id, DEFAULT_TEXT_LIMIT)
-        body: dict = {
-            "text": text[:limit],
-            "targets": [self._target(self._account_id())],
-            "platforms": [self.id],
-        }
-        media_items = self._media_payload(media)
-        if media_items:
-            body["media"] = media_items
-        platform_data = self._platform_data(media)
-        if platform_data:
-            body["platform_data"] = platform_data
+        body = self._build_payload(text, url, media, doc, for_validate=True)
         status, payload = self._request("POST", "/posts/validate", body)
         if status not in (200, 201):
             raise SyndicationError(self._error_message(status, payload))
@@ -352,7 +478,7 @@ class SocialApiSyndicator(Syndicator):
         raise SyndicationError("Pinterest needs a board and none could be resolved - "
                                + self._error_message(status, body))
 
-    def _platform_data(self, media: list[str] | None) -> dict | None:
+    def _platform_data(self, media: list[str] | None, doc: dict | None = None) -> dict | None:
         """Top-level `platform_data`, keyed by platform.
 
         Instagram requires `content_type` when publishing, and this belongs at the
@@ -360,18 +486,24 @@ class SocialApiSyndicator(Syndicator):
         target made the API ignore it and reject the post with "content_type is
         required for Instagram". Pinterest's `board_id` is the opposite: it must
         sit on the target (see _target).
+
+        YouTube's extra upload fields (category, tags, language, license, ...)
+        live under `platform_data.youtube`; `doc` carries the metadata saved by
+        the /youtube/<post_id> page.
         """
-        if self.id != "instagram":
-            return None
-        count = len(media or [])
-        kinds = {self._media_kind(m) for m in (media or [])}
-        if count > 1:
-            content_type = "carousel"
-        elif kinds == {"video"}:
-            content_type = "reel"
-        else:
-            content_type = "feed"
-        return {"instagram": {"content_type": content_type}}
+        if self.id == "instagram":
+            count = len(media or [])
+            kinds = {self._media_kind(m) for m in (media or [])}
+            if count > 1:
+                content_type = "carousel"
+            elif kinds == {"video"}:
+                content_type = "reel"
+            else:
+                content_type = "feed"
+            return {"instagram": {"content_type": content_type}}
+        if self.id == "youtube":
+            return {"youtube": self._youtube_platform_data(doc)}
+        return None
 
     def _target(self, account_id: str) -> dict:
         """Per-target fields.
@@ -398,18 +530,7 @@ class SocialApiSyndicator(Syndicator):
             raise SyndicationError(
                 "%s needs a video attachment, and this post has none. Attach a video file." % self.label)
         account_id = self._account_id()
-        limit = TEXT_LIMITS.get(self.id, DEFAULT_TEXT_LIMIT)
-        payload = {
-            "text": text[:limit],
-            "targets": [self._target(account_id)],
-            "publish_now": True,
-        }
-        media_items = self._media_payload(media)
-        if media_items:
-            payload["media"] = media_items
-        platform_data = self._platform_data(media)
-        if platform_data:
-            payload["platform_data"] = platform_data
+        payload = self._build_payload(text, url, media, doc, account_id)
 
         status, body = self._request("POST", "/posts", payload)
         if status not in (201, 207, 200):

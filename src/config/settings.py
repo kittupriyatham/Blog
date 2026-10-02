@@ -11,7 +11,7 @@ it before reading these same values, so behaviour is unchanged.
 """
 import os
 
-from dotenv import load_dotenv
+from dotenv import load_dotenv, dotenv_values
 
 load_dotenv()
 
@@ -60,7 +60,18 @@ MEDIA_PUBLIC_BASE = os.environ.get("MEDIA_PUBLIC_BASE", "").strip().rstrip("/")
 MONGO_URI = os.environ.get("MONGO_URI", "").strip()
 
 # --- Syndication (POSSE) ---
-SITE_URL = os.environ.get("SITE_URL", "").rstrip("/")
+# SITE_URL prefers the ".env" value over a real environment variable. A stale
+# OS-level SITE_URL (an earlier tunnel domain, say) would otherwise silently
+# shadow the configured public URL - `load_dotenv()` never overrides a variable
+# that is already set - so canonical links, Open Graph tags and syndication would
+# keep pointing at the old host even after ".env" was updated. Writing the ".env"
+# value back into the environment keeps every reader consistent, including ones
+# that read the variable directly (src/syndication/medium.py). Switching domains
+# is then a one-line ".env" edit.
+_env_file_site = (dotenv_values(os.path.join(ROOT, ".env")).get("SITE_URL") or "").strip()
+if _env_file_site:
+    os.environ["SITE_URL"] = _env_file_site
+SITE_URL = (_env_file_site or os.environ.get("SITE_URL", "")).strip().rstrip("/")
 # Alternative / next site URL — recorded for the planned move to a permanent
 # domain. Canonical links and syndication keep using SITE_URL; this is noted
 # only (no behaviour change).
@@ -84,6 +95,24 @@ ANALYTICS_GEO = os.environ.get("ANALYTICS_GEO", "1") == "1"
 # --- Notifications (Telegram webhook alerts, optional) ---
 TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "").strip()
 TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID", "").strip()
+
+# --- LinkedIn author (Organization / Company Page, with a person fallback) ---
+# `LINKEDIN_ORGANIZATION_URN` (the Page) is preferred so posts publish as the
+# Company Page and its `organizationalEntityShareStatistics` can be read;
+# `LINKEDIN_AUTHOR_URN` (the person) is the fallback when no Page is configured.
+# src/syndication/linkedin.py and linkedin_metrics.py read the env vars directly
+# at call time, so a runtime change is honoured; these constants are the
+# app-wide snapshot for anything that imports them from src.config.
+LINKEDIN_ORGANIZATION_URN = os.environ.get("LINKEDIN_ORGANIZATION_URN", "").strip()
+LINKEDIN_AUTHOR_URN = os.environ.get("LINKEDIN_AUTHOR_URN", "").strip()
+
+# --- YouTube upload form defaults --------------------------------------------
+# Only pre-fill the dedicated /youtube/<post_id> form: whatever the author picks
+# there is what gets stored and published, so these are defaults, not policy.
+# A blank/invalid value falls back to the documented SocialAPI default, which is
+# also the one socialapi.py applies when a doc has no stored youtube block.
+YOUTUBE_CATEGORY = os.environ.get("YOUTUBE_CATEGORY", "22").strip() or "22"
+YOUTUBE_VISIBILITY = os.environ.get("YOUTUBE_VISIBILITY", "public").strip() or "public"
 
 __all__ = [
     "ROOT",
@@ -112,4 +141,8 @@ __all__ = [
     "ANALYTICS_GEO",
     "TELEGRAM_BOT_TOKEN",
     "TELEGRAM_CHAT_ID",
+    "LINKEDIN_ORGANIZATION_URN",
+    "LINKEDIN_AUTHOR_URN",
+    "YOUTUBE_CATEGORY",
+    "YOUTUBE_VISIBILITY",
 ]

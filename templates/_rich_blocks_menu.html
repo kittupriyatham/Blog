@@ -1,0 +1,28 @@
+{#- Insertable rich-text blocks.
+
+    Rendered server-side so the entries are part of the HTML response, then wired
+    up by static/js/blocks.js: clicking one inserts the matching snippet from
+    window.RICHTEXT_SNIPPETS at the cursor (post/feed editor) or as a new text
+    block (article editor). Keep the `data-kind` values in step with that map and
+    with src/content/rich_text.py, which renders the syntax on the page. -#}
+{% set _rich_blocks = [
+  ('heading',  'Heading',           'H'),
+  ('quote',    'Quote',             '“'),
+  ('callout',  'Callout',           '💡'),
+  ('link',     'Link preview',      '🔗'),
+  ('table',    'Table',             '▦'),
+  ('poll',     'Poll',              '📊'),
+  ('gallery',  'Gallery',           '🖼️'),
+  ('toggle',   'Toggle',            '▸'),
+  ('cta',      'Button / CTA',      '🔘'),
+  ('embed',    'Embed',             '▶'),
+  ('math',     'Math (LaTeX)',      '∑'),
+  ('footnote', 'Footnote',          '†'),
+  ('divider',  'Divider',           '―'),
+  ('toc',      'Table of contents', '☰'),
+] %}
+{% for _kind, _label, _icon in _rich_blocks %}
+  <button type="button" class="rich-text-insert w-full text-left px-4 py-2.5 text-sm font-medium text-slate-700 dark:text-slate-200 hover:bg-brand-50 dark:hover:bg-slate-700 flex items-center gap-2.5 transition" data-kind="{{ _kind }}">
+    <span class="w-5 text-center text-slate-400" aria-hidden="true">{{ _icon }}</span>{{ _label }}
+  </button>
+{% endfor %}

@@ -70,4 +70,10 @@
   barChart('bar-platform', D.by_platform || [], 'platform', false);
   barChart('bar-country', D.by_country || [], 'country', false);
   barChart('bar-region', D.by_region || [], 'label', false);
+
+  // Social performance: total engagement (likes + comments + views) per social
+  // platform, summed from the cached metrics. Empty until a refresh has cached
+  // something - the section's table is server-rendered and stands on its own.
+  var social = D.social || {};
+  barChart('bar-social', social.by_platform || [], 'platform', false);
 })();

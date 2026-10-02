@@ -114,7 +114,9 @@ src="https://www.facebook.com/tr?id=2092273818327635&ev=PageView&noscript=1"
               <span class="text-white font-bold">K</span>
             </div>
             <div class="flex-1">
-              <textarea name="content" id="post-content" rows="2" placeholder="Start a post..." required
+              {#- Not `required`: a video-only post is valid. The submit handler below
+                  enforces text only when no video is attached and YouTube is off. -#}
+              <textarea name="content" id="post-content" rows="2" placeholder="Start a post... (or attach a video for YouTube)"
                 class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500 resize-y transition"></textarea>
               <div id="feed-media-preview" class="hidden mt-2 flex flex-wrap gap-2"></div>
               <input type="text" name="tags" placeholder="Tags (comma separated)" class="mt-2 w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 rounded-xl px-4 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500 transition">
@@ -334,6 +336,7 @@ src="https://www.facebook.com/tr?id=2092273818327635&ev=PageView&noscript=1"
   </div>
 
   <script src="{{ url_for('static', filename='js/attach.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/blocks.js') }}"></script>
   <script>
     // Expand a truncated post in place rather than opening the detail page. The
     // button lives inside the card's <a>, so its handler cancels the navigation.
@@ -393,6 +396,35 @@ src="https://www.facebook.com/tr?id=2092273818327635&ev=PageView&noscript=1"
     }
 
     initAttachMenu();
+
+    // Report the composer's pending uploads to the shared syndication guard and
+    // YouTube panel (see _syndication_options.html): the video picked here decides
+    // both whether the YouTube panel opens and whether the textarea is required.
+    window.collectSyndicationMedia = function () {
+      var input = document.getElementById('attach-file-input');
+      var out = [];
+      if (input && input.files) {
+        Array.from(input.files).forEach(function (f) { out.push({ type: f.type }); });
+      }
+      return out;
+    };
+
+    // A post needs text only when it carries no video and YouTube is not
+    // selected: a video-only post — typically for YouTube — is valid. The server
+    // enforces the same rule in create_post().
+    const composerForm = document.getElementById('post-content').closest('form');
+    if (composerForm) {
+      composerForm.addEventListener('submit', function (e) {
+        const text = document.getElementById('post-content').value.trim();
+        const media = window.collectSyndicationMedia();
+        const hasVideo = media.some(function (m) { return window.classifySyndicationItem(m) === 'video'; });
+        const ytSelected = !!document.querySelector('input[name="platforms"][value="youtube"]:checked');
+        if (!text && !hasVideo && !ytSelected) {
+          e.preventDefault();
+          alert('Add some text, or attach a video to post.');
+        }
+      });
+    }
 
     // Live preview of files selected in the compose box, before posting.
     const feedMediaInput = document.getElementById('attach-file-input');

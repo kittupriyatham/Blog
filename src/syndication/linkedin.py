@@ -3,6 +3,13 @@
 LinkedIn sunsets API versions over time, so rather than hardcoding one we try a
 recent version, fall back through the last several months on HTTP 426
 (NONEXISTENT_VERSION), and remember whichever version the API accepts.
+
+Posts go out as the author returned by `author_urn()`: the signed-in user's
+Organization (Company Page) when `LINKEDIN_ORGANIZATION_URN` is set, otherwise
+the person `LINKEDIN_AUTHOR_URN`. Publishing as the Page is what makes the
+`organizationalEntityShareStatistics` read in linkedin_metrics.py possible (that
+scope - `r_organization_social` - must be granted at OAuth time; see
+linkedin_token.SCOPE).
 """
 import json
 import os
@@ -13,6 +20,27 @@ from datetime import datetime, timezone
 
 from .base import CheckResult, Syndicator, SyndicationError
 from . import linkedin_token
+
+
+def organization_urn() -> str:
+    """The configured Organization (Company Page) URN, or "" when unset.
+
+    Read from the environment at call time (not import time) so a runtime change
+    - or a test - is honoured.
+    """
+    return os.environ.get("LINKEDIN_ORGANIZATION_URN", "").strip()
+
+
+def author_urn() -> str:
+    """The single LinkedIn author URN used for posts and image uploads.
+
+    The Organization (Company Page) URN wins when `LINKEDIN_ORGANIZATION_URN` is
+    set, so the blog publishes as the Page; otherwise it falls back to the person
+    `LINKEDIN_AUTHOR_URN`. "" when neither is set (`is_configured()` is then
+    False). `delete()` is author-agnostic - it deletes by URN - so it is not
+    affected.
+    """
+    return organization_urn() or os.environ.get("LINKEDIN_AUTHOR_URN", "").strip()
 
 
 def _recent_versions(count: int = 12) -> list[str]:
@@ -38,7 +66,8 @@ class LinkedinSyndicator(Syndicator):
     _working_version: str | None = None  # remembered once discovered (per process)
 
     def is_configured(self) -> bool:
-        return bool(linkedin_token.has_credentials() and os.environ.get("LINKEDIN_AUTHOR_URN"))
+        # A token *and* an author (Organization URN preferred, person fallback).
+        return bool(linkedin_token.has_credentials() and author_urn())
 
     def text_limit(self) -> int | None:
         """LinkedIn member posts accept 3000 characters (the commentary cap)."""
@@ -108,14 +137,18 @@ class LinkedinSyndicator(Syndicator):
                 raise SyndicationError("LinkedIn image upload failed: %s" % e)
         raise SyndicationError(last_error or "LinkedIn: no active API version accepted images.")
 
-    def publish(self, text: str, url: str, media: list[str] | None = None,
-                doc: dict | None = None) -> str:
-        """Publish a member post, attaching the first image when one is attached.
+    def _create_post(self, text: str, url: str, media: list[str] | None,
+                     doc: dict | None) -> tuple[str, str | None]:
+        """Create a post as `author_urn()`; return (permalink, post URN).
 
-        LinkedIn member posts carry a single image, so only the first is used.
+        The author is the Organization (Company Page) URN when configured, else
+        the person URN - see `author_urn()`. The URN (`x-restli-id`) is the id
+        LinkedIn's own share-statistics API keys on, so it is returned alongside
+        the permalink and persisted as `remote_id` by `publish_detailed` (read
+        back by linkedin_metrics.py).
         """
         token = linkedin_token.access_token()
-        author = os.environ.get("LINKEDIN_AUTHOR_URN")
+        author = author_urn()
         if not token or not author:
             raise SyndicationError("LinkedIn is not configured (missing token or author URN).")
         payload = {
@@ -149,7 +182,8 @@ class LinkedinSyndicator(Syndicator):
                 with urllib.request.urlopen(req, timeout=20) as resp:
                     urn = resp.headers.get("x-restli-id")
                 LinkedinSyndicator._working_version = version
-                return ("https://www.linkedin.com/feed/update/" + urn) if urn else "https://www.linkedin.com/feed/"
+                permalink = ("https://www.linkedin.com/feed/update/" + urn) if urn else "https://www.linkedin.com/feed/"
+                return permalink, (urn or None)
             except urllib.error.HTTPError as e:
                 body = e.read().decode("utf-8", "replace")[:500]
                 if e.code == 426:  # NONEXISTENT_VERSION -> try the next candidate
@@ -159,6 +193,26 @@ class LinkedinSyndicator(Syndicator):
             except Exception as e:
                 raise SyndicationError("LinkedIn request failed: %s" % e)
         raise SyndicationError(last_error or "LinkedIn: no active API version accepted.")
+
+    def publish(self, text: str, url: str, media: list[str] | None = None,
+                doc: dict | None = None) -> str:
+        """Publish a post, attaching the first image when one is attached.
+
+        The post is authored by `author_urn()` (Organization when configured).
+        LinkedIn posts carry a single image, so only the first is used.
+        """
+        permalink, _urn = self._create_post(text, url, media, doc)
+        return permalink
+
+    def publish_detailed(self, text: str, url: str, media: list[str] | None = None,
+                         doc: dict | None = None):
+        """Publish and also persist the post URN as `remote_id`.
+
+        The URN is what linkedin_metrics.py reads likes/comments with, so the
+        syndication record carries it instead of only the web permalink.
+        """
+        permalink, urn = self._create_post(text, url, media, doc)
+        return {"url": permalink, "remote_id": urn}
 
     def delete(self, url: str) -> None:
         """Delete a post this app created (author-only). Raises on failure."""
@@ -196,11 +250,11 @@ class LinkedinSyndicator(Syndicator):
     def check(self) -> CheckResult:
         """Read-only token validation - does NOT post anything."""
         token = linkedin_token.access_token()
-        author = os.environ.get("LINKEDIN_AUTHOR_URN")
+        author = author_urn()
         if not token:
             return CheckResult(ok=False, detail="No LinkedIn token available (set LINKEDIN_ACCESS_TOKEN, or run the OAuth setup).")
         if not author:
-            return CheckResult(ok=False, detail="No LINKEDIN_AUTHOR_URN set.")
+            return CheckResult(ok=False, detail="No LinkedIn author set - configure LINKEDIN_ORGANIZATION_URN (Page) or LINKEDIN_AUTHOR_URN (person).")
         req = urllib.request.Request("https://api.linkedin.com/v2/userinfo",
                                      headers={"Authorization": "Bearer " + token})
         try:

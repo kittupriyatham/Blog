@@ -106,7 +106,11 @@ src="https://www.facebook.com/tr?id=2092273818327635&ev=PageView&noscript=1"
             <div class="group relative bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm hover:shadow-xl hover:border-brand-200 dark:hover:border-brand-800 hover:-translate-y-0.5 transition duration-300 overflow-hidden flex flex-col cursor-pointer" data-url="{{ url_for('post_detail', post_id=post.post_id) }}" onclick="window.location.href=this.dataset.url">
 
               {% if session.get('logged_in') %}
-              <div class="absolute top-3 right-3 z-20">
+              <div class="absolute top-3 right-3 z-20 flex items-center gap-1.5">
+                <a href="{{ url_for('youtube_editor', post_id=post.post_id) }}" onclick="event.stopPropagation();" aria-label="YouTube upload details" title="YouTube upload"
+                   class="p-1.5 bg-white/90 dark:bg-slate-900/90 backdrop-blur text-slate-400 hover:text-red-600 rounded-md border border-slate-100 dark:border-slate-700 shadow-sm">
+                  <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
+                </a>
                 <form method="POST" action="{{ url_for('delete_post', post_id=post.post_id) }}" onsubmit="event.stopPropagation(); return confirm('Delete post permanently?');">
                   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                   <button type="submit" aria-label="Delete post" onclick="event.stopPropagation();" class="p-1.5 bg-white/90 dark:bg-slate-900/90 backdrop-blur text-slate-400 hover:text-red-500 rounded-md border border-slate-100 dark:border-slate-700 shadow-sm">
@@ -164,7 +168,11 @@ src="https://www.facebook.com/tr?id=2092273818327635&ev=PageView&noscript=1"
           {% for post in drafts %}
             <div class="group relative bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm hover:shadow-xl hover:border-orange-300 dark:hover:border-orange-800 hover:-translate-y-0.5 transition duration-300 overflow-hidden flex flex-col cursor-pointer" data-url="{{ url_for('edit_post', post_id=post.post_id) }}" onclick="window.location.href=this.dataset.url">
 
-              <div class="absolute top-3 right-3 z-20">
+              <div class="absolute top-3 right-3 z-20 flex items-center gap-1.5">
+                <a href="{{ url_for('youtube_editor', post_id=post.post_id) }}" onclick="event.stopPropagation();" aria-label="YouTube upload details" title="YouTube upload"
+                   class="p-1.5 bg-white/90 dark:bg-slate-900/90 backdrop-blur text-slate-400 hover:text-red-600 rounded-md border border-slate-100 dark:border-slate-700 shadow-sm">
+                  <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
+                </a>
                 <form method="POST" action="{{ url_for('delete_post', post_id=post.post_id) }}" onsubmit="event.stopPropagation(); return confirm('Delete this draft?');">
                   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                   <button type="submit" aria-label="Delete draft" onclick="event.stopPropagation();" class="p-1.5 bg-white/90 dark:bg-slate-900/90 backdrop-blur text-slate-400 hover:text-red-500 rounded-md border border-slate-100 dark:border-slate-700 shadow-sm">

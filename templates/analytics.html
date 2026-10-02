@@ -69,7 +69,10 @@ src="https://www.facebook.com/tr?id=2092273818327635&ev=PageView&noscript=1"
     <script>window.ANALYTICS_DATA = {{ data|tojson }};</script>
 
     <div class="flex items-center justify-between mb-6">
-      <h1 class="text-2xl font-bold text-slate-900 dark:text-white">Web analytics</h1>
+      <div>
+        <h1 class="text-2xl font-bold text-slate-900 dark:text-white">Analytics</h1>
+        <p class="text-xs text-slate-400 dark:text-slate-500 mt-1">This blog's own traffic (first-party) and each social platform's own engagement.</p>
+      </div>
       <span class="text-xs text-slate-400 dark:text-slate-500">Store: <code class="bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded">{{ analytics_store }}</code></span>
     </div>
 
@@ -85,8 +88,12 @@ src="https://www.facebook.com/tr?id=2092273818327635&ev=PageView&noscript=1"
       {% endif %}
     {% endwith %}
 
-    {# --- summary cards --- #}
+    {# --- summary cards (first-party: what this blog recorded itself) --- #}
     {% set t = data.totals %}
+    <div class="flex items-center gap-2 mb-3">
+      <h2 class="text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Blog &mdash; first-party</h2>
+      <span class="text-xs text-slate-400 dark:text-slate-500">views, likes, comments &amp; shares recorded on this site</span>
+    </div>
     <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
       <div class="bg-white dark:bg-slate-900 rounded-xl shadow p-4 text-center border border-slate-200 dark:border-slate-800"><div class="text-2xl font-bold">{{ t.view }}</div><div class="text-xs text-slate-400 dark:text-slate-500">Views</div></div>
       <div class="bg-white dark:bg-slate-900 rounded-xl shadow p-4 text-center border border-slate-200 dark:border-slate-800"><div class="text-2xl font-bold">{{ t.likes }}</div><div class="text-xs text-slate-400 dark:text-slate-500">Likes</div></div>
@@ -129,6 +136,99 @@ src="https://www.facebook.com/tr?id=2092273818327635&ev=PageView&noscript=1"
       <div class="bg-white dark:bg-slate-900 rounded-xl shadow p-4 border border-slate-200 dark:border-slate-800">
         <h2 class="font-semibold text-slate-800 dark:text-slate-200 mb-2 text-sm">Top states / regions</h2>
         <div id="bar-region"></div>
+      </div>
+    </div>
+
+    {# --- social performance: each platform's own numbers, per post --- #}
+    {% set s = data.social %}
+    <div class="mb-6">
+      <div class="flex flex-wrap items-center justify-between gap-3 mb-3">
+        <div class="flex items-center gap-2">
+          <h2 class="text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Social performance &mdash; platform-wise</h2>
+          <span class="text-xs text-slate-400 dark:text-slate-500">likes / comments / views as each platform reports them</span>
+        </div>
+        <div class="flex items-center gap-3">
+          {% if s.fetched_at %}<span class="text-xs text-slate-400 dark:text-slate-500">synced {{ s.fetched_at }}</span>{% endif %}
+          <form method="POST" action="{{ url_for('analytics_refresh_social') }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" class="text-xs font-semibold px-3 py-1.5 rounded-full bg-brand-600 hover:bg-brand-700 text-white transition shadow-soft disabled:opacity-40 disabled:cursor-not-allowed"
+              {% if not s.configured %}disabled title="SOCIALAPI_KEY is not set"{% endif %}>Refresh all</button>
+          </form>
+        </div>
+      </div>
+
+      {% if not s.configured %}
+      <div class="mb-4 text-xs px-3 py-2 rounded border border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-300">
+        <code>SOCIALAPI_KEY</code> is not set on the server, so platform metrics cannot be fetched. The blog's own numbers above are unaffected.
+      </div>
+      {% endif %}
+
+      {# social totals: only numbers actually read are counted #}
+      <div class="grid grid-cols-3 gap-4 mb-4">
+        <div class="bg-white dark:bg-slate-900 rounded-xl shadow p-4 text-center border border-slate-200 dark:border-slate-800"><div class="text-2xl font-bold">{{ s.totals.likes }}</div><div class="text-xs text-slate-400 dark:text-slate-500">Social likes</div></div>
+        <div class="bg-white dark:bg-slate-900 rounded-xl shadow p-4 text-center border border-slate-200 dark:border-slate-800"><div class="text-2xl font-bold">{{ s.totals.comments }}</div><div class="text-xs text-slate-400 dark:text-slate-500">Social comments</div></div>
+        <div class="bg-white dark:bg-slate-900 rounded-xl shadow p-4 text-center border border-slate-200 dark:border-slate-800"><div class="text-2xl font-bold">{{ s.totals.views }}</div><div class="text-xs text-slate-400 dark:text-slate-500">Social views</div></div>
+      </div>
+
+      <div class="bg-white dark:bg-slate-900 rounded-xl shadow border border-slate-200 dark:border-slate-800 p-4 mb-4">
+        <h3 class="font-semibold text-slate-800 dark:text-slate-200 mb-2 text-sm">Engagement by platform</h3>
+        <div id="bar-social"></div>
+      </div>
+
+      {# per-post, per-platform table #}
+      <div class="bg-white dark:bg-slate-900 rounded-xl shadow border border-slate-200 dark:border-slate-800 p-4">
+        <h3 class="font-semibold text-slate-800 dark:text-slate-200 mb-3 text-sm">Posts &times; platform</h3>
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm text-left">
+            <thead><tr class="text-xs text-slate-400 dark:text-slate-500 uppercase">
+              <th class="pb-2">Platform</th><th class="pb-2">Post link</th><th class="pb-2">Likes</th>
+              <th class="pb-2">Comments</th><th class="pb-2">Views</th><th class="pb-2">Metrics synced</th>
+            </tr></thead>
+            <tbody>
+              {% for p in s.posts %}
+              <tr class="border-t border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50">
+                <td colspan="6" class="py-2">
+                  <div class="flex items-center justify-between gap-3">
+                    <div class="min-w-0">
+                      <span class="font-semibold text-slate-700 dark:text-slate-100">{{ p.title }}</span>
+                      <span class="ml-2 font-mono text-[11px] text-slate-400 dark:text-slate-500">{{ p.post_id }}</span>
+                      {% if p.timestamp %}<span class="ml-2 text-[11px] text-slate-400 dark:text-slate-500">{{ p.timestamp[:10] }}</span>{% endif %}
+                    </div>
+                    <form method="POST" action="{{ url_for('analytics_refresh_social') }}" class="shrink-0">
+                      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                      <input type="hidden" name="post_id" value="{{ p.post_id }}">
+                      <button type="submit" class="text-[11px] font-semibold px-2.5 py-1 rounded-full border border-slate-300 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition">Refresh</button>
+                    </form>
+                  </div>
+                </td>
+              </tr>
+              {% for r in p.platforms %}
+              <tr class="border-t border-slate-100 dark:border-slate-800">
+                <td class="py-1.5 pr-2 font-medium text-slate-700 dark:text-slate-300">
+                  {{ r.label }}
+                  <span class="text-[11px] text-slate-400 dark:text-slate-500">{{ r.status }}</span>
+                  {% if r.error %}<div class="text-[11px] text-amber-600 dark:text-amber-400 max-w-[240px]">{{ r.error }}</div>
+                  {% elif r.note %}<div class="text-[11px] text-slate-400 dark:text-slate-500 max-w-[240px]">{{ r.note }}</div>{% endif %}
+                </td>
+                <td class="py-1.5 pr-2 text-xs">
+                  {% if r.permalink %}<a href="{{ r.permalink }}" target="_blank" rel="noopener" class="text-brand-600 dark:text-brand-400 hover:underline break-all">{{ r.permalink }}</a>
+                  {% else %}<span class="text-slate-400">&mdash;</span>{% endif %}
+                </td>
+                <td class="py-1.5 pr-2">{{ r.likes if r.likes is not none else '—' }}</td>
+                <td class="py-1.5 pr-2">{{ r.comments if r.comments is not none else '—' }}</td>
+                <td class="py-1.5 pr-2">{{ r.views if r.views is not none else '—' }}</td>
+                <td class="py-1.5 pr-2 text-[11px] text-slate-400 dark:text-slate-500">{{ r.synced_at if r.synced_at else '—' }}</td>
+              </tr>
+              {% endfor %}
+              {% else %}
+              <tr><td colspan="6" class="py-6 text-center text-sm text-slate-400">
+                No syndicated posts yet. Syndicate a post to a social platform, then press
+                <span class="font-medium">Refresh all</span>.
+              </td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
 

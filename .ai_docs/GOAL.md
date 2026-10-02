@@ -8,9 +8,9 @@ social post carries the blog post's URL → the blog post shows back-links to wh
 This is POSSE: *Publish Own Site, Syndicate Elsewhere.* The blog is home; social is distribution; links
 point both ways.
 
-**Status:** the north star is met for five platforms — LinkedIn, Facebook, Instagram, Bluesky and
-Pinterest — each returning a permalink that the page renders as "Also published on…". Remaining work is
-reach, robustness and **portability**.
+**Status:** the north star is met for six platforms — LinkedIn (personal profile, via the official API),
+Facebook, Instagram, Bluesky, Pinterest (SocialAPI) and YouTube (video, via SocialAPI) — each returning a
+permalink that the page renders as "Also published on…". Remaining work is reach, robustness and **portability**.
 
 ---
 
@@ -44,15 +44,21 @@ reach, robustness and **portability**.
 10. **Provider-agnostic storage** — a `local`/`cloud` selector per data type (media, database); cloud media
     via a plug-in HTTP upload adapter (no SDK), cloud database = any MongoDB-compatible URL.
 11. **LinkedIn refresh-token flow** — the token now renews itself instead of expiring.
+12. **YouTube** — video upload plus the full upload metadata, collected on a dedicated page and published via
+    SocialAPI.
+13. **Analytics + editor** — per-post × per-platform social metrics beside the blog's first-party traffic; the
+    editor gained a live per-platform preview, rich blocks, and attachment remove/reorder.
 
 ---
 
 ## Next
 
-12. **YouTube video path** — attach `static/video/video_<post_id>` and send the video's metadata
-    (title/description/tags/category/privacy) to YouTube. (Design in `TASKs.md`.)
-13. **Permanent domain** — `kittupriyatham.com` → `blog.kittupriyatham.com`.
-14. Per-platform text overrides; scheduling; metrics read-back; expand the Attach menu.
+14. **Permanent domain** — `kittupriyatham.com` → `blog.kittupriyatham.com` (a one-line `.env` edit now that a
+    stale OS `SITE_URL` can no longer shadow it).
+15. **LinkedIn engagement** — blocked on SocialAPI enabling the `linkedin_page` beta with the personal
+    connection type; the read path is staged (see `TASKs.md`).
+16. **Later:** hand-written per-platform text overrides (the automatic per-platform compose + live preview
+    already ship); scheduling; metrics read-back for the remaining platforms; expand the Attach menu.
 
 ---
 

@@ -1,0 +1,159 @@
+{#- Inline YouTube metadata panel (modal).
+
+     Opens the moment a video is attached AND YouTube is ticked in the feed
+     composer, the post editor or the article editor - so the same fields the
+     dedicated /youtube/<post_id> page asks for are collected up front instead of
+     only after Post. It is dismissible (close / backdrop / Esc / Done) and can be
+     reopened from the note under the platform checkboxes.
+
+     The field keys mirror templates/youtube.html and the keys app.py stores under
+     doc["youtube"], so the /youtube page and the SocialAPI payload builder read
+     them unchanged. window.collectYouTubeMeta() (see _syndication_options.html)
+     reads them and the composer submits them as the `youtube_meta` JSON field -
+     the inputs deliberately carry no `name`, so they never collide with the
+     composer's own `content`/`tags`.
+
+     Prefilled from `youtube_meta` when an editor loads a doc that already has
+     stored YouTube details (so editing never blanks them). -#}
+{% set _yt = youtube_meta if youtube_meta is defined and youtube_meta else {} %}
+{% set _input = 'w-full rounded-xl px-3.5 py-2 text-sm border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500 transition' %}
+{% set _label = 'block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1.5' %}
+{% set _check = 'inline-flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300' %}
+<div id="youtube-panel" class="hidden fixed inset-0 z-50 overflow-y-auto p-4 sm:p-6 bg-slate-900/50 dark:bg-black/60 backdrop-blur-sm"
+     role="dialog" aria-modal="true" aria-labelledby="youtube-panel-title">
+  <div class="mx-auto w-full max-w-2xl my-4 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xl">
+    <div class="flex items-center justify-between gap-3 px-5 py-4 border-b border-slate-100 dark:border-slate-800 sticky top-0 bg-white dark:bg-slate-900 rounded-t-2xl z-10">
+      <div class="flex items-center gap-2.5">
+        <span class="w-8 h-8 rounded-lg bg-red-600 flex items-center justify-center">
+          <svg class="w-4 h-4 text-white" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
+        </span>
+        <div class="flex flex-col leading-tight">
+          <span id="youtube-panel-title" class="font-bold text-slate-800 dark:text-white text-sm">YouTube details</span>
+          <span class="text-[11px] text-slate-400 dark:text-slate-500">Saved with this post and used when it publishes to YouTube.</span>
+        </div>
+      </div>
+      <button type="button" id="youtube-panel-close" class="p-2 rounded-full text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition" aria-label="Close YouTube details">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+      </button>
+    </div>
+
+    <div class="p-5 space-y-5">
+      <div>
+        <label class="{{ _label }}" for="ytp-title">Title</label>
+        <input type="text" id="ytp-title" data-yt-field="title" maxlength="100"
+               value="{{ _yt.get('title', '') }}" placeholder="Video title (max 100 characters)"
+               class="{{ _input }}">
+      </div>
+
+      <div>
+        <label class="{{ _label }}" for="ytp-description">Description</label>
+        <textarea id="ytp-description" data-yt-field="description" rows="5"
+                  placeholder="Video description (up to 5000 bytes)"
+                  class="{{ _input }} resize-y">{{ _yt.get('description', '') }}</textarea>
+      </div>
+
+      <div>
+        <label class="{{ _label }}" for="ytp-tags">Tags</label>
+        <input type="text" id="ytp-tags" data-yt-field="tags"
+               value="{{ _yt.get('tags', []) | join(', ') }}" placeholder="comma, separated, tags"
+               class="{{ _input }}">
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+        <div>
+          <label class="{{ _label }}" for="ytp-category_id">Category</label>
+          {% set _cat = _yt.get('category_id') or youtube_default_category %}
+          <select id="ytp-category_id" data-yt-field="category_id" class="{{ _input }}">
+            {% for cid, cname in youtube_categories %}
+              <option value="{{ cid }}" {% if _cat|string == cid|string %}selected{% endif %}>{{ cid }} - {{ cname }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div>
+          <label class="{{ _label }}" for="ytp-visibility">Visibility</label>
+          {% set _vis = _yt.get('visibility') or youtube_default_visibility %}
+          <select id="ytp-visibility" data-yt-field="visibility" class="{{ _input }}">
+            {% for v in ['public', 'unlisted', 'private'] %}
+              <option value="{{ v }}" {% if _vis == v %}selected{% endif %}>{{ v }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div>
+          <label class="{{ _label }}" for="ytp-publish_at">Schedule (publish at)</label>
+          <input type="datetime-local" id="ytp-publish_at" data-yt-field="publish_at"
+                 value="{{ _yt.get('publish_at', '') }}" class="{{ _input }}">
+          <p class="text-[11px] text-slate-400 dark:text-slate-500 mt-1.5">Only honoured when visibility is <strong>private</strong>.</p>
+        </div>
+
+        <div>
+          <label class="{{ _label }}" for="ytp-license">License</label>
+          {% set _lic = _yt.get('license') or 'youtube' %}
+          <select id="ytp-license" data-yt-field="license" class="{{ _input }}">
+            <option value="youtube" {% if _lic == 'youtube' %}selected{% endif %}>Standard YouTube license</option>
+            <option value="creativeCommon" {% if _lic == 'creativeCommon' %}selected{% endif %}>Creative Commons</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+        <div>
+          <label class="{{ _label }}" for="ytp-default_language">Default language</label>
+          <input type="text" id="ytp-default_language" data-yt-field="default_language" maxlength="10"
+                 value="{{ _yt.get('default_language', '') }}" placeholder="e.g. en" class="{{ _input }}">
+        </div>
+
+        <div>
+          <label class="{{ _label }}" for="ytp-recording_date">Recording date</label>
+          <input type="date" id="ytp-recording_date" data-yt-field="recording_date"
+                 value="{{ _yt.get('recording_date', '') }}" class="{{ _input }}">
+        </div>
+      </div>
+
+      <div>
+        <label class="{{ _label }}" for="ytp-playlist_id">Playlist ID</label>
+        <input type="text" id="ytp-playlist_id" data-yt-field="playlist_id"
+               value="{{ _yt.get('playlist_id', '') }}" placeholder="Optional playlist id" class="{{ _input }}">
+      </div>
+
+      <div>
+        <label class="{{ _label }}" for="ytp-first_comment">First comment</label>
+        <textarea id="ytp-first_comment" data-yt-field="first_comment" rows="2"
+                  placeholder="Optional pinned first comment"
+                  class="{{ _input }} resize-y">{{ _yt.get('first_comment', '') }}</textarea>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+        {% set _checks = [
+          ('made_for_kids', 'Made for kids', _yt.get('made_for_kids', false)),
+          ('embeddable', 'Allow embedding', _yt.get('embeddable', true)),
+          ('public_stats_viewable', 'Public stats viewable', _yt.get('public_stats_viewable', true)),
+          ('contains_synthetic_media', 'Contains synthetic media', _yt.get('contains_synthetic_media', false)),
+          ('notify_subscribers', 'Notify subscribers', _yt.get('notify_subscribers', true)),
+        ] %}
+        {% for name, label, on in _checks %}
+          <label class="{{ _check }}">
+            <input type="checkbox" data-yt-field="{{ name }}" {% if on %}checked{% endif %}
+                   class="rounded border-slate-300 dark:border-slate-600 text-brand-600 focus:ring-brand-500">
+            {{ label }}
+          </label>
+        {% endfor %}
+      </div>
+    </div>
+
+    <div class="flex items-center justify-between gap-3 px-5 py-4 border-t border-slate-100 dark:border-slate-800">
+      <a id="youtube-panel-page-link" href="#" class="hidden text-xs font-semibold text-brand-600 dark:text-brand-400 hover:underline">Open the full YouTube page &rarr;</a>
+      <div class="flex items-center gap-3 ml-auto">
+        <button type="button" id="youtube-panel-close-2"
+                class="text-slate-600 dark:text-slate-300 bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 font-medium px-4 py-1.5 rounded-full text-sm transition">
+          Cancel
+        </button>
+        <button type="button" id="youtube-panel-done"
+                class="bg-gradient-to-r from-red-600 to-red-500 hover:from-red-700 hover:to-red-600 text-white font-medium px-5 py-1.5 rounded-full text-sm transition shadow-sm">
+          Done
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

@@ -20,15 +20,39 @@
   <span id="char-note" class="text-amber-600 dark:text-amber-400"></span>
 </div>
 <div id="syndication-guard" data-text-card="{{ '1' if text_card_available else '0' }}" data-link-reserve="{{ link_reserve or 0 }}" class="hidden mt-2 px-3 py-2 rounded-lg text-xs bg-red-50 dark:bg-red-950/40 text-red-600 dark:text-red-400"></div>
+
+{#- YouTube inline panel. Picking YouTube here (with a video attached) opens a
+    modal that collects every YouTube field up front, so nothing has to be
+    re-entered later. Values travel with the post as `youtube_meta` and are
+    stored under doc["youtube"]. The note below is the reopen affordance. -#}
+<div id="youtube-note" class="hidden mt-2 px-3 py-2 rounded-lg text-xs bg-slate-50 dark:bg-slate-800/60 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700"></div>
+{% include '_youtube_panel.html' %}
+
+{#- Per-platform preview: shows the text that would actually be sent to each
+    platform (after the per-platform rewrite), not just the character count. -#}
+<div class="mt-3 flex items-center gap-2 flex-wrap">
+  <button type="button" id="preview-btn" aria-controls="syndication-preview" aria-expanded="false"
+          class="text-slate-600 dark:text-slate-300 hover:text-brand-600 dark:hover:text-brand-400 bg-slate-50 dark:bg-slate-800 hover:bg-brand-50 dark:hover:bg-slate-700 font-medium px-3.5 py-1.5 rounded-full text-xs transition disabled:opacity-50 dark:disabled:opacity-40">
+    Preview per platform
+  </button>
+  <button type="button" id="preview-hide-btn" aria-controls="syndication-preview"
+          class="hidden text-slate-600 dark:text-slate-300 hover:text-brand-600 dark:hover:text-brand-400 bg-slate-50 dark:bg-slate-800 hover:bg-brand-50 dark:hover:bg-slate-700 font-medium px-3.5 py-1.5 rounded-full text-xs transition">
+    Hide preview
+  </button>
+</div>
+<div id="syndication-preview" class="hidden mt-3 w-full max-w-full" aria-live="polite"></div>
 <script>
 (function () {
-  // YouTube can never be satisfied from text: it needs a real video.
-  var HARD = { youtube: 'a video' };
+  // YouTube is deliberately NOT part of this generic guard: it is published from
+  // its own page (/youtube/<post_id>), where the video and all the metadata are
+  // uploaded, so checking it here must not raise the "needs a file attachment"
+  // error (a video attached in the /youtube page is invisible to this editor).
+  // See refreshYouTubeNote() below for the hand-off affordance.
   // Instagram/Pinterest need an image, but we can render a text card for them -
   // so they only require a manual attachment when no card can be produced
   // (no Pillow, or no public base URL to serve the card from).
   var CARDED = { instagram: 'an image or video', pinterest: 'an image or video' };
-  var WATCHED = Object.keys(HARD).concat(Object.keys(CARDED));
+  var WATCHED = Object.keys(CARDED);
   var VIDEO_EXT = ['mp4', 'webm', 'ogg', 'mov', 'avi', 'mkv', 'wmv'];
   var IMAGE_EXT = ['png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp', 'svg', 'avif'];
 
@@ -78,10 +102,6 @@
       .forEach(function (cb) {
         var pid = cb.value;
         if (WATCHED.indexOf(pid) < 0) return;
-        if (HARD[pid]) {
-          if (!have.video) missing.push(pid + ' (' + HARD[pid] + ')');
-          return;
-        }
         if (CARDED[pid]) {
           if (canCard) return; // a text card will be rendered for this platform
           if (!have.image && !have.video) missing.push(pid + ' (' + CARDED[pid] + ')');
@@ -103,6 +123,135 @@
       box.textContent = '';
       box.classList.add('hidden');
     }
+  }
+
+  // --- YouTube -----------------------------------------------------------------
+  // YouTube needs a video plus a stack of metadata. Instead of only collecting
+  // that on the dedicated page /youtube/<post_id> after Post, an inline modal
+  // opens the moment a video is attached AND YouTube is ticked, right here in the
+  // composer/editor. The fields mirror templates/youtube.html; their values travel
+  // with the post as `youtube_meta` and are stored under doc["youtube"], so the
+  // /youtube page (and the publish) no longer require re-entry.
+  function youtubeChecked() {
+    var cb = document.querySelector('input[name="platforms"][value="youtube"]');
+    return !!(cb && cb.checked && !cb.disabled);
+  }
+
+  function currentDocId() {
+    var el = document.getElementById('post-id') || document.getElementById('article_id');
+    return (el && el.value) ? String(el.value).trim() : '';
+  }
+
+  var ytPanel = document.getElementById('youtube-panel');
+  // `ytPrevSatisfied` makes the auto-open fire once per false->true transition;
+  // `ytDismissed` keeps a closed panel closed until the condition goes false again.
+  var ytPrevSatisfied = false;
+  var ytDismissed = false;
+
+  function youtubeVideoAttached() { return attachments().video; }
+
+  function youtubePanelOpen() {
+    return !!(ytPanel && !ytPanel.classList.contains('hidden'));
+  }
+
+  function openYouTubePanel() {
+    if (!ytPanel) return;
+    ytPanel.classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+    var link = document.getElementById('youtube-panel-page-link');
+    var id = currentDocId();
+    if (link && id) {
+      link.href = '/youtube/' + encodeURIComponent(id);
+      link.classList.remove('hidden');
+    }
+  }
+
+  function closeYouTubePanel() {
+    if (!ytPanel) return;
+    ytPanel.classList.add('hidden');
+    document.body.style.overflow = '';
+  }
+
+  // The panel's values, keyed exactly as app.py stores them under doc["youtube"].
+  window.collectYouTubeMeta = function () {
+    if (!ytPanel) return null;
+    function val(name) {
+      var el = ytPanel.querySelector('[data-yt-field="' + name + '"]');
+      return el ? String(el.value == null ? '' : el.value).trim() : '';
+    }
+    function on(name) {
+      var el = ytPanel.querySelector('[data-yt-field="' + name + '"]');
+      return !!(el && el.checked);
+    }
+    return {
+      title: val('title'),
+      description: val('description'),
+      tags: val('tags'),
+      category_id: val('category_id'),
+      visibility: val('visibility'),
+      made_for_kids: on('made_for_kids'),
+      embeddable: on('embeddable'),
+      license: val('license'),
+      public_stats_viewable: on('public_stats_viewable'),
+      default_language: val('default_language'),
+      recording_date: val('recording_date'),
+      contains_synthetic_media: on('contains_synthetic_media'),
+      notify_subscribers: on('notify_subscribers'),
+      playlist_id: val('playlist_id'),
+      publish_at: val('publish_at'),
+      first_comment: val('first_comment')
+    };
+  };
+
+  // The JSON a composer submits. Empty when YouTube is not selected, so an edit
+  // that does not touch YouTube never overwrites the stored metadata.
+  window.youtubeMetaJSON = function () {
+    if (!youtubeChecked()) return '';
+    var meta = window.collectYouTubeMeta();
+    return meta ? JSON.stringify(meta) : '';
+  };
+
+  function refreshYouTubeNote() {
+    var box = document.getElementById('youtube-note');
+    if (!box) return;
+    if (!youtubeChecked()) { box.textContent = ''; box.classList.add('hidden'); return; }
+    var id = currentDocId();
+    var hasVideo = youtubeVideoAttached();
+    box.classList.remove('hidden');
+    var html = hasVideo
+      ? 'YouTube details are collected in the panel and saved with the post. '
+        + '<button type="button" id="youtube-configure-btn" class="font-semibold text-brand-600 dark:text-brand-400 hover:underline">Configure YouTube details</button>'
+      : 'YouTube needs a video: attach one and the details panel opens automatically.';
+    if (id) {
+      html += ' <a class="font-semibold text-brand-600 dark:text-brand-400 hover:underline" '
+        + 'href="/youtube/' + encodeURIComponent(id) + '">Open the full YouTube page \u2192</a>';
+    }
+    box.innerHTML = html;
+    var btn = document.getElementById('youtube-configure-btn');
+    if (btn) btn.addEventListener('click', function () { ytDismissed = false; openYouTubePanel(); });
+  }
+
+  // Opens the panel on the false->true edge of (video attached + YouTube ticked),
+  // then keeps the note in sync. Called from every relevant change event.
+  function refreshYouTubePanel() {
+    var satisfied = youtubeChecked() && youtubeVideoAttached();
+    if (satisfied && !ytPrevSatisfied && !ytDismissed) openYouTubePanel();
+    if (!satisfied) ytDismissed = false;
+    ytPrevSatisfied = satisfied;
+    refreshYouTubeNote();
+  }
+
+  if (ytPanel) {
+    function dismissYouTubePanel() { ytDismissed = true; closeYouTubePanel(); }
+    ['youtube-panel-close', 'youtube-panel-close-2', 'youtube-panel-done'].forEach(function (cid) {
+      var el = document.getElementById(cid);
+      if (el) el.addEventListener('click', dismissYouTubePanel);
+    });
+    // A click on the backdrop (the modal itself, not the card inside it) closes.
+    ytPanel.addEventListener('click', function (e) { if (e.target === ytPanel) dismissYouTubePanel(); });
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape' && youtubePanelOpen()) dismissYouTubePanel();
+    });
   }
 
   // Live character count. The canonical link is appended at publish time, so its
@@ -141,13 +290,169 @@
   document.addEventListener('input', refreshCount);
   document.addEventListener('change', function (e) {
     var t = e.target;
-    if (t && (t.name === 'platforms' || t.type === 'file')) refresh();
+    if (t && (t.name === 'platforms' || t.type === 'file')) { refresh(); refreshYouTubePanel(); }
     refreshCount();
   });
   document.addEventListener('DOMContentLoaded', function () {
     refresh();
     refreshCount();
+    // A doc loaded for editing may already have a video + YouTube ticked; this
+    // also prefills the note without force-opening the panel.
+    refreshYouTubePanel();
   });
+
+  // Native-form composers (the feed composer posts a plain <form>): drop the
+  // panel's values into a hidden `youtube_meta` field on the way out. The fetch
+  // editors append the same field themselves in their own save() path.
+  document.addEventListener('submit', function (e) {
+    var form = e.target;
+    if (!form || form.tagName !== 'FORM') return;
+    if (!form.querySelector('#youtube-panel')) return;
+    var hidden = form.querySelector('input[name="youtube_meta"]');
+    if (!hidden) {
+      hidden = document.createElement('input');
+      hidden.type = 'hidden';
+      hidden.name = 'youtube_meta';
+      form.appendChild(hidden);
+    }
+    hidden.value = window.youtubeMetaJSON();
+  });
+
+  // --- Per-platform preview -------------------------------------------------
+  // Calls /api/syndication/preview with the editor's *current* content and
+  // renders one row per available platform: the text that would actually be
+  // sent, its length/limit, and a rewritten/fits tag. Editors expose
+  // window.getSyndicationPreviewPayload() so the shared markup works for both
+  // the post editor and the block-based article editor.
+  var previewBtn = document.getElementById('preview-btn');
+  var previewHideBtn = document.getElementById('preview-hide-btn');
+  var previewBox = document.getElementById('syndication-preview');
+  // Every (re)render resets previewBox.className, so the panel's layout classes
+  // live in one place. Full width + no wrapping of the container keeps long
+  // platform text inside the card instead of overflowing sideways.
+  var PREVIEW_BASE = 'mt-3 w-full max-w-full';
+
+  function previewToken() {
+    var hidden = document.getElementById('csrf-token');
+    if (hidden && hidden.value) return hidden.value;
+    var field = document.querySelector('input[name="csrf_token"]');
+    return field ? field.value : '';
+  }
+
+  function previewPayload() {
+    if (typeof window.getSyndicationPreviewPayload === 'function') {
+      return window.getSyndicationPreviewPayload() || {};
+    }
+    var ta = document.getElementById('post-content');
+    return { kind: 'post', content: ta ? ta.value : '' };
+  }
+
+  function previewTag(text, cls) {
+    var span = document.createElement('span');
+    span.className = 'px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wide ' + cls;
+    span.textContent = text;
+    return span;
+  }
+
+  function renderPreview(data) {
+    if (!previewBox) return;
+    previewBox.innerHTML = '';
+    var rows = (data && data.results) || [];
+    previewBox.className = PREVIEW_BASE;
+    if (!rows.length) {
+      previewBox.className = PREVIEW_BASE + ' text-xs text-slate-400 dark:text-slate-500';
+      previewBox.textContent = 'No platforms available to preview.';
+      return;
+    }
+    rows.forEach(function (r) {
+      var card = document.createElement('div');
+      // Full-width, stacked block: never a wide flex row that could push the panel
+      // sideways. min-w-0 lets the text body wrap instead of setting the width.
+      card.className = 'w-full max-w-full min-w-0 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/60 p-3 mb-2';
+
+      var head = document.createElement('div');
+      head.className = 'flex items-center justify-between gap-2 mb-1.5 flex-wrap w-full min-w-0';
+
+      var name = document.createElement('span');
+      name.className = 'text-xs font-semibold text-slate-700 dark:text-slate-200 min-w-0 break-words';
+      name.textContent = (r.label || r.platform) +
+        (r.limit ? ' \u00b7 limit ' + r.limit : ' \u00b7 no limit');
+      head.appendChild(name);
+
+      var right = document.createElement('span');
+      right.className = 'flex items-center gap-2 shrink-0';
+      var count = document.createElement('span');
+      count.className = 'text-[11px] text-slate-400 dark:text-slate-500';
+      count.textContent = (r.length || 0) + ' char' + (r.length === 1 ? '' : 's');
+      right.appendChild(count);
+      if (r.error) {
+        right.appendChild(previewTag('error', 'bg-red-100 text-red-700 dark:bg-red-950/50 dark:text-red-400'));
+      } else if (r.rewritten) {
+        right.appendChild(previewTag('rewritten', 'bg-amber-100 text-amber-700 dark:bg-amber-950/50 dark:text-amber-400'));
+      } else {
+        right.appendChild(previewTag('fits', 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-400'));
+      }
+      head.appendChild(right);
+      card.appendChild(head);
+
+      var body = document.createElement('p');
+      body.className = 'text-sm text-slate-700 dark:text-slate-300 whitespace-pre-wrap break-words min-w-0 max-w-full';
+      // overflow-wrap:anywhere keeps a very long unbroken run (a URL, a word with
+      // no spaces) wrapping inside the card instead of widening the page.
+      body.style.overflowWrap = 'anywhere';
+      body.style.wordBreak = 'break-word';
+      body.textContent = r.error ? ('Could not preview: ' + r.error) : (r.text || '');
+      if (r.error) body.className += ' text-red-600 dark:text-red-400';
+      card.appendChild(body);
+
+      previewBox.appendChild(card);
+    });
+  }
+
+  // Show/hide the preview panel. The "Hide preview" button only appears while
+  // the panel is visible; the preview button also toggles it off when already
+  // shown, so the section can be hidden again after it is rendered.
+  function setPreviewVisible(visible) {
+    if (!previewBox) return;
+    previewBox.classList.toggle('hidden', !visible);
+    if (previewBtn) previewBtn.setAttribute('aria-expanded', visible ? 'true' : 'false');
+    if (previewHideBtn) previewHideBtn.classList.toggle('hidden', !visible);
+  }
+
+  if (previewHideBtn) {
+    previewHideBtn.addEventListener('click', function () { setPreviewVisible(false); });
+  }
+
+  if (previewBtn && previewBox) {
+    previewBtn.addEventListener('click', async function () {
+      // Already open -> the button hides it (simple toggle).
+      if (!previewBox.classList.contains('hidden')) { setPreviewVisible(false); return; }
+      var label = previewBtn.textContent;
+      previewBtn.disabled = true;
+      previewBtn.textContent = 'Previewing\u2026';
+      previewBox.className = PREVIEW_BASE + ' text-xs text-slate-400 dark:text-slate-500';
+      previewBox.textContent = 'Composing each platform\u2019s text\u2026';
+      setPreviewVisible(true);
+      var fd = new FormData();
+      var payload = previewPayload();
+      Object.keys(payload).forEach(function (k) {
+        if (payload[k] !== undefined && payload[k] !== null) fd.append(k, payload[k]);
+      });
+      fd.append('csrf_token', previewToken());
+      try {
+        var resp = await fetch('{{ url_for("api_syndication_preview") }}', { method: 'POST', body: fd });
+        renderPreview(await resp.json());
+      } catch (e) {
+        console.error(e);
+        previewBox.className = PREVIEW_BASE + ' text-xs text-red-500 dark:text-red-400';
+        previewBox.textContent = 'Preview failed. Please try again.';
+      } finally {
+        previewBtn.disabled = false;
+        previewBtn.textContent = label;
+        setPreviewVisible(true);
+      }
+    });
+  }
 })();
 </script>
 {% endif %}

@@ -96,19 +96,80 @@ src="https://www.facebook.com/tr?id=2092273818327635&ev=PageView&noscript=1"
   </main>
 
   <script src="{{ url_for('static', filename='js/attach.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/blocks.js') }}"></script>
   <script>
     (function () {
       var postContent = document.getElementById('post-content');
       var existingMedia = {{ media_paths | tojson }};
+      // Newly attached files, held in one array the editor owns. The file input's
+      // own FileList is read-only, so it cannot be edited in place - Remove and
+      // Reorder operate on this list, and it is what gets uploaded on save.
+      var newFiles = [];
+      var previewObjectUrls = [];
       var newFileInput = document.getElementById('attach-file-input');
       var saveStatus = document.getElementById('save-status');
+
+      function isImageFile(f) { return (f.type || '').indexOf('image/') === 0; }
+
+      // A small control button shared by the per-attachment Remove / move actions.
+      function attachmentButton(html, title, pos, kind) {
+        var b = document.createElement('button');
+        b.type = 'button';
+        b.title = title;
+        b.setAttribute('aria-label', title);
+        b.className = pos + ' w-6 h-6 rounded-full text-white text-sm leading-none flex items-center justify-center shadow ' +
+          (kind === 'remove' ? 'bg-red-500 hover:bg-red-600' : 'bg-slate-700 hover:bg-slate-800');
+        b.innerHTML = html;
+        return b;
+      }
+
+      // Swap item `idx` one slot earlier/later in `list`, then re-render.
+      function moveItem(list, idx, delta, rerender) {
+        var j = idx + delta;
+        if (j < 0 || j >= list.length) return;
+        var tmp = list[idx]; list[idx] = list[j]; list[j] = tmp;
+        rerender();
+      }
+
+      function revokePreviewUrls() {
+        previewObjectUrls.forEach(function (u) { try { URL.revokeObjectURL(u); } catch (e) {} });
+        previewObjectUrls = [];
+      }
+
+      // Adds Remove (x) + earlier/later controls to one attachment tile.
+      function buildMediaTile(el, isFirst, isLast, onRemove, onUp, onDown) {
+        var rm = attachmentButton('&times;', 'Remove attachment', 'absolute -top-2 -right-2', 'remove');
+        rm.addEventListener('click', onRemove);
+        el.appendChild(rm);
+        if (!isFirst) {
+          var up = attachmentButton('\u2191', 'Move earlier', 'absolute -top-2 -left-2', 'move');
+          up.addEventListener('click', onUp);
+          el.appendChild(up);
+        }
+        if (!isLast) {
+          var down = attachmentButton('\u2193', 'Move later', 'absolute -bottom-2 -left-2', 'move');
+          down.addEventListener('click', onDown);
+          el.appendChild(down);
+        }
+      }
+
+      // Feeds the shared "Preview per platform" control (see
+      // _syndication_options.html): the editor's current, unsaved content.
+      window.getSyndicationPreviewPayload = function () {
+        return {
+          kind: 'post',
+          content: postContent.value,
+          tags: document.getElementById('post-tags').value,
+          post_id: document.getElementById('post-id').value
+        };
+      };
 
       // What the syndication guard treats as real media: newly attached files
       // plus media already saved on this post. Attached articles, attached
       // posts and code blocks never count.
       window.collectSyndicationMedia = function () {
         var out = [];
-        Array.prototype.slice.call(newFileInput.files || []).forEach(function (f) { out.push({ type: f.type }); });
+        newFiles.forEach(function (f) { out.push({ type: f.type }); });
         (existingMedia || []).forEach(function (p) { out.push({ path: p }); });
         return out;
       };
@@ -134,45 +195,73 @@ src="https://www.facebook.com/tr?id=2092273818327635&ev=PageView&noscript=1"
           } else {
             el.innerHTML = '<div class="w-44 px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs text-slate-600 dark:text-slate-300 truncate">' + p.split('/').pop() + '</div>';
           }
-          var btn = document.createElement('button');
-          btn.type = 'button';
-          btn.textContent = '\u00d7';
-          btn.className = 'absolute -top-2 -right-2 w-6 h-6 rounded-full bg-red-500 text-white text-sm leading-none';
-          btn.onclick = function () { existingMedia.splice(idx, 1); renderExisting(); };
-          el.appendChild(btn);
+          buildMediaTile(el, idx === 0, idx === existingMedia.length - 1,
+            function () { existingMedia.splice(idx, 1); renderExisting(); },
+            function () { moveItem(existingMedia, idx, -1, renderExisting); },
+            function () { moveItem(existingMedia, idx, 1, renderExisting); });
           box.appendChild(el);
         });
       }
       renderExisting();
 
-      newFileInput.addEventListener('change', function () {
+      // New attachments (files not yet uploaded): Remove drops the file from the
+      // upload list, so it is never sent; the arrows reorder the carousel.
+      function renderNewFiles() {
         var box = document.getElementById('new-media-preview');
-        var files = Array.prototype.slice.call(newFileInput.files || []);
+        revokePreviewUrls();
         box.innerHTML = '';
-        if (!files.length) { box.classList.add('hidden'); return; }
+        if (!newFiles.length) { box.classList.add('hidden'); return; }
         box.classList.remove('hidden');
-        files.forEach(function (f) {
-          if (f.type.indexOf('image/') === 0) {
+        newFiles.forEach(function (f, idx) {
+          var el = document.createElement('div');
+          el.className = 'relative';
+          if (isImageFile(f)) {
             var img = document.createElement('img');
-            img.src = URL.createObjectURL(f);
+            var url = URL.createObjectURL(f);
+            previewObjectUrls.push(url);
+            img.src = url;
             img.className = 'w-24 h-24 object-cover rounded-xl border border-slate-200 dark:border-slate-700';
-            box.appendChild(img);
+            el.appendChild(img);
           } else {
-            var chip = document.createElement('span');
+            var chip = document.createElement('div');
             chip.textContent = f.name;
-            chip.className = 'px-3 py-2 rounded-xl text-xs bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 max-w-[12rem] truncate';
-            box.appendChild(chip);
+            chip.className = 'w-44 px-3 py-2 rounded-xl text-xs bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 truncate';
+            el.appendChild(chip);
           }
+          buildMediaTile(el, idx === 0, idx === newFiles.length - 1,
+            function () { newFiles.splice(idx, 1); renderNewFiles(); },
+            function () { moveItem(newFiles, idx, -1, renderNewFiles); },
+            function () { moveItem(newFiles, idx, 1, renderNewFiles); });
+          box.appendChild(el);
         });
+      }
+
+      newFileInput.addEventListener('change', function () {
+        Array.prototype.slice.call(newFileInput.files || []).forEach(function (f) { newFiles.push(f); });
+        // Clear the input so re-picking the same file still fires; `newFiles` is
+        // now the single source of truth for what will be uploaded.
+        newFileInput.value = '';
+        renderNewFiles();
       });
 
       var saving = false;
       async function save(action) {
         if (saving) return;
         var content = postContent.value.trim();
-        if (action === 'publish' && !content) { alert('Content is required to publish.'); return; }
+        // Text is required only when there is no video: a video-only post
+        // (typically for YouTube) is valid, and the inline YouTube panel carries
+        // the details. Mirrors create_post()/api_save_post() on the server.
+        var collect = window.collectSyndicationMedia || function () { return []; };
+        var hasVideo = collect().some(function (m) {
+          return window.classifySyndicationItem && window.classifySyndicationItem(m) === 'video';
+        });
+        var ytSelected = !!document.querySelector('input[name="platforms"][value="youtube"]:checked');
+        if (action === 'publish' && !content && !hasVideo && !ytSelected) {
+          alert('Content is required to publish.'); return;
+        }
         if (action === 'publish') {
-          // Instagram / Pinterest need an image or video, YouTube needs a video.
+          // Instagram / Pinterest need an image or video. YouTube is published
+          // from its own page (/youtube/<id>), so it is not part of this check.
           var mediaBlock = window.syndicationBlockReason ? window.syndicationBlockReason() : null;
           if (mediaBlock) { alert('Cannot publish: ' + mediaBlock); return; }
         }
@@ -184,8 +273,13 @@ src="https://www.facebook.com/tr?id=2092273818327635&ev=PageView&noscript=1"
         fd.append('keep_media', JSON.stringify(existingMedia));
         fd.append('csrf_token', document.getElementById('csrf-token').value);
         fd.append('tags', document.getElementById('post-tags').value);
+        // YouTube metadata gathered in the inline panel -> stored as doc["youtube"].
+        if (window.youtubeMetaJSON) {
+          var ytMeta = window.youtubeMetaJSON();
+          if (ytMeta) fd.append('youtube_meta', ytMeta);
+        }
         document.querySelectorAll('input[name="platforms"]:checked').forEach(function (cb) { fd.append('platforms', cb.value); });
-        var files = Array.prototype.slice.call(newFileInput.files || []);
+        var files = newFiles.slice();
         fd.append('new_files', String(files.length));
         files.forEach(function (f, i) { fd.append('file_' + i, f); });
         try {
@@ -195,7 +289,10 @@ src="https://www.facebook.com/tr?id=2092273818327635&ev=PageView&noscript=1"
             if (data.skipped && data.skipped.length) {
               alert('These files were skipped (unsupported file type):\n' + data.skipped.join('\n'));
             }
-            window.location.href = '{{ url_for("posts_dashboard") }}';
+            // Publishing with YouTube checked hands us off to /youtube/<id> (the
+            // server returns `redirect`) so the video details can be filled in and
+            // published there; otherwise back to the posts dashboard.
+            window.location.href = data.redirect || '{{ url_for("posts_dashboard") }}';
           } else {
             saving = false;
             alert('Error: ' + (data.message || 'could not save'));

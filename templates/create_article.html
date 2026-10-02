@@ -102,6 +102,10 @@ src="https://www.facebook.com/tr?id=2092273818327635&ev=PageView&noscript=1"
                 Replace Cover Image
              </span>
           </div>
+          {#- Remove the cover before saving. Wired to the `remove_cover` form field
+              so the server drops the saved image instead of keeping it. -#}
+          <button type="button" id="cover-remove-btn" title="Remove cover image" aria-label="Remove cover image"
+                  class="hidden absolute top-3 right-3 z-30 w-9 h-9 rounded-full bg-black/60 hover:bg-black/80 text-white text-xl leading-none backdrop-blur-sm border border-white/10 flex items-center justify-center transition">&times;</button>
         </div>
       </div>
 
@@ -135,7 +139,7 @@ src="https://www.facebook.com/tr?id=2092273818327635&ev=PageView&noscript=1"
         <button type="button" class="w-8 h-8 rounded-full bg-white dark:bg-slate-800 text-slate-400 hover:text-brand-600 dark:hover:text-brand-400 hover:bg-brand-50 dark:hover:bg-slate-700 flex items-center justify-center transition inset-btn focus:outline-none" aria-label="Add block here">
           <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"></path></svg>
         </button>
-        <div class="absolute top-10 left-1/2 -translate-x-1/2 bg-white dark:bg-slate-800 rounded-2xl shadow-xl border border-slate-100 dark:border-slate-700 w-40 py-2 scale-95 opacity-0 invisible group-hover/btn:visible group-hover/btn:opacity-100 group-focus-within/btn:visible group-focus-within/btn:opacity-100 group-hover/btn:scale-100 transition-all origin-top pointer-events-none group-hover/btn:pointer-events-auto">
+        <div class="absolute top-10 left-1/2 -translate-x-1/2 bg-white dark:bg-slate-800 rounded-2xl shadow-xl border border-slate-100 dark:border-slate-700 w-56 max-h-72 overflow-y-auto py-2 scale-95 opacity-0 invisible group-hover/btn:visible group-hover/btn:opacity-100 group-focus-within/btn:visible group-focus-within/btn:opacity-100 group-hover/btn:scale-100 transition-all origin-top pointer-events-none group-hover/btn:pointer-events-auto">
           <button type="button" class="add-text-action w-full text-left px-5 py-2.5 hover:bg-slate-50 dark:hover:bg-slate-700 text-sm font-semibold text-slate-700 dark:text-slate-200 flex items-center gap-3 transition">
             <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16m-7 6h7"></path></svg>
             Text Block
@@ -144,11 +148,17 @@ src="https://www.facebook.com/tr?id=2092273818327635&ev=PageView&noscript=1"
             <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
             Media Upload
           </button>
+          {#- Insertable rich-text blocks: each adds a new text block pre-filled
+              with its snippet (wired by static/js/blocks.js). -#}
+          <div class="my-1 border-t border-slate-100 dark:border-slate-700"></div>
+          <p class="px-5 pt-1 pb-1 text-[10px] font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500">Insert block</p>
+          {% include '_rich_blocks_menu.html' %}
         </div>
       </div>
     </div>
   </template>
 
+  <script src="{{ url_for('static', filename='js/blocks.js') }}"></script>
   <script>
     document.addEventListener('DOMContentLoaded', () => {
       // Setup Elements
@@ -159,7 +169,26 @@ src="https://www.facebook.com/tr?id=2092273818327635&ev=PageView&noscript=1"
       const coverPreview = document.getElementById('cover-preview');
       const coverPlaceholder = document.getElementById('cover-placeholder');
       const coverOverlay = document.getElementById('cover-overlay');
+      const coverRemoveBtn = document.getElementById('cover-remove-btn');
       const saveStatus = document.getElementById('save-status');
+
+      // Feeds the shared "Preview per platform" control (see
+      // _syndication_options.html): the article's current, unsaved content.
+      // Articles compose from their title, but the body is sent along too.
+      window.getSyndicationPreviewPayload = function () {
+        const parts = [];
+        container.querySelectorAll('.block-item[data-type="text"] textarea').forEach(function (t) {
+          const v = t.value.trim();
+          if (v) parts.push(v);
+        });
+        return {
+          kind: 'article',
+          title: document.getElementById('article-title').value,
+          content: parts.join('\n\n'),
+          tags: document.getElementById('article-tags').value,
+          article_id: document.getElementById('article_id').value
+        };
+      };
 
       let blockCounter = 0;
       let activeInsertNode = null;
@@ -198,19 +227,47 @@ src="https://www.facebook.com/tr?id=2092273818327635&ev=PageView&noscript=1"
         }
       });
 
-      // --- Cover Rendering ---
+      // --- Cover rendering + removal ---
+      // `coverRemoved` records an explicit Remove so it survives a draft save:
+      // the server then clears `cover_image` (via the `remove_cover` field).
+      let coverRemoved = false;
+
+      function showCoverRemoveBtn(show) {
+        if (coverRemoveBtn) coverRemoveBtn.classList.toggle('hidden', !show);
+      }
+
       coverInput.addEventListener('change', function(e) {
         if (e.target.files && e.target.files[0]) {
+          coverRemoved = false;
           const reader = new FileReader();
           reader.onload = function(evt) {
             coverPreview.src = evt.target.result;
             coverPreview.classList.remove('hidden');
             coverPlaceholder.classList.add('hidden');
             coverOverlay.classList.remove('hidden');
+            showCoverRemoveBtn(true);
           }
           reader.readAsDataURL(e.target.files[0]);
         }
       });
+
+      if (coverRemoveBtn) {
+        coverRemoveBtn.addEventListener('click', function(e) {
+          e.preventDefault();
+          e.stopPropagation();
+          coverInput.value = '';
+          coverRemoved = true;
+          coverPreview.removeAttribute('src');
+          coverPreview.classList.add('hidden');
+          coverOverlay.classList.add('hidden');
+          coverPlaceholder.classList.remove('hidden');
+          showCoverRemoveBtn(false);
+          markDirty();
+        });
+      }
+
+      // A cover may already be present on the loaded article.
+      if (coverPreview.getAttribute('src')) showCoverRemoveBtn(true);
 
       // --- DOM Manipulation ---
       const autoResize = (textarea) => {
@@ -230,6 +287,10 @@ src="https://www.facebook.com/tr?id=2092273818327635&ev=PageView&noscript=1"
       }
 
       function attachInsertionMenu(wrapper) {
+        // The template already contains the "Insert block" menu entries (rendered
+        // server-side by _rich_blocks_menu.html); clicking one is handled by the
+        // document-level delegate in static/js/blocks.js, which calls
+        // window.insertRichTextBlock() (defined below).
         wrapper.insertAdjacentHTML('beforeend', document.getElementById('insert-menu-template').innerHTML);
       }
 
@@ -261,7 +322,23 @@ src="https://www.facebook.com/tr?id=2092273818327635&ev=PageView&noscript=1"
         }
         setTimeout(() => autoResize(textarea), 0);
         markDirty(); // Auto-trigger dirty due to new insertion
+        return textarea;
       }
+
+      // Called by static/js/blocks.js when a snippet is chosen from the block
+      // menu: add a fresh text block after `afterNode`, pre-filled with the
+      // syntax for the chosen block, and put the caret in its first line.
+      window.insertRichTextBlock = function (afterNode, kind) {
+        const snippet = (window.RICHTEXT_SNIPPETS || {})[kind] || '';
+        const textarea = insertTextBlock(afterNode, snippet);
+        if (textarea) {
+          const nl = snippet.indexOf('\n');
+          const caret = nl >= 0 ? nl + 1 : snippet.length;
+          textarea.focus();
+          try { textarea.setSelectionRange(caret, caret); } catch (e) { /* no-op */ }
+          autoResize(textarea);
+        }
+      };
 
       function insertLoadedMediaBlock(urlPath, afterNode) {
         // Specifically rebuilds a visual block for already-existing URLs from the db
@@ -431,6 +508,16 @@ src="https://www.facebook.com/tr?id=2092273818327635&ev=PageView&noscript=1"
 
         const formData = new FormData(form);
         formData.append('action', actionType);
+        // Tell the server whether the saved cover was explicitly removed, so it
+        // can clear `cover_image` instead of keeping the old image.
+        formData.append('remove_cover', coverRemoved ? '1' : '0');
+        // YouTube metadata gathered in the inline panel -> stored as doc["youtube"].
+        // (Articles have no single required body textarea: blocks are optional, so
+        // the relaxed "text only when there is no video" rule needs nothing here.)
+        if (window.youtubeMetaJSON) {
+          const ytMeta = window.youtubeMetaJSON();
+          if (ytMeta) formData.append('youtube_meta', ytMeta);
+        }
 
         const blocksMeta = [];
         const blockItems = container.querySelectorAll('.block-item');
@@ -465,7 +552,9 @@ src="https://www.facebook.com/tr?id=2092273818327635&ev=PageView&noscript=1"
           if (item.fileData) out.push({ type: item.fileData.type });
           else if (item.hasAttribute('data-saved-path')) out.push({ path: item.getAttribute('data-saved-path') });
         });
-        if (coverInput.files && coverInput.files.length) {
+        if (coverRemoved) {
+          // Removed before posting: the cover must not count as attached media.
+        } else if (coverInput.files && coverInput.files.length) {
           Array.prototype.slice.call(coverInput.files).forEach(function (f) { out.push({ type: f.type }); });
         } else {
           // Already-saved cover: read the attribute (img.src returns the page
@@ -486,7 +575,9 @@ src="https://www.facebook.com/tr?id=2092273818327635&ev=PageView&noscript=1"
 
         const titleVal = document.getElementById('article-title').value.trim();
         const coverInputed = coverInput.files.length > 0;
-        const coverExisting = existingDataJSON !== '[]' && document.getElementById('cover-preview').src !== '';
+        // A cover counts as present only when one is chosen or still saved - and
+        // not after an explicit Remove (which also survives the publish check).
+        const coverExisting = !coverRemoved && !!coverPreview.getAttribute('src');
 
         // Final Publish Validation
         if (actionType === 'publish') {
@@ -516,7 +607,9 @@ src="https://www.facebook.com/tr?id=2092273818327635&ev=PageView&noscript=1"
              }
 
              if (actionType === 'publish') {
-                window.location.href = "{{ url_for('articles_dashboard') }}";
+                // Publishing with YouTube checked hands us off to /youtube/<id>
+                // (the server returns `redirect`) to finish the video details.
+                window.location.href = data.redirect || "{{ url_for('articles_dashboard') }}";
              } else {
                 saveStatus.innerText = 'Draft saved ' + new Date().toLocaleTimeString();
                 saveStatus.classList.remove('text-orange-400');
