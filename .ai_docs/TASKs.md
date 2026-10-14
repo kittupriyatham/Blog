@@ -1,17 +1,18 @@
 # TASKs
 
 Ordered ledger. Companions: `GOAL.md` (why), `CONTEXT.md` (where we are).
-**Initial foundation changes are committed up to commit f6067e5. The 7 cloud migration items are committed in commit e7fe968 and verified for Session 10.**
+**Initial foundation changes are committed up to commit f6067e5. The cloud migration items and dual MongoDB URI support are committed in commits e7fe968, 0f370a9, and dc61b13 for Session 10.**
 
 ---
 
-## Start here (session 10)
+## Start here (session 10 / 11)
 
 | # | Task | Why / done looks like |
 |---|------|------------------------|
-| 1 | **LinkedIn engagement via SocialAPI — blocked on their reply** | LinkedIn posting is settled: it publishes **natively** as the personal profile. Its *metrics* need SocialAPI's `linkedin_page` beta + `connection_type: "personal"`. Emailed `support@social-api.ai`; reply expected **Mon**. **On reply:** set `SOCIALAPI_METRIC_PLATFORMS = {"linkedin"}` in `socialapi_metrics.py`. |
-| 2 | **Threads / X for long-form** | X stays short-post-only until `TWITTER_SUBSCRIPTION=1`; Threads is not pursued at all. |
-| 3 | **Cloud Migration Implementation & Verification** | ✅ Committed in `e7fe968` and verified with full app import and test suite (all core & authenticated routes passing). |
+| 1 | **Execute Live Atlas & R2 Data Migration** | Run `scripts/migrate_to_atlas.py` once Atlas URI and R2 credentials are set in `.env` to copy existing posts/comments/analytics/media to the cloud. |
+| 2 | **Deploy on Render** | Connect Git repository to Render using `render.yaml` to spin up production web service. |
+| 3 | **LinkedIn engagement via SocialAPI — blocked on their reply** | LinkedIn posting is settled: it publishes **natively** as the personal profile. Its *metrics* need SocialAPI's `linkedin_page` beta + `connection_type: "personal"`. Emailed `support@social-api.ai`; reply expected **Mon**. **On reply:** set `SOCIALAPI_METRIC_PLATFORMS = {"linkedin"}` in `socialapi_metrics.py`. |
+| 4 | **Threads / X for long-form** | X stays short-post-only until `TWITTER_SUBSCRIPTION=1`; Threads is not pursued at all. |
 
 **Dropped:** permanent domain — the user will update `SITE_URL` manually when the domain is ready.
 **Deferred (do later):** scheduling (`scheduled_at`), multi-user accounts, moderated comments.
@@ -24,13 +25,15 @@ Ordered ledger. Companions: `GOAL.md` (why), `CONTEXT.md` (where we are).
 
 | Item | Component Task Target | Status |
 |:---|:---|:---:|
-| 1 | Create `src/providers/cloud/r2.py` — SigV4 upload adapter (stdlib only) | ✅ Completed |
-| 2 | Add R2 env vars to `src/config/settings.py` and re-export from `src/config/__init__.py` | ✅ Completed |
-| 3 | Move LinkedIn OAuth token store to Mongo in `src/syndication/linkedin_token.py` | ✅ Completed |
-| 4 | Create `render.yaml` blueprint with all keys syncing from file | ✅ Completed |
-| 5 | Document the R2 block in `.env.example` | ✅ Completed |
-| 6 | Write `scripts/migrate_to_atlas.py` (posts/comments/analytics, LinkedIn token, media) | ✅ Completed |
-| 7 | **Verify: import the app, run a local smoke test, confirm no regressions** | ✅ Verified (all tests pass) |
+| 1 | Create `src/providers/cloud/r2.py` — SigV4 upload adapter (stdlib only) | ✅ Completed (`e7fe968`) |
+| 2 | Add R2 env vars to `src/config/settings.py` and re-export from `src/config/__init__.py` | ✅ Completed (`e7fe968`) |
+| 3 | Move LinkedIn OAuth token store to Mongo in `src/syndication/linkedin_token.py` | ✅ Completed (`e7fe968`) |
+| 4 | Create `render.yaml` blueprint with all keys syncing from file | ✅ Completed (`e7fe968`) |
+| 5 | Document the R2 block in `.env.example` | ✅ Completed (`e7fe968`) |
+| 6 | Write `scripts/migrate_to_atlas.py` (posts/comments/analytics, LinkedIn token, media) | ✅ Completed (`e7fe968`) |
+| 7 | Add dual `LOCAL_MONGO_URI` and `ATLAS_MONGO_URI` with auto-switch | ✅ Completed (`dc61b13`) |
+| 8 | Update local `.env` with new schema and live `ATLAS_MONGO_URI` credentials | ✅ Completed |
+| 9 | **Verify: import the app, run a local smoke test, confirm no regressions** | ✅ Verified (all tests pass) |
 
 ---
 

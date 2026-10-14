@@ -38,11 +38,13 @@ Status: the north star is met for six platforms — LinkedIn, Facebook, Instagra
 11. **LinkedIn refresh-token flow** — long-lived automated refresh token rotations deployed.
 12. **YouTube workflow** — video processing page integration and SocialAPI sync blocks.
 13. **Analytics + editor** — completed the dashboard metrics overview panels and block composer.
+14. **Cloud Migration Engine** — built stdlib SigV4 S3 adapter for Cloudflare R2 (`src/providers/cloud/r2.py`), MongoDB token store persistence, Render deployment blueprint (`render.yaml`), and data/media migration script (`scripts/migrate_to_atlas.py`).
+15. **Dual MongoDB URI Support** — added `LOCAL_MONGO_URI` and `ATLAS_MONGO_URI` with auto-selection based on backend environment.
 
 ---
 
-## Next (Session 10 Roadmap)
+## Next (Session 10 & 11 Roadmap)
 
-14. **Commit & Freeze Infrastructure Layer** — Formally commit migration files (`r2.py`, `migrate_to_atlas.py`, `render.yaml`) to the repository record before triggering active verification tasks.
-15. **Host the blog on Render + MongoDB Atlas + Cloudflare R2** — Execute the verification checks and smoke tests mapped out in `plans/render-atlas-r2-deploy.md`.
-16. **LinkedIn engagement** — Staged read path operations pending SocialAPI personal account metric beta validation.
+16. **Execute Live Atlas & R2 Data Migration** — Run `scripts/migrate_to_atlas.py` with valid Atlas & R2 credentials to seed cloud storage before production traffic switch.
+17. **Link & Deploy on Render** — Connect repository to Render using `render.yaml` to spin up production web service.
+18. **LinkedIn engagement** — Staged read path operations pending SocialAPI personal account metric beta validation.
