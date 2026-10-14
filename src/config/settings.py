@@ -54,6 +54,18 @@ MEDIA_FORM_FIELD = os.environ.get("MEDIA_FORM_FIELD", "").strip()
 # Public URL base for the links the cloud media backend builds (e.g. a CDN host).
 MEDIA_PUBLIC_BASE = os.environ.get("MEDIA_PUBLIC_BASE", "").strip().rstrip("/")
 
+# --- Cloudflare R2 (used when MEDIA_ADAPTER=r2) ---
+# R2 is S3-compatible object storage reached through its signed API, so it needs
+# the account + bucket identity and a credential pair (see src/providers/cloud/r2.py).
+# R2_PUBLIC_BASE is the *served* URL - the bucket's Public Development URL
+# (https://pub-<id>.r2.dev) or a custom domain bound to the bucket - and is what
+# the browser loads; the signed endpoint is only used to write/read/delete objects.
+R2_ACCOUNT_ID = os.environ.get("R2_ACCOUNT_ID", "").strip()
+R2_ACCESS_KEY_ID = os.environ.get("R2_ACCESS_KEY_ID", "").strip()
+R2_SECRET_ACCESS_KEY = os.environ.get("R2_SECRET_ACCESS_KEY", "").strip()
+R2_BUCKET = os.environ.get("R2_BUCKET", "").strip()
+R2_PUBLIC_BASE = os.environ.get("R2_PUBLIC_BASE", "").strip().rstrip("/")
+
 # --- Cloud database (used when DB_BACKEND=cloud) ---
 # Any MongoDB-compatible URL (Atlas / DocumentDB / Cosmos-Mongo). When empty, the
 # local backend uses a local mongod at 127.0.0.1:27017/blog_db.
@@ -132,6 +144,11 @@ __all__ = [
     "MEDIA_TOKEN",
     "MEDIA_FORM_FIELD",
     "MEDIA_PUBLIC_BASE",
+    "R2_ACCOUNT_ID",
+    "R2_ACCESS_KEY_ID",
+    "R2_SECRET_ACCESS_KEY",
+    "R2_BUCKET",
+    "R2_PUBLIC_BASE",
     "MONGO_URI",
     "SITE_URL",
     "SITE_URL_ALT",

@@ -78,7 +78,14 @@ _REPO_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__f
 
 
 def _store_path() -> str:
-    """Absolute path of the token store. A relative value resolves from the repo root."""
+    """Absolute path of the *legacy* JSON token store.
+
+    This is no longer the live store - the token now lives in Mongo (see
+    `_load_store`), so it survives a host whose disk is wiped on every redeploy.
+    The path is kept for two reasons: it is the migration source the one-time
+    script reads, and it is the fallback when Mongo is unreachable (a local run
+    without Atlas). A relative value resolves from the repo root.
+    """
     path = os.environ.get("LINKEDIN_TOKEN_FILE", "").strip() or os.path.join("data", "linkedin_token.json")
     if not os.path.isabs(path):
         path = os.path.join(_REPO_ROOT, path)
@@ -96,8 +103,41 @@ def _client_credentials() -> tuple[str, str, str]:
             os.environ.get("LINKEDIN_REDIRECT_URI", "").strip())
 
 
+#: The one document in the `secrets` collection that holds the LinkedIn token.
+_TOKEN_DOC_ID = "linkedin_token"
+
+
+def _secrets_collection():
+    """The `secrets` collection on the app's Mongo connection, or None.
+
+    Ensures a connection first (the setup CLI runs without the app), and returns
+    None when Mongo is not reachable so callers can fall back to the legacy file.
+    """
+    try:
+        from src.db import connect_db
+        connect_db()
+        from mongoengine import get_db
+        return get_db()["secrets"]
+    except Exception:
+        return None
+
+
 def _load_store() -> dict:
-    """Read the token store. A missing or corrupt file simply means "no token"."""
+    """Read the token store: Mongo first, then the legacy JSON file.
+
+    Mongo is the live store (it survives redeploys). The legacy
+    `data/linkedin_token.json` is read only as a fallback so a local run - or a
+    deployment that has not migrated yet - keeps working.
+    """
+    coll = _secrets_collection()
+    if coll is not None:
+        try:
+            doc = coll.find_one({"_id": _TOKEN_DOC_ID}) or {}
+            doc.pop("_id", None)
+            if doc:
+                return doc
+        except Exception:
+            pass  # fall through to the legacy file
     try:
         with open(_store_path(), "r", encoding="utf-8") as fh:
             data = json.load(fh)
@@ -107,12 +147,25 @@ def _load_store() -> dict:
 
 
 def _save_store(data: dict) -> None:
-    """Write the store atomically (temp file + replace) so a crash cannot truncate it."""
+    """Persist the store to Mongo (upsert). Falls back to the legacy file.
+
+    Mongo is authoritative when reachable - an upsert is atomic, so no temp-file
+    dance is needed. The file write only happens when Mongo is not, so a local
+    run without Atlas can still refresh and keep its token.
+    """
+    payload = dict(data or {})
+    coll = _secrets_collection()
+    if coll is not None:
+        try:
+            coll.update_one({"_id": _TOKEN_DOC_ID}, {"$set": payload}, upsert=True)
+            return
+        except Exception:
+            pass  # fall through to the file
     path = _store_path()
     os.makedirs(os.path.dirname(path), exist_ok=True)
     tmp = path + ".tmp"
     with open(tmp, "w", encoding="utf-8") as fh:
-        json.dump(data, fh, indent=2)
+        json.dump(payload, fh, indent=2)
     os.replace(tmp, path)
 
 

@@ -1,0 +1,44 @@
+# Render Blueprint (https://render.com/docs/blueprint-spec)
+#
+# Every env var below syncs FROM this file (sync: true), so render.yaml is the
+# single source of truth for the service's configuration - nothing is pasted
+# into the Render dashboard by hand to define the service.
+#
+# SECRETS ARE PLACEHOLDERS ON PURPOSE. This file is committed to GitHub, so it
+# ships only `CHANGE_ME_*` values, never real credentials. After the first
+# deploy, open Dashboard -> Environment, paste the real values over each
+# placeholder, and Render stores them from then on. (If you would rather commit
+# real values, the repo must be private - and you accept that anyone who clones
+# it gets your database and storage credentials.)
+services:
+  - type: web
+    name: blog
+    runtime: python
+    plan: free            # switch to starter if you want no spin-down
+    buildCommand: pip install -r requirements.txt
+    # One worker on purpose: the background syndication queue is in-process, so a
+    # single worker avoids two threads draining the same logical job. Threads keep
+    # concurrent page loads responsive.
+    startCommand: gunicorn app:app --workers 1 --threads 4 --timeout 180 --bind 0.0.0.0:$PORT
+    envVars:
+      - key: SECRET_KEY             value: CHANGE_ME_secret_key
+      - key: MONGO_URI              value: mongodb+srv://USER:PASS@cluster0.xxxxx.mongodb.net/blog
+      - key: DB_BACKEND             value: cloud
+      - key: DEFAULT_BACKEND        value: local    # media is overridden to cloud below
+      - key: MEDIA_BACKEND          value: cloud
+      - key: MEDIA_ADAPTER          value: r2
+      - key: ANALYTICS_STORE        value: mongo
+      - key: SITE_URL               value: https://CHANGE_ME.onrender.com   # or the custom domain
+      - key: R2_ACCOUNT_ID          value: CHANGE_ME_account_id
+      - key: R2_ACCESS_KEY_ID       value: CHANGE_ME_access_key_id
+      - key: R2_SECRET_ACCESS_KEY   value: CHANGE_ME_secret_access_key
+      - key: R2_BUCKET              value: CHANGE_ME_bucket
+      - key: R2_PUBLIC_BASE         value: https://pub-CHANGE_ME.r2.dev
+      - key: SOCIALAPI_KEY          value: CHANGE_ME_socialapi_key
+      - key: BLOG_ADMIN_USERNAME    value: admin
+      - key: BLOG_ADMIN_PASSWORD    value: CHANGE_ME_admin_password
+      - key: LINKEDIN_CLIENT_ID     value: CHANGE_ME_client_id
+      - key: LINKEDIN_CLIENT_SECRET value: CHANGE_ME_client_secret
+      - key: LINKEDIN_REDIRECT_URI  value: https://CHANGE_ME.onrender.com/linkedin/callback
+      - key: TELEGRAM_BOT_TOKEN     value: ""
+      - key: TELEGRAM_CHAT_ID       value: ""

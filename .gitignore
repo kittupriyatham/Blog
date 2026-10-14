@@ -33,3 +33,6 @@ data/
 # README images are versioned (moved out of the repo root into static/images/readme/).
 !static/images/readme/
 !static/images/readme/*
+
+tmp/*
+cmdc2

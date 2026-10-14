@@ -5,19 +5,14 @@
 **Write once on the blog (canonical) → on publish it fans out to the social platforms you choose → each
 social post carries the blog post's URL → the blog post shows back-links to where it was syndicated.**
 
-This is POSSE: *Publish Own Site, Syndicate Elsewhere.* The blog is home; social is distribution; links
-point both ways.
-
-**Status:** the north star is met for six platforms — LinkedIn (personal profile, via the official API),
-Facebook, Instagram, Bluesky, Pinterest (SocialAPI) and YouTube (video, via SocialAPI) — each returning a
-permalink that the page renders as "Also published on…". Remaining work is reach, robustness and **portability**.
+Status: the north star is met for six platforms — LinkedIn, Facebook, Instagram, Bluesky, Pinterest, and YouTube — each returning a permalink. Remaining work is reach, robustness, and **portability**.
 
 ---
 
 ## Principles
 
 - **Blog is canonical.** Every social post links back; the blog records where it went.
-- **Bidirectional references.** "Also published on…" is part of the post, not an afterthought.
+- **Bidirectional references.** "Also published on…" is part of the post.
 - **Publishing never blocks.** Slow/flaky platform APIs run on a background worker.
 - **Idempotent by design.** Re-publishing never double-posts; retry only touches failures.
 - **Pluggable adapters.** Each network is one module behind a common interface.
@@ -30,51 +25,24 @@ permalink that the page renders as "Also published on…". Remaining work is rea
 
 ## Achieved
 
-1. **Syndication core** — canonical `SITE_URL`, `syndications` per doc, per-post platform selection,
-   background worker, back-reference rendering, idempotent re-publish.
-2. **LinkedIn** (text **and** images) + **SocialAPI platforms** (Facebook, Instagram, Bluesky, Pinterest).
-3. **Media pipeline** — JPEG conversion, downscaling, byte budgeting, Instagram aspect fit, text cards.
+1. **Syndication core** — canonical `SITE_URL`, `syndications` per doc, background worker, idempotent re-publish.
+2. **LinkedIn** (native API) + **SocialAPI platforms** (Facebook, Instagram, Bluesky, Pinterest).
+3. **Media pipeline** — JPEG conversion, downscaling, byte budgeting, aspect scaling adjustments.
 4. **Per-platform text** + **LLM rewrite-to-fit** instead of truncation.
-5. **Permanent public URL** — Cloudflare **named** tunnel as an auto-start **boot service**.
+5. **Permanent public URL** — Cloudflare **named** tunnel running as a background system boot service.
 6. **Free dry-run validation** (`POST /v1/posts/validate`).
-7. **ORM data layer** — MongoEngine Documents in `src/db/`; `syndications` is a declared field, so it can
-   never be silently dropped.
+7. **ORM data layer** — MongoEngine Documents in `src/db/` to guarantee field schemas are preserved.
 8. **Thin `app.py`** — routes + Flask init + run only; all logic lives in `src/` packages.
-9. **Root hygiene** — notes in `.ai_docs/`, README images in `static/images/readme/`, runtime in `data/`.
-10. **Provider-agnostic storage** — a `local`/`cloud` selector per data type (media, database); cloud media
-    via a plug-in HTTP upload adapter (no SDK), cloud database = any MongoDB-compatible URL.
-11. **LinkedIn refresh-token flow** — the token now renews itself instead of expiring.
-12. **YouTube** — video upload plus the full upload metadata, collected on a dedicated page and published via
-    SocialAPI.
-13. **Analytics + editor** — per-post × per-platform social metrics beside the blog's first-party traffic; the
-    editor gained a live per-platform preview, rich blocks, and attachment remove/reorder.
+9. **Root hygiene** — consolidated structures under `.ai_docs/`, `static/`, and `data/`.
+10. **Provider-agnostic storage** — implemented `local`/`cloud` storage layer selector per data type.
+11. **LinkedIn refresh-token flow** — long-lived automated refresh token rotations deployed.
+12. **YouTube workflow** — video processing page integration and SocialAPI sync blocks.
+13. **Analytics + editor** — completed the dashboard metrics overview panels and block composer.
 
 ---
 
-## Next
+## Next (Session 10 Roadmap)
 
-14. **Permanent domain** — `kittupriyatham.com` → `blog.kittupriyatham.com` (a one-line `.env` edit now that a
-    stale OS `SITE_URL` can no longer shadow it).
-15. **LinkedIn engagement** — blocked on SocialAPI enabling the `linkedin_page` beta with the personal
-    connection type; the read path is staged (see `TASKs.md`).
-16. **Later:** hand-written per-platform text overrides (the automatic per-platform compose + live preview
-    already ship); scheduling; metrics read-back for the remaining platforms; expand the Attach menu.
-
----
-
-## Later / ideas
-
-- Video path for YouTube; per-platform hand-written overrides; `scheduled_at`; metrics read-back.
-- **Multi-user accounts** — today it is a single admin taken from the environment.
-- **Moderated comments** — comments are deliberately open and unmoderated for now.
-- **Publishing to personal Facebook profiles** — not possible via any permitted API; a Page is the route.
-
----
-
-## Architecture direction
-
-- **Data access** goes through MongoEngine Documents in `src/db/`.
-- **Storage abstraction (next).** A provider layer so the app is not fixed to one cloud: a single
-  **common provider class** defines the contract; concrete providers (local filesystem, Azure Blob, S3,
-  GCS, MongoDB, …) register into it and are selected by config. **Media and database are chosen
-  separately**, and each can fall back to a **shared default** provider.
+14. **Commit & Freeze Infrastructure Layer** — Formally commit migration files (`r2.py`, `migrate_to_atlas.py`, `render.yaml`) to the repository record before triggering active verification tasks.
+15. **Host the blog on Render + MongoDB Atlas + Cloudflare R2** — Execute the verification checks and smoke tests mapped out in `plans/render-atlas-r2-deploy.md`.
+16. **LinkedIn engagement** — Staged read path operations pending SocialAPI personal account metric beta validation.

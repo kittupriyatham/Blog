@@ -1,6 +1,6 @@
 # CONTEXT — handoff
 
-_Last updated: 2026-10-02 (**session 9**). Companions: `GOAL.md` (north star), `TASKs.md` (ledger)._
+_Last updated: 2026-10-14 (**session 10**). Companions: `GOAL.md` (north star), `TASKs.md` (ledger)._
 
 ---
 
@@ -29,14 +29,15 @@ carries the blog URL → the post shows where it was syndicated ("Also published
 - **Thin `app.py`** (~607 lines): Flask init + 25 route view functions + `app.run`; all logic lives in
   `src/` packages.
 - **Tunnel:** the auto-start `cloudflared` Windows service routes `blog.potluri-krishna-priyatham.tech` →
-  `127.0.0.1:5000`. Trial domain good for **≥1 year**; permanent `blog.kittupriyatham.com` planned.
+  `127.0.0.1:5000`. Trial domain good for **≥1 year**; permanent `://kittupriyatham.com` planned.
 - **Repo tidy:** session notes in `.ai_docs/`; README images in `static/images/readme/`; runtime in `data/`.
-- **Commits:** sessions 6–8 are committed and pushed.
+- **Commits:** sessions 6–9 are fully committed and pushed. Baseline commit is `f6067e5`. The 7 cloud migration items are currently uncommitted and staged in the working directory for this session block.
 
 ---
 
 ## 3. Layout
-```
+
+```text
 app.py                       # Flask init + routes + app.run  (thin)
 src/
   __init__.py                # regular package marker
@@ -66,7 +67,7 @@ templates/  static/  media/  data/  .ai_docs/
   beside first-party blog events); **editor** rebuild (live per-platform text preview, 14 rich blocks,
   attachment remove/reorder); **YouTube** page + upload metadata; **LinkedIn posts as the personal profile**
   (member metrics proven API-gated — `403 partnerApi…` — and the SocialAPI read path staged, inactive);
-  **stale `SITE_URL` fixed** in `settings.py`.
+  **stale `SITE_URL` fixed** in `settings.py`. Session 9 closed out cleanly to establish the code-commit baseline.
 
 ---
 
@@ -86,10 +87,9 @@ templates/  static/  media/  data/  .ai_docs/
 ---
 
 ## 6. Open items / next
-- **Commit + push session 9** — a large uncommitted tree (analytics dashboard, editor blocks, YouTube, the
-  LinkedIn/metrics work; see `git status`). The user pushes.
-- **YouTube end-to-end** — built but not yet exercised with a real video (spends a SocialAPI credit).
 - **LinkedIn engagement** — blocked on SocialAPI's reply (`TASKs.md` #1); the read path is staged.
+- **Host on Render + MongoDB Atlas + Cloudflare R2 (Session 10 Focus)** — Commit the 7 staged migration code blocks to the repository record first. Once committed, execute the application import verification pass and smoke checks mapped out in `C:\Users\kittu\.commandcode\plans\render-atlas-r2-deploy.md` to shift assets off local storage configurations cleanly.
+- **YouTube end-to-end** — built but not yet exercised with a real video (spends a SocialAPI credit).
 - **Permanent domain**; hand-written per-platform overrides; scheduling; metrics read-back; expand the Attach menu.
 - **SocialAPI quota** = 10 posts/month (validate is free) — confirm whether a multi-platform post spends one
   credit or one per platform.
