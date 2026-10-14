@@ -31,7 +31,7 @@ carries the blog URL → the post shows where it was syndicated ("Also published
 - **Tunnel:** the auto-start `cloudflared` Windows service routes `blog.potluri-krishna-priyatham.tech` →
   `127.0.0.1:5000`. Trial domain good for **≥1 year**; permanent `://kittupriyatham.com` planned.
 - **Repo tidy:** session notes in `.ai_docs/`; README images in `static/images/readme/`; runtime in `data/`.
-- **Commits:** sessions 6–9 are fully committed and pushed. Baseline commit is `f6067e5`. The 7 cloud migration items are currently uncommitted and staged in the working directory for this session block.
+- **Commits:** sessions 6–9 are fully committed and pushed (baseline commit `f6067e5`). The 7 cloud migration items are committed in `e7fe968` for Session 10.
 
 ---
 

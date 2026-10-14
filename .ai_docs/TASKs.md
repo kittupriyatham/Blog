@@ -1,7 +1,7 @@
 # TASKs
 
 Ordered ledger. Companions: `GOAL.md` (why), `CONTEXT.md` (where we are).
-**Initial foundation changes are committed up to commit f6067e5. The 7 cloud migration items are uncommitted and staged for Session 10.**
+**Initial foundation changes are committed up to commit f6067e5. The 7 cloud migration items are committed in commit e7fe968 and verified for Session 10.**
 
 ---
 
@@ -11,7 +11,7 @@ Ordered ledger. Companions: `GOAL.md` (why), `CONTEXT.md` (where we are).
 |---|------|------------------------|
 | 1 | **LinkedIn engagement via SocialAPI — blocked on their reply** | LinkedIn posting is settled: it publishes **natively** as the personal profile. Its *metrics* need SocialAPI's `linkedin_page` beta + `connection_type: "personal"`. Emailed `support@social-api.ai`; reply expected **Mon**. **On reply:** set `SOCIALAPI_METRIC_PLATFORMS = {"linkedin"}` in `socialapi_metrics.py`. |
 | 2 | **Threads / X for long-form** | X stays short-post-only until `TWITTER_SUBSCRIPTION=1`; Threads is not pursued at all. |
-| 3 | **Commit Cloud Migration Implementation & Verify Bundle** | The code for items 1–6 is written but not yet committed. Commit these changes to freeze the migration architecture before launching the final app import and verification loop. |
+| 3 | **Cloud Migration Implementation & Verification** | ✅ Committed in `e7fe968` and verified with full app import and test suite (all core & authenticated routes passing). |
 
 **Dropped:** permanent domain — the user will update `SITE_URL` manually when the domain is ready.
 **Deferred (do later):** scheduling (`scheduled_at`), multi-user accounts, moderated comments.
