@@ -33,9 +33,16 @@ load_dotenv()
 from pymongo import MongoClient
 
 # Where the data lives *today* (the local mongod the app has been using).
-SOURCE_URI = os.environ.get("MIGRATE_SOURCE_URI", "mongodb://127.0.0.1:27017/blog_db")
-# Where it is going (Atlas). Read from the env, exactly as the app will.
-TARGET_URI = os.environ.get("MONGO_URI", "").strip()
+SOURCE_URI = (
+    os.environ.get("LOCAL_MONGO_URI", "").strip()
+    or os.environ.get("MIGRATE_SOURCE_URI", "").strip()
+    or "mongodb://127.0.0.1:27017/blog_db"
+)
+# Where it is going (Atlas). Read from ATLAS_MONGO_URI or MONGO_URI.
+TARGET_URI = (
+    os.environ.get("ATLAS_MONGO_URI", "").strip()
+    or os.environ.get("MONGO_URI", "").strip()
+)
 
 COLLECTIONS = ("posts", "comments", "analytics")
 
@@ -162,7 +169,7 @@ def migrate_media(target):
 
 def main():
     if not TARGET_URI:
-        raise SystemExit("MONGO_URI is not set - put your Atlas connection string in .env first.")
+        raise SystemExit("ATLAS_MONGO_URI (or MONGO_URI) is not set - put your Atlas connection string in .env first.")
 
     source = _connect(SOURCE_URI, "local mongod (source)")
     target = _connect(TARGET_URI, "Atlas (target)")

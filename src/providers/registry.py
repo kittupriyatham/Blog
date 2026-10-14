@@ -65,6 +65,8 @@ def selected_name(kind, override=None):
     name = (override or "").strip() if override else ""
     if not name:
         name = os.environ.get(_ENV_BACKEND[kind], "").strip()
+        if name.startswith("#"):
+            name = ""
     if not name:
         from src.config import DEFAULT_BACKEND  # lazy: keep the import cycle-free
         name = (DEFAULT_BACKEND or "").strip() or _FALLBACK_BACKEND

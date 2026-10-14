@@ -78,13 +78,14 @@ class LocalDatabaseProvider(DatabaseProvider):
     def connect(self) -> str:
         if self._uri:  # idempotent: app startup and any other importer may call
             return self._uri
-        uri = (MONGO_URI or "").strip()
+        from src.config import LOCAL_MONGO_URI as _CONFIG_LOCAL_URI
+        uri = (_CONFIG_LOCAL_URI or MONGO_URI or "").strip()
         if uri:
             uri = uri_with_db(uri)
         else:
             uri = LOCAL_MONGO_URI
-            print("[startup] No MONGO_URI set - using local mongod at %s. "
-                  "Start one with `docker run -d -p 27017:27017 mongo`, or set MONGO_URI."
+            print("[startup] No LOCAL_MONGO_URI or MONGO_URI set - using local mongod at %s. "
+                  "Start one with `docker run -d -p 27017:27017 mongo`, or set LOCAL_MONGO_URI."
                   % uri)
         connect(host=uri)
         self._uri = uri

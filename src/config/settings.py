@@ -37,10 +37,20 @@ UPLOAD_TOKEN = os.environ.get("UPLOAD_TOKEN", "").strip()
 # Each data kind is served by one backend: `local` (the filesystem media/ folder
 # and a local mongod) or `cloud` (an HTTP upload endpoint and a
 # MongoDB-compatible URL). Selection is config-only, so no code changes when a
-# platform is swapped in - see src/providers/registry.py.
-DEFAULT_BACKEND = os.environ.get("DEFAULT_BACKEND", "local").strip() or "local"
-MEDIA_BACKEND = os.environ.get("MEDIA_BACKEND", "").strip()   # overrides DEFAULT_BACKEND for media
-DB_BACKEND = os.environ.get("DB_BACKEND", "").strip()         # overrides DEFAULT_BACKEND for the database
+def _clean_env(key: str, default: str = "") -> str:
+    """Read an env var, stripping whitespace and discarding trailing comments ingested on empty values."""
+    raw = os.environ.get(key, default)
+    if raw is None:
+        return default
+    text = str(raw).strip()
+    if text.startswith("#"):
+        return default
+    return text
+
+
+DEFAULT_BACKEND = _clean_env("DEFAULT_BACKEND", "local") or "local"
+MEDIA_BACKEND = _clean_env("MEDIA_BACKEND", "")   # overrides DEFAULT_BACKEND for media
+DB_BACKEND = _clean_env("DB_BACKEND", "")         # overrides DEFAULT_BACKEND for the database
 
 # --- Cloud media upload (used when MEDIA_BACKEND=cloud) ---
 # No cloud SDK: the `http` adapter PUTs/POSTs the bytes to this endpoint with an
@@ -66,10 +76,22 @@ R2_SECRET_ACCESS_KEY = os.environ.get("R2_SECRET_ACCESS_KEY", "").strip()
 R2_BUCKET = os.environ.get("R2_BUCKET", "").strip()
 R2_PUBLIC_BASE = os.environ.get("R2_PUBLIC_BASE", "").strip().rstrip("/")
 
-# --- Cloud database (used when DB_BACKEND=cloud) ---
-# Any MongoDB-compatible URL (Atlas / DocumentDB / Cosmos-Mongo). When empty, the
-# local backend uses a local mongod at 127.0.0.1:27017/blog_db.
-MONGO_URI = os.environ.get("MONGO_URI", "").strip()
+# --- Database URIs (local vs cloud) ---
+# LOCAL_MONGO_URI: local mongod (e.g. mongodb://localhost:27017/blog_db)
+# ATLAS_MONGO_URI: MongoDB Atlas connection string (e.g. mongodb+srv://...)
+# MONGO_URI: active connection string or master override. If MONGO_URI is unset,
+# it automatically selects ATLAS_MONGO_URI when DB_BACKEND=cloud (or DEFAULT_BACKEND=cloud),
+# and LOCAL_MONGO_URI when running with a local database backend.
+LOCAL_MONGO_URI = _clean_env("LOCAL_MONGO_URI", "")
+ATLAS_MONGO_URI = _clean_env("ATLAS_MONGO_URI", "")
+
+MONGO_URI = _clean_env("MONGO_URI", "")
+if not MONGO_URI:
+    _effective_db = DB_BACKEND or DEFAULT_BACKEND
+    if _effective_db == "cloud" and ATLAS_MONGO_URI:
+        MONGO_URI = ATLAS_MONGO_URI
+    elif LOCAL_MONGO_URI:
+        MONGO_URI = LOCAL_MONGO_URI
 
 # --- Syndication (POSSE) ---
 # SITE_URL prefers the ".env" value over a real environment variable. A stale
@@ -149,6 +171,8 @@ __all__ = [
     "R2_SECRET_ACCESS_KEY",
     "R2_BUCKET",
     "R2_PUBLIC_BASE",
+    "LOCAL_MONGO_URI",
+    "ATLAS_MONGO_URI",
     "MONGO_URI",
     "SITE_URL",
     "SITE_URL_ALT",

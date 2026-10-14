@@ -7,13 +7,13 @@ and the same code works with every Mongo-compatible host.
 """
 from mongoengine import connect
 
-from src.config import MONGO_URI
+from src.config import ATLAS_MONGO_URI, MONGO_URI
 
 from ..base import DatabaseProvider, ProviderError, ensure_model_indexes, uri_with_db
 
 
 class CloudDatabaseProvider(DatabaseProvider):
-    """A MongoDB-compatible database reached by URL (`MONGO_URI`)."""
+    """A MongoDB-compatible database reached by URL (`ATLAS_MONGO_URI` or `MONGO_URI`)."""
 
     name = "cloud"
 
@@ -23,9 +23,9 @@ class CloudDatabaseProvider(DatabaseProvider):
     def connect(self) -> str:
         if self._uri:  # idempotent
             return self._uri
-        uri = (MONGO_URI or "").strip()
+        uri = (ATLAS_MONGO_URI or MONGO_URI or "").strip()
         if not uri:
-            raise ProviderError("DB_BACKEND=cloud needs MONGO_URI - a MongoDB-compatible "
+            raise ProviderError("DB_BACKEND=cloud needs ATLAS_MONGO_URI or MONGO_URI - a MongoDB-compatible "
                                "URL (e.g. mongodb+srv://user:pass@cluster/db).")
         uri = uri_with_db(uri)
         connect(host=uri)
@@ -36,7 +36,7 @@ class CloudDatabaseProvider(DatabaseProvider):
         ensure_model_indexes()
 
     def health(self) -> bool:
-        return bool((MONGO_URI or "").strip())
+        return bool((ATLAS_MONGO_URI or MONGO_URI or "").strip())
 
 
 __all__ = ["CloudDatabaseProvider"]
