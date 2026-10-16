@@ -65,13 +65,16 @@ src="https://www.facebook.com/tr?id=2092273818327635&ev=PageView&noscript=1"
         <a href="{{ url_for('posts_dashboard') }}" class="px-3 py-1.5 rounded-full text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition">Posts</a>
         <a href="{{ url_for('articles_dashboard') }}" class="px-3 py-1.5 rounded-full text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition">Articles</a>
         {% if session.get('logged_in') %}
-          <a href="{{ url_for('analytics_dashboard') }}" class="px-3 py-1.5 rounded-full text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition">Analytics</a>
-          <form method="POST" action="{{ url_for('logout') }}" class="ml-2 pl-3 border-l border-slate-200 dark:border-slate-700">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <button type="submit" class="text-red-500 hover:text-red-600 font-medium transition">Sign Out</button>
-          </form>
+          <div class="flex items-center gap-2">
+            <a href="{{ url_for('analytics_dashboard') }}" class="px-2.5 py-1.5 rounded-full text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition">Analytics</a>
+            <span class="text-slate-300 dark:text-slate-700 select-none">|</span>
+            <form method="POST" action="{{ url_for('logout') }}">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <button type="submit" class="text-red-500 hover:text-red-600 font-medium transition">Sign Out</button>
+            </form>
+          </div>
         {% else %}
-          <a href="{{ url_for('login') }}" class="ml-2 pl-3 border-l border-slate-200 dark:border-slate-700 text-brand-600 dark:text-brand-400 hover:text-brand-700 font-medium transition">Admin</a>
+          <a href="{{ url_for('login') }}" class="px-2.5 py-1.5 rounded-full text-brand-600 dark:text-brand-400 hover:text-brand-700 font-medium transition">Admin</a>
         {% endif %}
         <button type="button" data-theme-toggle onclick="toggleTheme()" class="p-2 rounded-full text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition" title="Toggle theme" aria-label="Toggle theme">
           <svg data-icon-moon class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>

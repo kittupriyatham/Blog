@@ -68,7 +68,8 @@ src="https://www.facebook.com/tr?id=2092273818327635&ev=PageView&noscript=1"
       </div>
       <div class="flex items-center gap-3">
         {% if session.get('logged_in') %}
-          <a href="{{ url_for('analytics_dashboard') }}" class="text-xs sm:text-sm font-medium px-3 py-1.5 rounded-full text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition">Analytics</a>
+          <a href="{{ url_for('analytics_dashboard') }}" class="text-xs sm:text-sm font-medium px-2.5 py-1.5 rounded-full text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition">Analytics</a>
+          <span class="text-slate-300 dark:text-slate-700 text-sm select-none">|</span>
           <form method="POST" action="{{ url_for('logout') }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button type="submit" class="text-sm text-red-500 hover:text-red-600 font-medium transition">Sign Out</button></form>
         {% endif %}
         <button type="button" data-theme-toggle onclick="toggleTheme()" class="p-2 rounded-full text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition" title="Toggle theme" aria-label="Toggle theme">
