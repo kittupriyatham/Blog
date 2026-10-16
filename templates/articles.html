@@ -61,6 +61,9 @@ src="https://www.facebook.com/tr?id=2092273818327635&ev=PageView&noscript=1"
           <a href="{{ url_for('index') }}" class="px-3 py-1.5 rounded-full text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition">Feed</a>
           <a href="{{ url_for('posts_dashboard') }}" class="px-3 py-1.5 rounded-full text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition">Posts</a>
           <a href="{{ url_for('articles_dashboard') }}" class="px-3 py-1.5 rounded-full text-brand-600 dark:text-brand-400 bg-brand-50 dark:bg-brand-950/50 transition">Articles</a>
+          {% if session.get('logged_in') %}
+            <a href="{{ url_for('analytics_dashboard') }}" class="px-3 py-1.5 rounded-full text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition">Analytics</a>
+          {% endif %}
         </div>
         {% if session.get('logged_in') %}
         <a href="{{ url_for('create_article') }}" class="bg-gradient-to-r from-brand-600 to-blue-600 hover:from-brand-700 hover:to-blue-700 text-white font-medium px-4 py-1.5 rounded-full text-sm shadow-sm hover:shadow-md transition flex items-center gap-2">

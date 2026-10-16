@@ -20,7 +20,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="{{ url_for('static', filename='js/theme.js') }}"></script>
-  <script>window.ANALYTICS = {page:'post', post_id: {{ post.post_id | tojson }}, type:'post'};</script>
+  <script>window.ANALYTICS = {page: 'post', post_id: '{{ post.post_id }}', type: 'post'};</script>
   <script src="{{ url_for('static', filename='js/analytics.js') }}"></script>
   <!-- Meta Pixel Code -->
 <script>
@@ -66,12 +66,15 @@ src="https://www.facebook.com/tr?id=2092273818327635&ev=PageView&noscript=1"
           <span class="font-bold text-slate-900 dark:text-white text-lg tracking-tight">My Blog</span>
         </div>
       </div>
-      <div class="flex items-center gap-4">
+      <div class="flex items-center gap-3">
+        {% if session.get('logged_in') %}
+          <a href="{{ url_for('analytics_dashboard') }}" class="text-xs sm:text-sm font-medium px-3 py-1.5 rounded-full text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition">Analytics</a>
+          <form method="POST" action="{{ url_for('logout') }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button type="submit" class="text-sm text-red-500 hover:text-red-600 font-medium transition">Sign Out</button></form>
+        {% endif %}
         <button type="button" data-theme-toggle onclick="toggleTheme()" class="p-2 rounded-full text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition" title="Toggle theme" aria-label="Toggle theme">
           <svg data-icon-moon class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>
           <svg data-icon-sun class="w-5 h-5 hidden" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path stroke-linecap="round" d="M12 2v2m0 16v2M4.93 4.93l1.41 1.41m11.32 11.32l1.41 1.41M2 12h2m16 0h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
         </button>
-        {% if session.get('logged_in') %}<form method="POST" action="{{ url_for('logout') }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button type="submit" class="text-sm text-red-500 hover:text-red-600 font-medium transition">Sign Out</button></form>{% endif %}
       </div>
     </div>
   </nav>
@@ -143,12 +146,42 @@ src="https://www.facebook.com/tr?id=2092273818327635&ev=PageView&noscript=1"
       </div>
     {% endif %}
 
+    <!-- Post Engagement Action Bar -->
+    {% set post_url = canonical('post_detail', post_id=post.post_id) %}
+    <div class="mt-4 bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 flex items-center divide-x divide-slate-100 dark:divide-slate-800 px-2 py-1 relative">
+      <div class="flex-1 relative group/rx" id="rx-container-{{ post.post_id }}">
+        <button onclick="reactToPost('{{ post.post_id }}', 'like', this)"
+                class="w-full flex items-center justify-center gap-1.5 py-2 text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg text-sm font-medium transition rx-trigger">
+          <span class="rx-emoji text-base">👍</span>
+          <span class="rx-label">Like</span>
+          <span class="like-count ml-0.5 text-xs text-slate-400 dark:text-slate-500 font-normal">{% if post.likes %}({{ post.likes }}){% endif %}</span>
+        </button>
+        <div class="absolute bottom-full left-2 mb-2 hidden group-hover/rx:flex items-center gap-1.5 bg-white dark:bg-slate-800 shadow-xl border border-slate-200 dark:border-slate-700 px-3 py-1.5 rounded-full z-30 backdrop-blur-md animate-in fade-in zoom-in-95 duration-150">
+          <button type="button" onclick="event.stopPropagation(); reactToPost('{{ post.post_id }}', 'like', this)" title="Like" class="hover:scale-130 active:scale-95 transition-transform text-lg p-1">👍</button>
+          <button type="button" onclick="event.stopPropagation(); reactToPost('{{ post.post_id }}', 'heart', this)" title="Love" class="hover:scale-130 active:scale-95 transition-transform text-lg p-1">❤️</button>
+          <button type="button" onclick="event.stopPropagation(); reactToPost('{{ post.post_id }}', 'fire', this)" title="Fire" class="hover:scale-130 active:scale-95 transition-transform text-lg p-1">🔥</button>
+          <button type="button" onclick="event.stopPropagation(); reactToPost('{{ post.post_id }}', 'clap', this)" title="Clap" class="hover:scale-130 active:scale-95 transition-transform text-lg p-1">👏</button>
+          <button type="button" onclick="event.stopPropagation(); reactToPost('{{ post.post_id }}', 'insightful', this)" title="Insightful" class="hover:scale-130 active:scale-95 transition-transform text-lg p-1">💡</button>
+        </div>
+      </div>
+      <a href="#comments" class="flex-1 flex items-center justify-center gap-1.5 py-2 text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg text-sm font-medium transition">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" /></svg>
+        <span>Comments ({{ comments | length }})</span>
+      </a>
+      <button onclick="sharePost('{{ post.post_id }}', this.dataset.url, this)" data-url="{{ post_url }}" data-share="copy_link" class="flex-1 flex items-center justify-center gap-1.5 py-2 text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg text-sm font-medium transition">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8" /><polyline stroke-linecap="round" stroke-linejoin="round" points="16 6 12 2 8 6" /><line stroke-linecap="round" stroke-linejoin="round" x1="12" y1="2" x2="12" y2="15" /></svg>
+        <span>Share</span>
+        <span class="share-count ml-0.5 text-xs text-slate-400 dark:text-slate-500 font-normal">{% if post.shares %}({{ post.shares }}){% endif %}</span>
+      </button>
+    </div>
+
     {% include '_social_icons.html' %}
 
     <div class="mt-3">
       <button type="button"
               data-share="medium_import"
-              onclick="navigator.clipboard.writeText('{{ canonical('post_detail', post_id=post.post_id) }}').catch(function(){}); window.open('https://medium.com/p/import', '_blank', 'noopener');"
+              data-url="{{ post_url }}"
+              onclick="navigator.clipboard.writeText(this.dataset.url).catch(function(){}); window.open('https://medium.com/p/import', '_blank', 'noopener');"
               class="text-xs px-3 py-1.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-brand-50 dark:hover:bg-slate-700 transition">
         Publish to Medium — opens Medium's importer, blog URL copied to clipboard
       </button>
@@ -192,8 +225,8 @@ src="https://www.facebook.com/tr?id=2092273818327635&ev=PageView&noscript=1"
       </div>
       <script>
       (function () {
-        var POST_ID = {{ post.post_id | tojson }};
-        var CSRF = {{ csrf_token() | tojson }};
+        var POST_ID = '{{ post.post_id }}';
+        var CSRF = '{{ csrf_token() }}';
         var box = document.getElementById('retry-status');
         var buttons = document.querySelectorAll('[data-retry-platform]');
 
@@ -359,5 +392,76 @@ src="https://www.facebook.com/tr?id=2092273818327635&ev=PageView&noscript=1"
       </div>
     </section>
   </main>
+  <script>
+    const EMOJI_MAP = {
+      'like': '👍',
+      'heart': '❤️',
+      'fire': '🔥',
+      'clap': '👏',
+      'insightful': '💡'
+    };
+
+    function reactToPost(postId, reactionType, el) {
+      const container = document.getElementById(`rx-container-${postId}`);
+      const trigger = container ? container.querySelector('.rx-trigger') : el;
+      const countEl = trigger ? trigger.querySelector('.like-count') : null;
+      const emojiEl = trigger ? trigger.querySelector('.rx-emoji') : null;
+      const labelEl = trigger ? trigger.querySelector('.rx-label') : null;
+
+      fetch(`/like/${postId}?type=${encodeURIComponent(reactionType)}`, {
+        method: 'POST',
+        headers: { 'X-CSRFToken': document.querySelector('input[name="csrf_token"]') ? document.querySelector('input[name="csrf_token"]').value : '' }
+      })
+      .then(res => res.json())
+      .then(data => {
+        if(data.status === 'success') {
+          if (countEl) countEl.innerText = `(${data.likes})`;
+          if (emojiEl && EMOJI_MAP[reactionType]) emojiEl.innerText = EMOJI_MAP[reactionType];
+          if (labelEl) {
+            labelEl.innerText = reactionType.charAt(0).toUpperCase() + reactionType.slice(1);
+          }
+          if (trigger) trigger.classList.add('text-brand-600', 'dark:text-brand-400');
+        }
+      })
+      .catch(console.error);
+    }
+
+    function sharePost(postId, url, btn) {
+      const countEl = btn ? btn.querySelector('.share-count') : null;
+      if (navigator.share) {
+        navigator.share({ title: 'Blog Post', url: url })
+          .then(() => recordShare(postId, 'native_share', countEl))
+          .catch(err => {
+            if (err.name !== 'AbortError') copyToClipboard(postId, url, countEl);
+          });
+      } else {
+        copyToClipboard(postId, url, countEl);
+      }
+    }
+
+    function copyToClipboard(postId, url, countEl) {
+      navigator.clipboard.writeText(url).then(() => {
+        alert("Post link copied to clipboard!");
+        recordShare(postId, 'copy_link', countEl);
+      }).catch(err => {
+        console.error("Failed to copy link: ", err);
+      });
+    }
+
+    function recordShare(postId, method, countEl) {
+      const csrf = document.querySelector('input[name="csrf_token"]') ? document.querySelector('input[name="csrf_token"]').value : '';
+      fetch(`/share/${postId}?method=${encodeURIComponent(method)}`, {
+        method: 'POST',
+        headers: { 'X-CSRFToken': csrf }
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.status === 'success' && countEl) {
+          countEl.innerText = `(${data.shares})`;
+        }
+      })
+      .catch(console.error);
+    }
+  </script>
 </body>
 </html>

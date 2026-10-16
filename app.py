@@ -20,6 +20,7 @@ import json
 import os
 import re
 import secrets
+from typing import Any
 
 from dotenv import load_dotenv
 
@@ -81,8 +82,8 @@ def serve_media(filename):
     return send_from_directory(MEDIA_FOLDER, filename)
 
 
-@app.route("/upload_media", methods=["POST"])
 @csrf.exempt
+@app.route("/upload_media", methods=["POST"])
 def upload_media():
     """Store an uploaded file in media/ and return its path.
 
@@ -172,14 +173,17 @@ def tag_view(tag):
 @app.route("/post/<post_id>")
 def post_detail(post_id):
     post = posts_collection.find_one({"post_id": post_id})
-    if not post: abort(404)
-    if post.get("status") == "draft" and not session.get("logged_in"): abort(404)
-    
+    if not post:
+        abort(404)
+    if post.get("status") == "draft" and not session.get("logged_in"):
+        abort(404)
+
     if "blocks" in post:
         text_parts = [b.get("content", "").strip() for b in post["blocks"] if b.get("type") == "text"]
         media_paths = []
         for b in post["blocks"]:
-            if b.get("type") == "media": media_paths.extend(b.get("media_paths", []))
+            if b.get("type") == "media":
+                media_paths.extend(b.get("media_paths", []))
         post["content"] = "\n\n".join(text_parts)
         post["media_paths"] = media_paths
 
@@ -187,7 +191,8 @@ def post_detail(post_id):
     match = pattern.search(post.get("content", ""))
     if match:
         linked = posts_collection.find_one({"post_id": match.group(1)})
-        if linked: post["embedded_article"] = linked
+        if linked:
+            post["embedded_article"] = linked
 
     if not session.get("logged_in"):
         posts_collection.update_one({"post_id": post_id}, {"$inc": {"views": 1}})
@@ -204,7 +209,8 @@ def post_detail(post_id):
 @app.route("/post/<post_id>/comments", methods=["POST"])
 def add_comment(post_id):
     post = posts_collection.find_one({"post_id": post_id})
-    if not post: abort(404)
+    if not post:
+        abort(404)
     target = url_for("post_detail", post_id=post_id) + "#comments"
     if request.form.get("website", "").strip():  # honeypot
         flash("Comment rejected.", "error")
@@ -223,11 +229,14 @@ def add_comment(post_id):
     flash("Comment posted.", "success")
     return redirect(target)
 
+
 @app.route("/article/<article_id>")
 def article_detail(article_id):
     article = posts_collection.find_one({"post_id": article_id, "type": "article"})
-    if not article: abort(404)
-    if article.get("status") == "draft" and not session.get("logged_in"): abort(404)
+    if not article:
+        abort(404)
+    if article.get("status") == "draft" and not session.get("logged_in"):
+        abort(404)
     if not session.get("logged_in"):
         posts_collection.update_one({"post_id": article_id}, {"$inc": {"views": 1}})
         analytics.record_analytics({"event": "view", "post_id": article_id, "type": "article",
@@ -239,13 +248,46 @@ def article_detail(article_id):
             analytics.record_analytics({"event": "post_opened", "post_id": article_id, "source": ref})
     return render_template("article.html", post=article)
 
+@csrf.exempt
 @app.route("/like/<post_id>", methods=["POST"])
 def like_post(post_id):
-    result = posts_collection.find_one_and_update({"post_id": post_id}, {"$inc": {"likes": 1}}, return_document=True)
+    reaction = request.args.get("type", "like").lower()
+    allowed = {"like", "heart", "fire", "clap", "insightful"}
+    if reaction not in allowed:
+        reaction = "like"
+
+    update = {"$inc": {f"reactions.{reaction}": 1, "likes": 1}}
+    result = posts_collection.find_one_and_update({"post_id": post_id}, update, return_document=True)
     if result:
-        analytics.record_analytics({"event": "likes", "post_id": post_id, "count_after": result.get("likes", 0)})
-        return jsonify({"status": "success", "likes": result.get("likes", 0)})
+        reactions_data = result.get("reactions") or {}
+        analytics.record_analytics({
+            "event": "likes",
+            "reaction": reaction,
+            "post_id": post_id,
+            "count_after": result.get("likes", 0)
+        })
+        return jsonify({
+            "status": "success",
+            "likes": result.get("likes", 0),
+            "reactions": reactions_data
+        })
     return jsonify({"status": "error", "message": "Post not found"}), 404
+
+@csrf.exempt
+@app.route("/share/<post_id>", methods=["POST"])
+def share_post(post_id):
+    method = request.args.get("method") or (request.get_json(silent=True) or {}).get("method") or "copy_link"
+    result = posts_collection.find_one_and_update({"post_id": post_id}, {"$inc": {"shares": 1}}, return_document=True)
+    if result:
+        analytics.record_analytics({
+            "event": "shares",
+            "post_id": post_id,
+            "method": method,
+            "count_after": result.get("shares", 0)
+        })
+        return jsonify({"status": "success", "shares": result.get("shares", 0)})
+    return jsonify({"status": "error", "message": "Post not found"}), 404
+
 
 # ---------------------------------------------------------------------------
 # Routes — Admin
@@ -295,7 +337,7 @@ def create_post():
         blocks.append({"type": "text", "content": body})
     if media_urls:
         blocks.append({"type": "media", "media_paths": media_urls})
-    new_post = {
+    new_post: dict[str, Any] = {
         "post_id": post_id, "type": "post",
         "blocks": blocks, "tags": tags,
         "timestamp": content.now_str(),
@@ -409,21 +451,22 @@ def posts_dashboard():
     all_docs = list(posts_collection.find().sort("timestamp", -1))
     all_articles = {p["post_id"]: p for p in all_docs if p.get("type") == "article"}
     posts_list = [p for p in all_docs if p.get("type", "post") != "article"]
-    
+
     pattern = re.compile(r"/(?:post|article)/([a-zA-Z0-9_.-]+)")
     for p in posts_list:
         if "blocks" in p:
             text_parts = [b.get("content", "").strip() for b in p["blocks"] if b.get("type") == "text"]
             media_paths = []
             for b in p["blocks"]:
-                if b.get("type") == "media": media_paths.extend(b.get("media_paths", []))
+                if b.get("type") == "media":
+                    media_paths.extend(b.get("media_paths", []))
             p["content"] = "\n\n".join(text_parts)
             p["media_paths"] = media_paths
 
         match = pattern.search(p.get("content", ""))
         if match and match.group(1) in all_articles:
             p["embedded_article"] = all_articles[match.group(1)]
-                
+
     published = [p for p in posts_list if p.get("status", "published") != "draft"]
     drafts = [p for p in posts_list if p.get("status") == "draft"]
     return render_template("posts.html", published=published, drafts=drafts)
@@ -869,8 +912,8 @@ def _preview_shortened(body, url, limit):
     return len(body) > max(room, 0)
 
 
-@app.route("/api/syndication/preview", methods=["POST"])
 @csrf.exempt
+@app.route("/api/syndication/preview", methods=["POST"])
 def api_syndication_preview():
     """Preview, per platform, the exact text that would be published.
 
@@ -954,8 +997,8 @@ def delete_post(post_id):
     flash("Post removed.", "success")
     return redirect(url_for("index"))
 
-@app.route("/api/analytics", methods=["POST"])
 @csrf.exempt
+@app.route("/api/analytics", methods=["POST"])
 def api_analytics():
     """Collect client-side analytics events (view, shares, clicks, time_spent, ...).
 
@@ -1059,8 +1102,10 @@ def analytics_refresh_social():
             # the dashboard claim a refresh happened.
             skipped += 1
             continue
-        posts_collection.update_one({"post_id": doc.get("post_id")},
-                                   {"$set": {"platform_metrics": metrics}})
+        posts_collection.update_one(
+            {"post_id": doc.get("post_id")},
+            {"$set": {"platform_metrics": metrics}}
+        )
         refreshed += 1
         platform_count += len(platforms)
         for err in (metrics.get("_meta") or {}).get("errors") or []:

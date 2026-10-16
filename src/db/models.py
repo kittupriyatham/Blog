@@ -24,6 +24,8 @@ class Post(Document):
     timestamp = StringField()
     likes = IntField(default=0)
     views = IntField(default=0)
+    shares = IntField(default=0)
+    reactions = DictField(default=lambda: {"like": 0, "heart": 0, "fire": 0, "clap": 0, "insightful": 0})
     title = StringField()
     cover_image = StringField()
     tags = ListField(StringField())

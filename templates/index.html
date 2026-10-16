@@ -282,16 +282,25 @@ src="https://www.facebook.com/tr?id=2092273818327635&ev=PageView&noscript=1"
       <div class="border-t border-slate-100 dark:border-slate-800 mx-5"></div>
 
       {% set post_url = url_for('post_detail', post_id=post.post_id, _external=True) %}
-      <div class="flex items-center divide-x divide-slate-100 dark:divide-slate-800 px-2 py-1">
-        <button onclick="likePost('{{ post.post_id }}', this)" class="flex-1 flex items-center justify-center gap-1.5 py-2 text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg text-sm font-medium transition">
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round"
-              d="M14 9V5a3 3 0 00-3-3l-4 9v11h11.28a2 2 0 002-1.7l1.38-9a2 2 0 00-2-2.3H14z" />
-            <path stroke-linecap="round" stroke-linejoin="round"
-              d="M7 22H4a2 2 0 01-2-2v-7a2 2 0 012-2h3" />
-          </svg>
-          Like <span class="like-count ml-0.5 text-xs text-slate-400 dark:text-slate-500 font-normal">{% if post.likes %}({{ post.likes }}){% endif %}</span>
-        </button>
+      <div class="flex items-center divide-x divide-slate-100 dark:divide-slate-800 px-2 py-1 relative">
+        <!-- Reaction / Like Button with interactive Picker -->
+        <div class="flex-1 relative group/rx" id="rx-container-{{ post.post_id }}">
+          <button onclick="reactToPost('{{ post.post_id }}', 'like', this)"
+                  class="w-full flex items-center justify-center gap-1.5 py-2 text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg text-sm font-medium transition rx-trigger">
+            <span class="rx-emoji text-base">👍</span>
+            <span class="rx-label">Like</span>
+            <span class="like-count ml-0.5 text-xs text-slate-400 dark:text-slate-500 font-normal">{% if post.likes %}({{ post.likes }}){% endif %}</span>
+          </button>
+          <!-- Hover / long-press reaction picker popup -->
+          <div class="absolute bottom-full left-2 mb-2 hidden group-hover/rx:flex items-center gap-1.5 bg-white dark:bg-slate-800 shadow-xl border border-slate-200 dark:border-slate-700 px-3 py-1.5 rounded-full z-30 backdrop-blur-md animate-in fade-in zoom-in-95 duration-150">
+            <button type="button" onclick="event.stopPropagation(); reactToPost('{{ post.post_id }}', 'like', this)" title="Like" class="hover:scale-130 active:scale-95 transition-transform text-lg p-1">👍</button>
+            <button type="button" onclick="event.stopPropagation(); reactToPost('{{ post.post_id }}', 'heart', this)" title="Love" class="hover:scale-130 active:scale-95 transition-transform text-lg p-1">❤️</button>
+            <button type="button" onclick="event.stopPropagation(); reactToPost('{{ post.post_id }}', 'fire', this)" title="Fire" class="hover:scale-130 active:scale-95 transition-transform text-lg p-1">🔥</button>
+            <button type="button" onclick="event.stopPropagation(); reactToPost('{{ post.post_id }}', 'clap', this)" title="Clap" class="hover:scale-130 active:scale-95 transition-transform text-lg p-1">👏</button>
+            <button type="button" onclick="event.stopPropagation(); reactToPost('{{ post.post_id }}', 'insightful', this)" title="Insightful" class="hover:scale-130 active:scale-95 transition-transform text-lg p-1">💡</button>
+          </div>
+        </div>
+
         <a href="{{ url_for('post_detail', post_id=post.post_id) }}#comments"
           class="flex-1 flex items-center justify-center gap-1.5 py-2 text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg text-sm font-medium transition">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
@@ -300,14 +309,15 @@ src="https://www.facebook.com/tr?id=2092273818327635&ev=PageView&noscript=1"
           </svg>
           Comment
         </a>
-        <button onclick="copyLink('{{ post_url }}')" data-share="copy_link" data-post-id="{{ post.post_id }}" class="flex-1 flex items-center justify-center gap-1.5 py-2 text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg text-sm font-medium transition">
+        <button onclick="sharePost('{{ post.post_id }}', '{{ post_url }}', this)" data-share="copy_link" data-post-id="{{ post.post_id }}" class="flex-1 flex items-center justify-center gap-1.5 py-2 text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg text-sm font-medium transition">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round"
               d="M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8" />
             <polyline stroke-linecap="round" stroke-linejoin="round" points="16 6 12 2 8 6" />
             <line stroke-linecap="round" stroke-linejoin="round" x1="12" y1="2" x2="12" y2="15" />
           </svg>
-          Share
+          <span>Share</span>
+          <span class="share-count ml-0.5 text-xs text-slate-400 dark:text-slate-500 font-normal">{% if post.shares %}({{ post.shares }}){% endif %}</span>
         </button>
       </div>
     </article>
@@ -371,29 +381,77 @@ src="https://www.facebook.com/tr?id=2092273818327635&ev=PageView&noscript=1"
       }
     });
 
-    function copyLink(url) {
-      navigator.clipboard.writeText(url).then(() => {
-        alert("Post link copied to clipboard!");
-      }).catch(err => {
-        console.error("Failed to copy link: ", err);
-      });
-    }
+    const EMOJI_MAP = {
+      'like': '👍',
+      'heart': '❤️',
+      'fire': '🔥',
+      'clap': '👏',
+      'insightful': '💡'
+    };
 
-    function likePost(postId, btn) {
-      fetch(`/like/${postId}`, {
+    function reactToPost(postId, reactionType, el) {
+      const container = document.getElementById(`rx-container-${postId}`);
+      const trigger = container ? container.querySelector('.rx-trigger') : el;
+      const countEl = trigger ? trigger.querySelector('.like-count') : null;
+      const emojiEl = trigger ? trigger.querySelector('.rx-emoji') : null;
+      const labelEl = trigger ? trigger.querySelector('.rx-label') : null;
+
+      fetch(`/like/${postId}?type=${encodeURIComponent(reactionType)}`, {
         method: 'POST',
         headers: { 'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').content }
       })
       .then(res => res.json())
       .then(data => {
         if(data.status === 'success') {
-          btn.querySelector('.like-count').innerText = `(${data.likes})`;
-          btn.classList.add('text-brand-600');
-          btn.querySelector('svg').classList.add('fill-current');
+          if (countEl) countEl.innerText = `(${data.likes})`;
+          if (emojiEl && EMOJI_MAP[reactionType]) emojiEl.innerText = EMOJI_MAP[reactionType];
+          if (labelEl) {
+            labelEl.innerText = reactionType.charAt(0).toUpperCase() + reactionType.slice(1);
+          }
+          if (trigger) trigger.classList.add('text-brand-600', 'dark:text-brand-400');
         }
       })
       .catch(console.error);
     }
+
+    function sharePost(postId, url, btn) {
+      const countEl = btn ? btn.querySelector('.share-count') : null;
+      
+      // Native Share API if supported on mobile/tablets, fallback to clipboard
+      if (navigator.share) {
+        navigator.share({ title: 'Blog Post', url: url })
+          .then(() => recordShare(postId, 'native_share', countEl))
+          .catch(err => {
+            if (err.name !== 'AbortError') copyToClipboard(postId, url, countEl);
+          });
+      } else {
+        copyToClipboard(postId, url, countEl);
+      }
+    }
+
+    function copyToClipboard(postId, url, countEl) {
+      navigator.clipboard.writeText(url).then(() => {
+        alert("Post link copied to clipboard!");
+        recordShare(postId, 'copy_link', countEl);
+      }).catch(err => {
+        console.error("Failed to copy link: ", err);
+      });
+    }
+
+    function recordShare(postId, method, countEl) {
+      fetch(`/share/${postId}?method=${encodeURIComponent(method)}`, {
+        method: 'POST',
+        headers: { 'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').content }
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.status === 'success' && countEl) {
+          countEl.innerText = `(${data.shares})`;
+        }
+      })
+      .catch(console.error);
+    }
+
 
     initAttachMenu();
 

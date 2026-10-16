@@ -47,6 +47,7 @@ def analytics_aggregates(events):
     by_platform = {}
     by_country = {}   # country -> set(ip_hash): distinct visitors
     by_region = {}    # "region, country" -> set(ip_hash): distinct visitors
+    by_reaction = {}  # reaction type -> count
     totals = {"view": 0, "reach_in": 0, "post_opened": 0, "shares": 0, "click_out": 0,
               "likes": 0, "comments": 0, "time_spent_ms": 0, "time_on_blog_ms": 0}
 
@@ -54,7 +55,8 @@ def analytics_aggregates(events):
         r = per_post.get(pid)
         if r is None:
             r = {"post_id": pid, "type": ptype, "view": 0, "reach_in": 0, "post_opened": 0,
-                 "shares": 0, "click_out": 0, "likes": 0, "comments": 0, "time_spent_ms": 0}
+                 "shares": 0, "click_out": 0, "likes": 0, "comments": 0, "time_spent_ms": 0,
+                 "reactions": {}}
             per_post[pid] = r
         if ptype and not r["type"]:
             r["type"] = ptype
@@ -84,8 +86,15 @@ def analytics_aggregates(events):
 
         if ev in count_events:
             totals[ev] += 1
+            if ev == "likes":
+                rx = e.get("reaction") or "like"
+                by_reaction[rx] = by_reaction.get(rx, 0) + 1
             if pid:
                 row(pid, ptype)[ev] += 1
+                if ev == "likes":
+                    rx = e.get("reaction") or "like"
+                    rx_dict = row(pid, ptype).setdefault("reactions", {})
+                    rx_dict[rx] = rx_dict.get(rx, 0) + 1
         elif ev == "shares":
             totals["shares"] += 1
             m = e.get("method") or "unknown"
@@ -125,6 +134,7 @@ def analytics_aggregates(events):
         "by_platform": [{"platform": k, "count": v} for k, v in sorted(by_platform.items(), key=lambda x: -x[1])],
         "by_country": [{"country": k, "count": len(v)} for k, v in sorted(by_country.items(), key=lambda x: -len(x[1]))],
         "by_region": [{"label": k, "count": len(v)} for k, v in sorted(by_region.items(), key=lambda x: -len(x[1]))],
+        "by_reaction": [{"reaction": k, "count": v} for k, v in sorted(by_reaction.items(), key=lambda x: -x[1])],
         "per_post": posts,
         "recent": events[:50],
     }
@@ -146,13 +156,20 @@ SOCIAL_METRIC_KEYS = ("likes", "comments", "views")
 NATIVE_METRIC_PLATFORMS = {"linkedin"}
 
 
-def _metric(value):
+def _metric(value) -> int | None:
     """An int counter, or None when the platform's number is unknown.
 
     `None` and `0` must not collapse into each other: "we could not read this"
     renders as an em dash, "the post has no likes yet" renders as 0.
     """
-    return value if isinstance(value, int) and not isinstance(value, bool) else None
+    if isinstance(value, int) and not isinstance(value, bool):
+        return value
+    if isinstance(value, str):
+        try:
+            return int(value)
+        except ValueError:
+            return None
+    return None
 
 
 def _label(doc):
@@ -192,11 +209,10 @@ def _platform_row(syn, cached):
         "synced_at": metrics.get("synced_at") if tracked else None,
         "available": available and tracked,
         "tracked": tracked,
-        # The cached error (why metrics are missing) wins over a publish error,
-        # since a stale publish error on a posted platform is noise.
-        "error": (metrics.get("error")
-                  or (syn.get("error") if syn.get("status") != "posted" else None))
-                 if tracked else None,
+        "error": (
+            (metrics.get("error") or (syn.get("error") if syn.get("status") != "posted" else None))
+            if tracked else None
+        ),
     }
     if not tracked:
         # A neutral hint: the reader's own reason (e.g. "LinkedIn has no member metrics"),
@@ -230,7 +246,7 @@ def social_metrics_summary(docs, configured=True):
     """
     posts = []
     platform_totals: dict = {}
-    totals = {key: 0 for key in SOCIAL_METRIC_KEYS}
+    totals: dict[str, int] = {key: 0 for key in SOCIAL_METRIC_KEYS}
     errors: list = []
     newest: str | None = None
 
@@ -254,10 +270,10 @@ def social_metrics_summary(docs, configured=True):
                 row["platform"], {"platform": row["platform"], "label": row["label"],
                                   **{key: 0 for key in SOCIAL_METRIC_KEYS}})
             for key in SOCIAL_METRIC_KEYS:
-                if row[key] is None:
-                    continue
-                totals[key] += row[key]
-                bucket[key] += row[key]
+                val = row[key]
+                if isinstance(val, int) and not isinstance(val, bool):
+                    totals[key] += val
+                    bucket[key] += val
 
         meta = cached.get("_meta") if isinstance(cached.get("_meta"), dict) else {}
         fetched_at = meta.get("fetched_at")

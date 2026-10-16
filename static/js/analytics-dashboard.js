@@ -6,7 +6,18 @@
  */
 (function () {
   'use strict';
-  var D = window.ANALYTICS_DATA || {};
+  var D = window.ANALYTICS_DATA;
+  if (!D) {
+    var dataEl = document.getElementById('analytics-data');
+    if (dataEl && dataEl.textContent) {
+      try {
+        D = JSON.parse(dataEl.textContent);
+      } catch (e) {
+        D = {};
+      }
+    }
+  }
+  D = D || {};
 
   function fmtMs(ms) {
     ms = ms || 0;
@@ -67,6 +78,7 @@
   lineChart('chart-views', daily, 'view', false);
   lineChart('chart-time', daily, 'time_on_blog_ms', true);
   barChart('bar-method', D.by_method || [], 'method', false);
+  barChart('bar-reaction', D.by_reaction || [], 'reaction', false);
   barChart('bar-platform', D.by_platform || [], 'platform', false);
   barChart('bar-country', D.by_country || [], 'country', false);
   barChart('bar-region', D.by_region || [], 'label', false);
