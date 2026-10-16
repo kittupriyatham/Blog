@@ -95,7 +95,7 @@ src="https://www.facebook.com/tr?id=2092273818327635&ev=PageView&noscript=1"
            <h1 class="text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight mb-6">{{ post.title }}</h1>
         {% endif %}
 
-        <div class="space-y-4">
+        <div id="article-content-container" class="space-y-4">
         {% for block in post.blocks %}
           {% if block.type == 'text' %}
             <div class="text-slate-700 dark:text-slate-300 leading-relaxed whitespace-pre-wrap text-[16px]">{{ block.content | rich_text }}</div>
@@ -133,6 +133,28 @@ src="https://www.facebook.com/tr?id=2092273818327635&ev=PageView&noscript=1"
           </div>
         {% endif %}
         {% include '_social_icons.html' %}
+        {% if session.get('logged_in') %}
+          <div class="mt-4 pt-4 border-t border-slate-100 dark:border-slate-800 flex items-center gap-3 flex-wrap">
+            <button type="button"
+                    id="syndicate-medium-btn"
+                    onclick="syndicateToMedium()"
+                    class="inline-flex items-center gap-2 text-xs font-semibold px-4 py-2 rounded-xl bg-slate-900 text-white hover:bg-slate-800 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-100 shadow-sm transition">
+              <svg class="w-4 h-4 fill-current" viewBox="0 0 24 24"><path d="M13.54 12a6.8 6.8 0 01-6.77 6.82A6.8 6.8 0 010 12a6.8 6.8 0 016.77-6.82A6.8 6.8 0 0113.54 12zM20.96 12c0 3.54-1.51 6.42-3.38 6.42-1.87 0-3.39-2.88-3.39-6.42s1.52-6.42 3.39-6.42 3.38 2.88 3.38 6.42M24 12c0 3.17-.53 5.75-1.19 5.75-.66 0-1.19-2.58-1.19-5.75s.53-5.75 1.19-5.75C23.47 6.25 24 8.83 24 12z"/></svg>
+              Syndicate to Medium
+            </button>
+            <button type="button"
+                    data-share="medium_import"
+                    onclick="navigator.clipboard.writeText('{{ canonical('article_detail', article_id=post.post_id) }}').catch(function(){}); window.open('https://medium.com/p/import', '_blank', 'noopener');"
+                    class="text-xs px-3 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition">
+              Medium Importer Fallback
+            </button>
+          </div>
+          {% for s in post.syndications if s.status != 'posted' %}
+            <div class="mt-2 px-3 py-2 rounded-lg text-xs bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300">
+              Syndication → {{ s.label or s.platform }}: <strong>{{ s.status }}</strong>{% if s.error %} — {{ s.error }}{% endif %}
+            </div>
+          {% endfor %}
+        {% else %}
           <div class="mt-4 pt-4 border-t border-slate-100 dark:border-slate-800">
             <button type="button"
                     data-share="medium_import"
@@ -141,15 +163,81 @@ src="https://www.facebook.com/tr?id=2092273818327635&ev=PageView&noscript=1"
               Publish to Medium — opens Medium's importer, blog URL copied to clipboard
             </button>
           </div>
-        {% if session.get('logged_in') %}
-          {% for s in post.syndications if s.status != 'posted' %}
-            <div class="mt-2 px-3 py-2 rounded-lg text-xs bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300">
-              Syndication → {{ s.label or s.platform }}: <strong>{{ s.status }}</strong>{% if s.error %} — {{ s.error }}{% endif %}
-            </div>
-          {% endfor %}
         {% endif %}
       </div>
     </article>
   </main>
+
+  <script>
+    function syndicateToMedium() {
+      var title = {{ (post.title or 'My Blog Article') | tojson }};
+      var canonicalUrl = {{ canonical('article_detail', article_id=post.post_id) | tojson }};
+      var origin = window.location.origin;
+
+      // Extract article body container
+      var container = document.getElementById('article-content-container');
+      var clone = container ? container.cloneNode(true) : document.createElement('div');
+
+      // Add cover image if present
+      {% if post.cover_image %}
+      var coverSrc = {{ (post.cover_image if post.cover_image.startswith('http') else site_url + post.cover_image) | tojson }};
+      if (coverSrc) {
+        var figure = document.createElement('figure');
+        var img = document.createElement('img');
+        img.src = coverSrc;
+        img.alt = title;
+        figure.appendChild(img);
+        clone.insertBefore(figure, clone.firstChild);
+      }
+      {% endif %}
+
+      // Normalize all relative image/media/link URLs to absolute URLs
+      var images = clone.querySelectorAll('img');
+      for (var i = 0; i < images.length; i++) {
+        var src = images[i].getAttribute('src');
+        if (src && !/^https?:\/\//i.test(src) && !/^data:/i.test(src)) {
+          images[i].setAttribute('src', new URL(src, origin).href);
+        }
+      }
+
+      var videos = clone.querySelectorAll('video, source');
+      for (var j = 0; j < videos.length; j++) {
+        var vsrc = videos[j].getAttribute('src');
+        if (vsrc && !/^https?:\/\//i.test(vsrc)) {
+          videos[j].setAttribute('src', new URL(vsrc, origin).href);
+        }
+      }
+
+      var links = clone.querySelectorAll('a');
+      for (var k = 0; k < links.length; k++) {
+        var href = links[k].getAttribute('href');
+        if (href && !/^https?:\/\//i.test(href) && !/^mailto:/i.test(href) && !/^tel:/i.test(href) && !/^#/i.test(href)) {
+          links[k].setAttribute('href', new URL(href, origin).href);
+        }
+      }
+
+      // Append clean canonical attribution
+      var attribution = document.createElement('p');
+      attribution.innerHTML = '<em>Originally published at <a href="' + canonicalUrl + '" target="_blank" rel="noopener noreferrer">' + canonicalUrl + '</a></em>';
+      clone.appendChild(document.createElement('hr'));
+      clone.appendChild(attribution);
+
+      var payload = {
+        posseMedium: true,
+        title: title,
+        html: clone.innerHTML,
+        canonicalUrl: canonicalUrl
+      };
+
+      // Store in window.name and navigate targeting medium new-story
+      var win = window.open('about:blank', '_blank');
+      if (win) {
+        win.name = JSON.stringify(payload);
+        win.location.href = 'https://medium.com/new-story';
+      } else {
+        alert('Popup blocked. Please allow popups for this site to open Medium.');
+      }
+    }
+  </script>
 </body>
 </html>

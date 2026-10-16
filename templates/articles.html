@@ -127,7 +127,21 @@ src="https://www.facebook.com/tr?id=2092273818327635&ev=PageView&noscript=1"
               </div>
 
               <div class="p-5 flex flex-col flex-grow">
-                <span class="text-xs font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider mb-2">Published</span>
+                <div class="flex items-center justify-between mb-2">
+                  <span class="text-xs font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">Published</span>
+                  {% if session.get('logged_in') %}
+                  <button type="button"
+                          onclick="event.stopPropagation(); triggerCardMediumSyndication(this);"
+                          data-title="{{ article.title }}"
+                          data-canonical="{{ canonical('article_detail', article_id=article.post_id) }}"
+                          data-cover="{{ article.cover_image or '' }}"
+                          title="Syndicate to Medium"
+                          class="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-semibold bg-slate-900 text-white hover:bg-slate-800 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-100 transition shadow-sm">
+                    <svg class="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24"><path d="M13.54 12a6.8 6.8 0 01-6.77 6.82A6.8 6.8 0 010 12a6.8 6.8 0 016.77-6.82A6.8 6.8 0 0113.54 12zM20.96 12c0 3.54-1.51 6.42-3.38 6.42-1.87 0-3.39-2.88-3.39-6.42s1.52-6.42 3.39-6.42 3.38 2.88 3.38 6.42M24 12c0 3.17-.53 5.75-1.19 5.75-.66 0-1.19-2.58-1.19-5.75s.53-5.75 1.19-5.75C23.47 6.25 24 8.83 24 12z"/></svg>
+                    Medium
+                  </button>
+                  {% endif %}
+                </div>
                 <h3 class="text-lg font-bold text-slate-900 dark:text-white group-hover:text-brand-600 dark:group-hover:text-brand-400 transition line-clamp-2 mb-2">{{ article.title }}</h3>
                 <p class="text-sm text-slate-500 dark:text-slate-400 mt-auto pt-4 border-t border-slate-100 dark:border-slate-800">{{ article.timestamp.split(' ')[0] }}</p>
               </div>
@@ -193,6 +207,58 @@ src="https://www.facebook.com/tr?id=2092273818327635&ev=PageView&noscript=1"
       document.getElementById('tab-drafts').className = tabName === 'drafts' ? activeBtn : inactiveBtn;
       document.getElementById('content-published').className = tabName === 'published' ? 'tab-content active-tab' : 'tab-content hidden-tab';
       document.getElementById('content-drafts').className = tabName === 'drafts' ? 'tab-content active-tab' : 'tab-content hidden-tab';
+    }
+
+    async function triggerCardMediumSyndication(btn) {
+      var title = btn.getAttribute('data-title') || 'Article';
+      var canonicalUrl = btn.getAttribute('data-canonical');
+      var cover = btn.getAttribute('data-cover');
+
+      // Fetch rendered article page to extract normalized HTML container
+      var htmlContent = '';
+      try {
+        var resp = await fetch(canonicalUrl);
+        if (resp.ok) {
+          var text = await resp.text();
+          var doc = new DOMParser().parseFromString(text, 'text/html');
+          var container = doc.getElementById('article-content-container');
+          if (container) {
+            // Ensure links & media are absolute
+            var images = container.querySelectorAll('img');
+            for (var i = 0; i < images.length; i++) {
+              var src = images[i].getAttribute('src');
+              if (src && !/^https?:\/\//i.test(src) && !/^data:/i.test(src)) {
+                images[i].setAttribute('src', new URL(src, window.location.origin).href);
+              }
+            }
+            htmlContent = container.innerHTML;
+          }
+        }
+      } catch (e) {
+        console.warn('Could not pre-fetch article HTML:', e);
+      }
+
+      if (!htmlContent && cover) {
+        var absCover = /^https?:\/\//i.test(cover) ? cover : (window.location.origin + '/' + cover.replace(/^\//, ''));
+        htmlContent = '<figure><img src="' + absCover + '" alt="' + title + '"></figure>\n';
+      }
+
+      htmlContent += '\n<hr><p><em>Originally published at <a href="' + canonicalUrl + '" target="_blank" rel="noopener noreferrer">' + canonicalUrl + '</a></em></p>';
+
+      var payload = {
+        posseMedium: true,
+        title: title,
+        html: htmlContent,
+        canonicalUrl: canonicalUrl
+      };
+
+      var win = window.open('about:blank', '_blank');
+      if (win) {
+        win.name = JSON.stringify(payload);
+        win.location.href = 'https://medium.com/new-story';
+      } else {
+        alert('Popup blocked. Please allow popups to syndicate to Medium.');
+      }
     }
   </script>
 </body>

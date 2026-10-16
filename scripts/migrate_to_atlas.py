@@ -44,7 +44,7 @@ TARGET_URI = (
     or os.environ.get("MONGO_URI", "").strip()
 )
 
-COLLECTIONS = ("posts", "comments", "analytics")
+COLLECTIONS = ("posts", "comments", "analytics", "secrets")
 
 
 def _connect(uri, label):
@@ -54,20 +54,25 @@ def _connect(uri, label):
     # Fail fast: a typo'd Atlas string should surface here, not mid-copy.
     client.admin.command("ping")
     print("[migrate] connected to %s: %s" % (label, uri.split("@")[-1]))
-    return client
+    # If URI does not specify database name, default to blog_db
+    try:
+        db = client.get_default_database()
+    except Exception:
+        db = client["blog_db"]
+    return db
 
 
 def migrate_collections(source, target):
     """Copy each collection, skipping docs whose _id already exists in Atlas."""
     for name in COLLECTIONS:
-        src = source[name]
-        dst = target[name]
-        existing = {d["_id"] for d in dst.find({}, {"_id": 1})}
-        docs = [d for d in src.find({}) if d.get("_id") not in existing]
+        srcd = source[name]
+        dstd = target[name]
+        existing = {d["_id"] for d in dstd.find({}, {"_id": 1})}
+        docs = [d for d in srcd.find({}) if d.get("_id") not in existing]
         if docs:
-            dst.insert_many(docs)
+            dstd.insert_many(docs)
         print("[migrate] %-10s copied %d (skipped %d already present)"
-              % (name, len(docs), src.count_documents({}) - len(docs)))
+              % (name, len(docs), srcd.count_documents({}) - len(docs)))
 
 
 def migrate_linkedin_token(target):
@@ -108,6 +113,7 @@ def _is_local_media(ref):
 def migrate_media(target):
     """Upload media/ to R2 and rewrite every post's media_paths to the R2 URL."""
     from src.config import MEDIA_FOLDER
+    import src.providers.cloud.r2  # noqa: F401 - registers 'r2' adapter
     from src.providers.cloud.media import get_adapter
 
     adapter = get_adapter("r2")

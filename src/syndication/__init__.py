@@ -22,6 +22,8 @@ from urllib.parse import urlparse
 from .base import SyndicationError, Syndicator, register, get, all_syndicators
 from .linkedin import LinkedinSyndicator
 from .medium import MediumSyndicator
+from .devto import DevtoSyndicator
+from .hashnode import HashnodeSyndicator
 from .socialapi import (SocialApiSyndicator, build_platforms, TEXT_CARD_PLATFORMS,
                         twitter_has_subscription)
 from . import textcard
@@ -39,6 +41,10 @@ register(LinkedinSyndicator())
 # Medium: no write API, and its importer cannot reach localhost, so this drives
 # the editor in a browser instead (see medium.py).
 register(MediumSyndicator())
+# Dev.to: developer blogging platform REST API
+register(DevtoSyndicator())
+# Hashnode: developer blogging platform GraphQL API
+register(HashnodeSyndicator())
 # SocialAPI covers Facebook/Instagram/Threads/YouTube (and more) through one key,
 # using the provider's pre-approved platform apps.
 for _syndicator in build_platforms():
@@ -46,8 +52,8 @@ for _syndicator in build_platforms():
 
 
 # Platforms that only make sense for long-form articles, not short posts.
-# Medium imports a whole story, so it suits an article - not a one-paragraph post.
-ARTICLE_ONLY = {"medium"}
+# Medium, Dev.to, and Hashnode import/publish a whole story, so they suit an article - not a one-paragraph post.
+ARTICLE_ONLY = {"medium", "devto", "hashnode"}
 
 # Platforms that can only take long-form content when a paid tier is present.
 # X Articles are a Premium feature, so without a subscription X is not offered

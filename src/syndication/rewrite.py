@@ -84,10 +84,6 @@ def condense(text: str, limit: int) -> str | None:
         "generationConfig": {
             "temperature": 0.4,
             "maxOutputTokens": 2048,
-            # Gemini 2.5 Flash spends output tokens on internal reasoning by
-            # default. Left on with a small budget, the visible answer came back
-            # clipped mid-word, so thinking is switched off for this task.
-            "thinkingConfig": {"thinkingBudget": 0},
         },
     }).encode("utf-8")
 
@@ -97,7 +93,7 @@ def condense(text: str, limit: int) -> str | None:
     try:
         with urllib.request.urlopen(req, timeout=TIMEOUT_S) as resp:
             rewritten = _extract(json.loads(resp.read().decode("utf-8")))
-    except (urllib.error.URLError, urllib.error.HTTPError, ValueError, OSError) as e:
+    except (urllib.error.URLError, ValueError, OSError) as e:
         print("[rewrite] %s model unavailable: %s" % (_model(), e))
         return None
 

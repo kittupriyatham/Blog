@@ -30,8 +30,7 @@ from html import escape
 from .base import SyndicationError, Syndicator, SyndicationResult
 
 try:
-    from playwright.sync_api import sync_playwright
-
+    from playwright.sync_api import sync_playwright  # type: ignore
     _PW_OK = True
 except Exception:  # pragma: no cover - Playwright missing
     _PW_OK = False
@@ -52,14 +51,59 @@ _STEALTH_JS = "Object.defineProperty(navigator,'webdriver',{get:()=>undefined});
 _IMG_EXT = {"png", "jpg", "jpeg", "gif", "webp", "bmp", "avif", "svg"}
 
 
+import json
+import tempfile
+
+#: Document id in the `secrets` collection holding the Medium session state.
+_MEDIUM_DOC_ID = "medium_auth"
+
+
+def _medium_secrets_collection():
+    """The `secrets` collection on the app's Mongo connection, or None."""
+    try:
+        try:
+            from ..db import connect_db  # type: ignore
+        except ImportError:
+            from src.db import connect_db  # type: ignore
+        connect_db()
+        from mongoengine import get_db
+        return get_db()["secrets"]
+    except Exception:
+        return None
+
+
+def _resolve_state_file(path: str) -> str | None:
+    """Return a path to a valid state file, loading from MongoDB if available."""
+    # 1. Check MongoDB secrets collection
+    coll = _medium_secrets_collection()
+    if coll is not None:
+        try:
+            doc = coll.find_one({"_id": _MEDIUM_DOC_ID})
+            if doc and isinstance(doc.get("data"), dict):
+                # Write to a secure temp file so Playwright can consume it
+                tmp = tempfile.NamedTemporaryFile("w", encoding="utf-8", delete=False, suffix=".json")
+                json.dump(doc["data"], tmp)
+                tmp.close()
+                return tmp.name
+        except Exception:
+            pass
+
+    # 2. Fall back to local file on disk
+    if os.path.exists(path):
+        return path
+    return None
+
+
 def _cfg() -> dict:
     repo = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     state = os.environ.get("MEDIUM_STATE_FILE", "data/medium_auth.json").strip() or "data/medium_auth.json"
     if not os.path.isabs(state):
         state = os.path.join(repo, state)
+    resolved_state = _resolve_state_file(state)
     return {
         "base": os.environ.get("SITE_URL", "").strip().rstrip("/"),
-        "state": state,
+        "state": resolved_state or state,
+        "has_state": bool(resolved_state),
         "media": os.environ.get("MEDIUM_MEDIA_DIR", "").strip() or os.path.join(repo, "media"),
         "headless": os.environ.get("MEDIUM_HEADLESS", "1").strip() != "0",
         "channel": os.environ.get("MEDIUM_CHANNEL", "chrome").strip() or "chrome",
@@ -127,7 +171,7 @@ def write_page(doc: dict, canonical_url: str, post_id: str, cfg: dict) -> str | 
     if not base:
         return None
     os.makedirs(cfg["media"], exist_ok=True)
-    seed = str(post_id or canonical_url or "article")
+    seed = (post_id or canonical_url or "article")
     filename = "medium_%s.html" % hashlib.sha1(seed.encode("utf-8")).hexdigest()[:16]
     with open(os.path.join(cfg["media"], filename), "w", encoding="utf-8") as fh:
         fh.write(render_html(doc, canonical_url, base))
@@ -139,9 +183,9 @@ class MediumSyndicator(Syndicator):
     label = "Medium"
 
     def is_configured(self) -> bool:
-        """Needs Playwright, a signed-in session, and a public base to serve from."""
+        """Needs Playwright, a signed-in session (Mongo or file), and a public base to serve from."""
         cfg = _cfg()
-        return bool(_PW_OK and cfg["base"] and os.path.exists(cfg["state"]))
+        return bool(_PW_OK and cfg["base"] and cfg.get("has_state"))
 
     def text_limit(self) -> int | None:
         """Medium accepts long stories, so it must not shrink other platforms."""

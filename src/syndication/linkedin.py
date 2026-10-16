@@ -17,30 +17,52 @@ import urllib.error
 import urllib.parse
 import urllib.request
 from datetime import datetime, timezone
+from typing import Any
 
 from .base import CheckResult, Syndicator, SyndicationError
 from . import linkedin_token
 
 
+def _clean_urn(val: str | None) -> str:
+    """Return a trimmed URN string, or empty string if unset, '0', or invalid."""
+    s = (val or "").strip()
+    if not s or s == "0" or s.lower() in ("none", "false", "null"):
+        return ""
+    return s
+
+
 def organization_urn() -> str:
-    """The configured Organization (Company Page) URN, or "" when unset.
+    """The configured Organization (Company Page) URN, or "" when unset/0/invalid.
 
     Read from the environment at call time (not import time) so a runtime change
     - or a test - is honoured.
     """
-    return os.environ.get("LINKEDIN_ORGANIZATION_URN", "").strip()
+    return _clean_urn(os.environ.get("LINKEDIN_ORGANIZATION_URN"))
 
 
-def author_urn() -> str:
+def author_urn(strict: bool = False) -> str:
     """The single LinkedIn author URN used for posts and image uploads.
 
-    The Organization (Company Page) URN wins when `LINKEDIN_ORGANIZATION_URN` is
-    set, so the blog publishes as the Page; otherwise it falls back to the person
-    `LINKEDIN_AUTHOR_URN`. "" when neither is set (`is_configured()` is then
-    False). `delete()` is author-agnostic - it deletes by URN - so it is not
-    affected.
+    The Organization (Company Page) URN wins when configured (and not "0" or empty),
+    so the blog publishes as the Page; otherwise it falls back to the person
+    `LINKEDIN_AUTHOR_URN`.
+
+    If both are invalid, "0", or empty:
+      - Returns "" when strict=False (allowing `is_configured()` to return False).
+      - Raises `SyndicationError` when strict=True (or during publishing).
     """
-    return organization_urn() or os.environ.get("LINKEDIN_AUTHOR_URN", "").strip()
+    org = organization_urn()
+    if org:
+        return org
+    person = _clean_urn(os.environ.get("LINKEDIN_AUTHOR_URN"))
+    if person:
+        return person
+    if strict:
+        raise SyndicationError(
+            "LinkedIn author URN is invalid or not set. Configure a valid "
+            "LINKEDIN_ORGANIZATION_URN (Page) or LINKEDIN_AUTHOR_URN (person)."
+        )
+    return ""
 
 
 def _recent_versions(count: int = 12) -> list[str]:
@@ -148,10 +170,10 @@ class LinkedinSyndicator(Syndicator):
         back by linkedin_metrics.py).
         """
         token = linkedin_token.access_token()
-        author = author_urn()
-        if not token or not author:
-            raise SyndicationError("LinkedIn is not configured (missing token or author URN).")
-        payload = {
+        author = author_urn(strict=True)
+        if not token:
+            raise SyndicationError("LinkedIn is not configured (missing access token).")
+        payload: dict[str, Any] = {
             "author": author,
             "commentary": text[:3000],
             "visibility": "PUBLIC",
@@ -214,12 +236,12 @@ class LinkedinSyndicator(Syndicator):
         permalink, urn = self._create_post(text, url, media, doc)
         return {"url": permalink, "remote_id": urn}
 
-    def delete(self, url: str) -> None:
+    def delete(self, identifier: str) -> None:
         """Delete a post this app created (author-only). Raises on failure."""
         token = linkedin_token.access_token()
         if not token:
             raise SyndicationError("LinkedIn is not configured (missing token).")
-        urn = url.rstrip("/").split("/")[-1]
+        urn = identifier.rstrip("/").split("/")[-1]
         endpoint = "https://api.linkedin.com/rest/posts/" + urllib.parse.quote(urn, safe="")
         last_error: str | None = None
         for version in self._version_candidates():
