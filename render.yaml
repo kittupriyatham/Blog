@@ -1,44 +1,107 @@
 # Render Blueprint (https://render.com/docs/blueprint-spec)
 #
-# Every env var below syncs FROM this file (sync: true), so render.yaml is the
-# single source of truth for the service's configuration - nothing is pasted
-# into the Render dashboard by hand to define the service.
+# Since your GitHub repository is PUBLIC, this file intentionally defines
+# clean configuration keys with safe placeholders (or sync: false) so no
+# real passwords, API tokens, or database connection strings are exposed in Git.
 #
-# SECRETS ARE PLACEHOLDERS ON PURPOSE. This file is committed to GitHub, so it
-# ships only `CHANGE_ME_*` values, never real credentials. After the first
-# deploy, open Dashboard -> Environment, paste the real values over each
-# placeholder, and Render stores them from then on. (If you would rather commit
-# real values, the repo must be private - and you accept that anyone who clones
-# it gets your database and storage credentials.)
+# How deployment works:
+# 1. Connect this repo to Render as a "Blueprint".
+# 2. Render reads this file and creates the web service with all required keys.
+# 3. In the Render Dashboard (Dashboard -> Service -> Environment), paste your
+#    real credentials from your local .env into each variable.
+#
 services:
   - type: web
     name: blog
     runtime: python
-    plan: free            # switch to starter if you want no spin-down
+    plan: free            # Render Free/Hobby tier (512MB RAM, spins down on idle)
     buildCommand: pip install -r requirements.txt
-    # One worker on purpose: the background syndication queue is in-process, so a
-    # single worker avoids two threads draining the same logical job. Threads keep
-    # concurrent page loads responsive.
+    # Single worker with 4 threads ensures the in-process POSSE/syndication
+    # queue doesn't conflict, while threads handle concurrent web requests.
     startCommand: gunicorn app:app --workers 1 --threads 4 --timeout 180 --bind 0.0.0.0:$PORT
     envVars:
-      - key: SECRET_KEY             value: CHANGE_ME_secret_key
-      - key: MONGO_URI              value: mongodb+srv://USER:PASS@cluster0.xxxxx.mongodb.net/blog
-      - key: DB_BACKEND             value: cloud
-      - key: DEFAULT_BACKEND        value: local    # media is overridden to cloud below
-      - key: MEDIA_BACKEND          value: cloud
-      - key: MEDIA_ADAPTER          value: r2
-      - key: ANALYTICS_STORE        value: mongo
-      - key: SITE_URL               value: https://CHANGE_ME.onrender.com   # or the custom domain
-      - key: R2_ACCOUNT_ID          value: CHANGE_ME_account_id
-      - key: R2_ACCESS_KEY_ID       value: CHANGE_ME_access_key_id
-      - key: R2_SECRET_ACCESS_KEY   value: CHANGE_ME_secret_access_key
-      - key: R2_BUCKET              value: CHANGE_ME_bucket
-      - key: R2_PUBLIC_BASE         value: https://pub-CHANGE_ME.r2.dev
-      - key: SOCIALAPI_KEY          value: CHANGE_ME_socialapi_key
-      - key: BLOG_ADMIN_USERNAME    value: admin
-      - key: BLOG_ADMIN_PASSWORD    value: CHANGE_ME_admin_password
-      - key: LINKEDIN_CLIENT_ID     value: CHANGE_ME_client_id
-      - key: LINKEDIN_CLIENT_SECRET value: CHANGE_ME_client_secret
-      - key: LINKEDIN_REDIRECT_URI  value: https://CHANGE_ME.onrender.com/linkedin/callback
-      - key: TELEGRAM_BOT_TOKEN     value: ""
-      - key: TELEGRAM_CHAT_ID       value: ""
+      # --- Core App Settings ---
+      - key: SECRET_KEY
+        sync: false
+      - key: BLOG_ADMIN_USERNAME
+        value: admin
+      - key: BLOG_ADMIN_PASSWORD
+        sync: false
+      - key: SITE_URL
+        value: https://blog.potluri-krishna-priyatham.tech
+      - key: SITE_URL_ALT
+        value: https://blog.kittupriyatham.com
+
+      # --- Database (MongoDB Atlas) ---
+      - key: DB_BACKEND
+        value: cloud
+      - key: DEFAULT_BACKEND
+        value: local
+      - key: MONGO_URI
+        sync: false
+      - key: ATLAS_MONGO_URI
+        sync: false
+      - key: ANALYTICS_STORE
+        value: mongo
+      - key: ANALYTICS_IP_SALT
+        value: blog-analytics
+      - key: ANALYTICS_GEO
+        value: "1"
+
+      # --- Media Storage (Cloudflare R2) ---
+      - key: MEDIA_BACKEND
+        value: cloud
+      - key: MEDIA_ADAPTER
+        value: r2
+      - key: R2_ACCOUNT_ID
+        sync: false
+      - key: R2_ACCESS_KEY_ID
+        sync: false
+      - key: R2_SECRET_ACCESS_KEY
+        sync: false
+      - key: R2_BUCKET
+        value: blog-data
+      - key: R2_PUBLIC_BASE
+        value: https://pub-5dd94088ada04ea8b72ad971f9943617.r2.dev
+
+      # --- LinkedIn Direct Integration ---
+      - key: LINKEDIN_ACCESS_TOKEN
+        sync: false
+      - key: LINKEDIN_AUTHOR_URN
+        sync: false
+      - key: LINKEDIN_CLIENT_ID
+        sync: false
+      - key: LINKEDIN_CLIENT_SECRET
+        sync: false
+      - key: LINKEDIN_REDIRECT_URI
+        value: https://blog.potluri-krishna-priyatham.tech/linkedin/callback
+      - key: LINKEDIN_ORGANIZATION_URN
+        value: "0"
+
+      # --- Dev.to & Hashnode POSSE Syndication ---
+      - key: DEVTO_API_KEY
+        sync: false
+      - key: HASHNODE_ACCESS_TOKEN
+        sync: false
+      - key: HASHNODE_PUBLICATION_ID
+        value: 6ad1e1aa1cddb0d5092b0796
+
+      # --- SocialAPI & AI Rewriter ---
+      - key: SOCIALAPI_KEY
+        sync: false
+      - key: SOCIALAPI_BOARD_PINTEREST
+        value: "1114359570239165244"
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: REWRITE_MODEL
+        value: gemini-3.5-flash-lite
+
+      # --- Telegram Alerts (Optional) ---
+      - key: TELEGRAM_BOT_TOKEN
+        sync: false
+      - key: TELEGRAM_CHAT_ID
+        sync: false
+
+      # --- Upload & Moderation ---
+      - key: UPLOAD_TOKEN
+        sync: false
