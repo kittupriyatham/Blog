@@ -7,8 +7,7 @@
 # How deployment works:
 # 1. Connect this repo to Render as a "Blueprint".
 # 2. Render reads this file and creates the web service with all required keys.
-# 3. In the Render Dashboard (Dashboard -> Service -> Environment), paste your
-#    real credentials from your local .env into each variable.
+# 3. In the Render Dashboard, paste your real credentials for each variable.
 #
 services:
   - type: web
@@ -16,13 +15,13 @@ services:
     runtime: python
     plan: free            # Render Free/Hobby tier (512MB RAM, spins down on idle)
     buildCommand: pip install -r requirements.txt
-    # Single worker with 4 threads ensures the in-process POSSE/syndication
-    # queue doesn't conflict, while threads handle concurrent web requests.
     startCommand: gunicorn app:app --workers 1 --threads 4 --timeout 180 --bind 0.0.0.0:$PORT
     envVars:
       # --- Core App Settings ---
       - key: SECRET_KEY
         sync: false
+      - key: FLASK_DEBUG
+        value: "0"
       - key: BLOG_ADMIN_USERNAME
         value: admin
       - key: BLOG_ADMIN_PASSWORD
@@ -37,9 +36,11 @@ services:
         value: cloud
       - key: DEFAULT_BACKEND
         value: local
-      - key: MONGO_URI
-        sync: false
       - key: ATLAS_MONGO_URI
+        sync: false
+      - key: ATLAS_MONGO_NAME
+        value: kittupriyatham
+      - key: ATLAS_MONGO_PASS
         sync: false
       - key: ANALYTICS_STORE
         value: mongo
@@ -63,6 +64,10 @@ services:
         value: blog-data
       - key: R2_PUBLIC_BASE
         value: https://pub-5dd94088ada04ea8b72ad971f9943617.r2.dev
+      - key: R2_S3_ENDPOINT
+        value: https://8c80a0cbc1645657715aa1218c967dea.r2.cloudflarestorage.com
+      - key: CLOUDFLARE_API_TOKEN
+        sync: false
 
       # --- LinkedIn Direct Integration ---
       - key: LINKEDIN_ACCESS_TOKEN
@@ -74,7 +79,7 @@ services:
       - key: LINKEDIN_CLIENT_SECRET
         sync: false
       - key: LINKEDIN_REDIRECT_URI
-        value: https://blog.potluri-krishna-priyatham.tech/linkedin/callback
+        value: https://www.linkedin.com/developers/tools/oauth/redirect
       - key: LINKEDIN_ORGANIZATION_URN
         value: "0"
 
@@ -86,7 +91,7 @@ services:
       - key: HASHNODE_PUBLICATION_ID
         value: 6ad1e1aa1cddb0d5092b0796
 
-      # --- SocialAPI & AI Rewriter ---
+      # --- SocialAPI, YouTube & AI Rewriter ---
       - key: SOCIALAPI_KEY
         sync: false
       - key: SOCIALAPI_BOARD_PINTEREST
@@ -95,6 +100,20 @@ services:
         sync: false
       - key: REWRITE_MODEL
         value: gemini-3.5-flash-lite
+      - key: YOUTUBE_CATEGORY
+        value: "22"
+      - key: YOUTUBE_VISIBILITY
+        value: public
+
+      # --- Platform Flags & Medium ---
+      - key: MEDIUM_HEADLESS
+        value: "1"
+      - key: MEDIUM_CHANNEL
+        value: chrome
+      - key: TWITTER_API_CREDIT
+        value: "0"
+      - key: TWITTER_SUBSCRIPTION
+        value: "0"
 
       # --- Telegram Alerts (Optional) ---
       - key: TELEGRAM_BOT_TOKEN
