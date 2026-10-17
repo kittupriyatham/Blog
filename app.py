@@ -335,6 +335,8 @@ def inject_cert_auth():
 
 @app.route("/login", methods=["GET", "POST"])
 def login():
+    if not is_cert_authorized():
+        abort(404)
     if session.get("logged_in"):
         return redirect(url_for("index"))
     if request.method == "POST":
