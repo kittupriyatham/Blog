@@ -289,18 +289,34 @@ def share_post(post_id):
     return jsonify({"status": "error", "message": "Post not found"}), 404
 
 
+def is_cert_authorized() -> bool:
+    """True when the client presented a valid Cloudflare mTLS certificate,
+    or during local development / when already authenticated."""
+    if app.debug or session.get("logged_in"):
+        return True
+    return request.headers.get("Cf-Client-Cert-Verified", "").upper() == "SUCCESS"
+
+
+@app.context_processor
+def inject_cert_auth():
+    return {"is_cert_authorized": is_cert_authorized()}
+
+
 # ---------------------------------------------------------------------------
 # Routes — Admin
 # ---------------------------------------------------------------------------
 
 @app.route("/login", methods=["GET", "POST"])
 def login():
+    if not is_cert_authorized():
+        abort(404)
     if request.method == "POST":
         if request.form.get("username") == ADMIN_USERNAME and request.form.get("password") == ADMIN_PASSWORD:
             session["logged_in"] = True
             return redirect(url_for("index"))
         flash("Invalid credentials.", "error")
     return render_template("login.html")
+
 
 @app.route("/logout", methods=["POST"])
 def logout():

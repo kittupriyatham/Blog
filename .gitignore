@@ -37,3 +37,9 @@ data/
 tmp/*
 cmdc2
 pyproject.toml
+
+# Client mTLS certificates and keys
+*.crt
+*.key
+*.p12
+*.pem
