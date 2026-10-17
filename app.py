@@ -292,9 +292,9 @@ def share_post(post_id):
 def is_cert_authorized() -> bool:
     """True when the client presented a valid Cloudflare mTLS certificate,
     or during local development / when already authenticated."""
-    if app.debug or session.get("logged_in"):
+    if session.get("logged_in"):
         return True
-    host = request.host.split(":")[0].lower()
+    host = (request.host or "").split(":")[0].lower()
     remote = (request.remote_addr or "").strip()
     if host in ("localhost", "127.0.0.1") or remote in ("127.0.0.1", "::1"):
         return True
@@ -466,9 +466,10 @@ def api_save_post():
 def articles_dashboard():
     published = list(posts_collection.find({"type": "article", "status": "published"}).sort("timestamp", -1))
     drafts = []
-    if session.get("logged_in"):
+    if is_cert_authorized() or session.get("logged_in"):
         drafts = list(posts_collection.find({"type": "article", "status": "draft"}).sort("timestamp", -1))
     return render_template("articles.html", published=published, drafts=drafts)
+
 
 
 @app.route("/posts")
@@ -494,9 +495,10 @@ def posts_dashboard():
 
     published = [p for p in posts_list if p.get("status", "published") != "draft"]
     drafts = []
-    if session.get("logged_in"):
+    if is_cert_authorized() or session.get("logged_in"):
         drafts = [p for p in posts_list if p.get("status") == "draft"]
     return render_template("posts.html", published=published, drafts=drafts)
+
 
 
 # --- YouTube upload ---------------------------------------------------------
