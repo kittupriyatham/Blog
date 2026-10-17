@@ -294,7 +294,13 @@ def is_cert_authorized() -> bool:
     or during local development / when already authenticated."""
     if app.debug or session.get("logged_in"):
         return True
-    return request.headers.get("Cf-Client-Cert-Verified", "").upper() == "SUCCESS"
+    host = request.host.split(":")[0].lower()
+    remote = (request.remote_addr or "").strip()
+    if host in ("localhost", "127.0.0.1") or remote in ("127.0.0.1", "::1"):
+        return True
+    cf_cert_status = request.headers.get("Cf-Client-Cert-Verified", "").upper()
+    return cf_cert_status == "SUCCESS"
+
 
 
 @app.context_processor
@@ -459,8 +465,11 @@ def api_save_post():
 @app.route("/articles")
 def articles_dashboard():
     published = list(posts_collection.find({"type": "article", "status": "published"}).sort("timestamp", -1))
-    drafts = list(posts_collection.find({"type": "article", "status": "draft"}).sort("timestamp", -1))
+    drafts = []
+    if session.get("logged_in"):
+        drafts = list(posts_collection.find({"type": "article", "status": "draft"}).sort("timestamp", -1))
     return render_template("articles.html", published=published, drafts=drafts)
+
 
 @app.route("/posts")
 def posts_dashboard():
@@ -484,8 +493,11 @@ def posts_dashboard():
             p["embedded_article"] = all_articles[match.group(1)]
 
     published = [p for p in posts_list if p.get("status", "published") != "draft"]
-    drafts = [p for p in posts_list if p.get("status") == "draft"]
+    drafts = []
+    if session.get("logged_in"):
+        drafts = [p for p in posts_list if p.get("status") == "draft"]
     return render_template("posts.html", published=published, drafts=drafts)
+
 
 # --- YouTube upload ---------------------------------------------------------
 # The common YouTube categories as (id, name). "22" (People & Blogs) is the

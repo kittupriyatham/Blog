@@ -85,11 +85,11 @@ src="https://www.facebook.com/tr?id=2092273818327635&ev=PageView&noscript=1"
   <main class="max-w-5xl mx-auto px-4 py-10">
     <div class="mb-8 flex items-end justify-between border-b border-slate-200 dark:border-slate-800 pb-4">
       <div>
-        <h2 class="text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">Post Manager</h2>
-        <p class="text-slate-500 dark:text-slate-400 mt-2 text-sm">Manage your published posts and drafts.</p>
+        <h2 class="text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">Posts</h2>
+        <p class="text-slate-500 dark:text-slate-400 mt-2 text-sm">{% if session.get('logged_in') %}Manage your published posts and drafts.{% else %}Browse all published posts.{% endif %}</p>
       </div>
 
-      {% if session.get('logged_in') %}
+      {% if session.get('logged_in') and drafts %}
       <div class="flex items-center gap-2 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl">
         <button id="tab-published" onclick="switchTab('published')" class="px-5 py-1.5 rounded-lg text-sm font-semibold transition bg-white dark:bg-slate-700 shadow-sm text-slate-900 dark:text-white">
           Published <span class="ml-1 px-1.5 py-0.5 bg-slate-100 dark:bg-slate-600 text-slate-500 dark:text-slate-300 rounded-md text-xs">{{ published | length }}</span>
@@ -217,10 +217,14 @@ src="https://www.facebook.com/tr?id=2092273818327635&ev=PageView&noscript=1"
     function switchTab(tabName) {
       const activeBtn = 'px-5 py-1.5 rounded-lg text-sm font-semibold transition bg-white dark:bg-slate-700 shadow-sm text-slate-900 dark:text-white';
       const inactiveBtn = 'px-5 py-1.5 rounded-lg text-sm font-medium text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white transition';
-      document.getElementById('tab-published').className = tabName === 'published' ? activeBtn : inactiveBtn;
-      document.getElementById('tab-drafts').className = tabName === 'drafts' ? activeBtn : inactiveBtn;
-      document.getElementById('content-published').className = tabName === 'published' ? 'tab-content active-tab' : 'tab-content hidden-tab';
-      document.getElementById('content-drafts').className = tabName === 'drafts' ? 'tab-content active-tab' : 'tab-content hidden-tab';
+      const tabPub = document.getElementById('tab-published');
+      const tabDrf = document.getElementById('tab-drafts');
+      const cntPub = document.getElementById('content-published');
+      const cntDrf = document.getElementById('content-drafts');
+      if (tabPub) tabPub.className = tabName === 'published' ? activeBtn : inactiveBtn;
+      if (tabDrf) tabDrf.className = tabName === 'drafts' ? activeBtn : inactiveBtn;
+      if (cntPub) cntPub.className = tabName === 'published' ? 'tab-content active-tab' : 'tab-content hidden-tab';
+      if (cntDrf) cntDrf.className = tabName === 'drafts' ? 'tab-content active-tab' : 'tab-content hidden-tab';
     }
   </script>
 </body>
