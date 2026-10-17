@@ -31,14 +31,14 @@ Status: the north star is met for six platforms — LinkedIn, Facebook, Instagra
 4. **Per-platform text** + **LLM rewrite-to-fit** instead of truncation.
 5. **Permanent public URL** — Cloudflare **named** tunnel running as a background system boot service.
 6. **Free dry-run validation** (`POST /v1/posts/validate`).
-7. **ORM data layer** — MongoEngine Documents in `src/db/` to guarantee field schemas are preserved.
-8. **Thin `app.py`** — routes + Flask init + run only; all logic lives in `src/` packages.
+7. **ORM data layer** — MongoEngine Documents in `core/db/` to guarantee field schemas are preserved.
+8. **Thin `app.py`** — routes + Flask init + run only; all logic lives in `core/` packages.
 9. **Root hygiene** — consolidated structures under `.ai_docs/`, `static/`, and `data/`.
 10. **Provider-agnostic storage** — implemented `local`/`cloud` storage layer selector per data type.
 11. **LinkedIn refresh-token flow** — long-lived automated refresh token rotations deployed.
 12. **YouTube workflow** — video processing page integration and SocialAPI sync blocks.
 13. **Analytics + editor** — completed the dashboard metrics overview panels and block composer.
-14. **Cloud Migration Engine** — built stdlib SigV4 S3 adapter for Cloudflare R2 (`src/providers/cloud/r2.py`), MongoDB token store persistence, Render deployment blueprint (`render.yaml`), and data/media migration script (`scripts/migrate_to_atlas.py`).
+14. **Cloud Migration Engine** — built stdlib SigV4 S3 adapter for Cloudflare R2 (`core/providers/cloud/r2.py`), MongoDB token store persistence, Render deployment blueprint (`render.yaml`), and data/media migration script (`scripts/migrate_to_atlas.py`).
 15. **Dual MongoDB URI Support** — added `LOCAL_MONGO_URI` and `ATLAS_MONGO_URI` with auto-selection based on backend environment.
 
 ---

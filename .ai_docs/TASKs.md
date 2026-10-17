@@ -25,9 +25,9 @@ Ordered ledger. Companions: `GOAL.md` (why), `CONTEXT.md` (where we are).
 
 | Item | Component Task Target | Status |
 |:---|:---|:---:|
-| 1 | Create `src/providers/cloud/r2.py` — SigV4 upload adapter (stdlib only) | ✅ Completed (`e7fe968`) |
-| 2 | Add R2 env vars to `src/config/settings.py` and re-export from `src/config/__init__.py` | ✅ Completed (`e7fe968`) |
-| 3 | Move LinkedIn OAuth token store to Mongo in `src/syndication/linkedin_token.py` | ✅ Completed (`e7fe968`) |
+| 1 | Create `core/providers/cloud/r2.py` — SigV4 upload adapter (stdlib only) | ✅ Completed (`e7fe968`) |
+| 2 | Add R2 env vars to `core/config/settings.py` and re-export from `core/config/__init__.py` | ✅ Completed (`e7fe968`) |
+| 3 | Move LinkedIn OAuth token store to Mongo in `core/syndication/linkedin_token.py` | ✅ Completed (`e7fe968`) |
 | 4 | Create `render.yaml` blueprint with all keys syncing from file | ✅ Completed (`e7fe968`) |
 | 5 | Document the R2 block in `.env.example` | ✅ Completed (`e7fe968`) |
 | 6 | Write `scripts/migrate_to_atlas.py` (posts/comments/analytics, LinkedIn token, media) | ✅ Completed (`e7fe968`) |
@@ -44,14 +44,14 @@ Ordered ledger. Companions: `GOAL.md` (why), `CONTEXT.md` (where we are).
 - **SocialAPI LinkedIn metrics path staged (inactive)** — `socialapi_metrics.SOCIALAPI_METRIC_PLATFORMS` (empty today) routes a *natively-published* platform's metrics to SocialAPI; `socialapi.py` records that LinkedIn is deliberately not a SocialAPI publishing platform.
 - **YouTube video path built** — a dedicated `/youtube/<post_id>` page (+ an inline composer panel) collects the full upload metadata into `doc["youtube"]`; the SocialAPI adapter sends it as the `platform_data.youtube` block.
 - **Per-platform text — rigorously tested, no bugs** — 100+ checks: per-platform limits, link suffix, exact-fit vs over-limit boundaries, per-platform independence, empty body, article-vs-post, CRLF, non-public URL, `_preview_shortened` mirroring `compose_text`, and `/api/syndication/preview`.
-- **Stale `SITE_URL` fixed in code** — `src/config/settings.py` now prefers the `.env` value for `SITE_URL` and writes it back into `os.environ`.
+- **Stale `SITE_URL` fixed in code** — `core/config/settings.py` now prefers the `.env` value for `SITE_URL` and writes it back into `os.environ`.
 - **Analytics + editor (built earlier this session)** — per-post × per-platform social metrics + first-party blog analytics; the editor gained per-platform preview, 14 rich blocks, attachment remove/reorder.
 
 ---
 
 ## Done (session 8)
 
-- **LinkedIn refresh-token flow** — `src/syndication/linkedin_token.py` wired into `linkedin.py` (all 4 token reads). `.env.example` documents `LINKEDIN_CLIENT_ID`/`LINKEDIN_CLIENT_SECRET`/`LINKEDIN_REDIRECT_URI` + the setup CLI.
+- **LinkedIn refresh-token flow** — `core/syndication/linkedin_token.py` wired into `linkedin.py` (all 4 token reads). `.env.example` documents `LINKEDIN_CLIENT_ID`/`LINKEDIN_CLIENT_SECRET`/`LINKEDIN_REDIRECT_URI` + the setup CLI.
 - **Free dry-run Validate** on `welcome_post` → facebook/instagram/youtube/bluesky/pinterest all `valid` (bluesky warns 282/300); linkedin has no dry-run.
 - **Medium import** verified as-is (copies the canonical URL + opens `://medium.com`).
 - **Rigorous full-project test pass** (51/53) — fixed stale Azure references, the cloud provider `exists()/delete()` error contract, and an orphaned draft's status.

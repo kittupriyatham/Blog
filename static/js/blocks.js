@@ -3,7 +3,7 @@
  * The editor menus (the post/feed editor's Attach menu and the article editor's
  * block menu) are rendered server-side by templates/_rich_blocks_menu.html with
  * `data-kind` values. This file supplies the snippet each entry inserts and the
- * click handling; the `rich_text` Jinja filter (src/content/rich_text.py)
+ * click handling; the `rich_text` Jinja filter (core/content/rich_text.py)
  * renders the syntax on the page. Keep all three in step — the syntax
  * documented in rich_text.py is the contract here.
  */

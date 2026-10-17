@@ -1,17 +1,17 @@
 """Thin Flask entrypoint: app setup, the route view functions, and the dev server.
 
-Everything that is not a route lives in `src/` (mirroring the existing src/db/
+Everything that is not a route lives in `core/` (mirroring the existing core/db/
 layout - one package folder per concern, each with an `__init__.py` that is the
 package's public API):
 
-    src/config/       env vars + constants (SECRET_KEY, MEDIA_FOLDER, ...)
-    src/providers/    storage backends (local vs cloud) for media + database
-    src/media/        uploads (delegated to the media provider) + media paths
-    src/content/      rich text, canonical URLs, shared helpers
-    src/analytics/    first-party analytics (write + dashboard reports)
-    src/notify/       Telegram notification
-    src/syndication/  platform adapters + background runner
-    src/db/           MongoEngine connection, schema + models
+    core/config/       env vars + constants (SECRET_KEY, MEDIA_FOLDER, ...)
+    core/providers/    storage backends (local vs cloud) for media + database
+    core/media/        uploads (delegated to the media provider) + media paths
+    core/content/      rich text, canonical URLs, shared helpers
+    core/analytics/    first-party analytics (write + dashboard reports)
+    core/notify/       Telegram notification
+    core/syndication/  platform adapters + background runner
+    core/db/           MongoEngine connection, schema + models
 
 The route bodies are unchanged: they call those packages through their module
 namespaces (media.upload_to_server(...), content.canonical(...), ...).
@@ -25,7 +25,7 @@ from typing import Any
 from dotenv import load_dotenv
 
 # Load environment variables from ".env" (git-ignored) before anything reads them.
-# (src.config.settings loads it too, so importing a package directly also works.)
+# (core.config.settings loads it too, so importing a package directly also works.)
 load_dotenv()
 
 from flask import (
@@ -43,18 +43,18 @@ from flask import (
 )
 from flask_wtf.csrf import CSRFProtect
 
-from src import analytics, content, media, syndication
-from src.config import (ADMIN_PASSWORD, ADMIN_USERNAME, ANALYTICS_STORE, MEDIA_FOLDER,
+from core import analytics, content, media, syndication
+from core.config import (ADMIN_PASSWORD, ADMIN_USERNAME, ANALYTICS_STORE, MEDIA_FOLDER,
                         SECRET_KEY, YOUTUBE_CATEGORY, YOUTUBE_VISIBILITY)
-from src.db import Comment, Post, connect_db, ensure_schema
-from src.syndication import runner, socialapi_metrics
+from core.db import Comment, Post, connect_db, ensure_schema
+from core.syndication import runner, socialapi_metrics
 
 app = Flask(__name__)
 app.secret_key = SECRET_KEY
 csrf = CSRFProtect(app)
 
 # --- Database Setup (MongoEngine) ---
-# Schema + indexes live in src/db/models.py. connect_db() opens the single
+# Schema + indexes live in core/db/models.py. connect_db() opens the single
 # MongoEngine connection (MONGO_URI, or a local mongod at 127.0.0.1:27017/blog_db)
 # and ensure_schema() idempotently creates collections/indexes (replaces
 # dbinit.py). The models back pymongo-style collection handles below, so the
@@ -314,7 +314,7 @@ def create_post():
         published_articles = list(posts_collection.find({"type": "article", "status": "published"}).sort("timestamp", -1))
         published_posts = list(posts_collection.find({"type": "post", "status": "published"}).sort("timestamp", -1).limit(20))
         return render_template("post_editor.html", post=None, content="", media_paths=[], articles=published_articles, attach_posts=published_posts, syndication_platforms=syndication.available_platforms(kind="post"))
-    # Named `body` (not `content`) so the src.content package stays reachable.
+    # Named `body` (not `content`) so the core.content package stays reachable.
     body = request.form.get("content", "").strip()
     media_files = request.files.getlist("media")
     platforms = request.form.getlist("platforms")
@@ -376,7 +376,7 @@ def edit_post(post_id):
 @app.route("/api/save_post", methods=["POST"])
 def api_save_post():
     if not session.get("logged_in"): return jsonify({"status": "error", "message": "Unauthorized"}), 401
-    # Named `body` (not `content`) so the src.content package stays reachable.
+    # Named `body` (not `content`) so the core.content package stays reachable.
     body = request.form.get("content", "").strip()
     action = request.form.get("action", "draft")
     post_id = request.form.get("post_id", "").strip()
@@ -473,7 +473,7 @@ def posts_dashboard():
 
 # --- YouTube upload ---------------------------------------------------------
 # The common YouTube categories as (id, name). "22" (People & Blogs) is the
-# default from src.config.YOUTUBE_CATEGORY; so is the visibility, from
+# default from core.config.YOUTUBE_CATEGORY; so is the visibility, from
 # YOUTUBE_VISIBILITY. Both are only form defaults - the saved value wins.
 YOUTUBE_CATEGORIES = [
     ("1", "Film & Animation"), ("2", "Autos & Vehicles"), ("10", "Music"),
@@ -938,7 +938,7 @@ def api_syndication_preview():
     kind = (request.form.get("kind") or "").strip().lower()
     if kind not in ("post", "article"):
         kind = "post"
-    # Named `body_text` (not `content`) so the src.content package stays reachable.
+    # Named `body_text` (not `content`) so the core.content package stays reachable.
     body_text = request.form.get("content")
     if body_text is None:
         body_text = request.form.get("text", "")
@@ -1067,7 +1067,7 @@ def analytics_refresh_social():
     route is deliberately NOT `@csrf.exempt`, so the browser's `csrf_token()`
     must be present.
 
-    Read-only against SocialAPI (see src/syndication/socialapi_metrics.py). It
+    Read-only against SocialAPI (see core/syndication/socialapi_metrics.py). It
     never publishes - the only write is the cache onto the post itself:
 
         doc["platform_metrics"] = {platform: {likes, comments, views, ...},

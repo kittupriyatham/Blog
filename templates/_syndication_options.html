@@ -1,7 +1,7 @@
 {% if syndication_platforms %}
 {#- Platforms that will not publish a text-only post. Instagram and Pinterest
     need an image OR video; YouTube needs a video specifically. This mirrors
-    REQUIRES_MEDIA / REQUIRES_VIDEO in src/syndication/socialapi.py. -#}
+    REQUIRES_MEDIA / REQUIRES_VIDEO in core/syndication/socialapi.py. -#}
 {% set _needs = {'instagram': 'image', 'pinterest': 'image', 'youtube': 'video'} %}
 <div class="flex items-center gap-3 flex-wrap">
   <span class="text-xs font-medium text-slate-500 dark:text-slate-400">Share to:</span>

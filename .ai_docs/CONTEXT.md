@@ -19,16 +19,16 @@ carries the blog URL → the post shows where it was syndicated ("Also published
   importer. **X** short-post-only; **Threads** not pursued.
 - **"Also published on"** row renders on every card + post/article page — posted platforms active, others
   dimmed; failed attempts show retry banners (logged-in).
-- **ORM enforced:** all DB access through MongoEngine Documents in `src/db/` (`Post`/`Comment`/
+- **ORM enforced:** all DB access through MongoEngine Documents in `core/db/` (`Post`/`Comment`/
   `AnalyticsEvent`; `syndications` declared). No file store (`blog.json`, `sync_storage`, `dbinit` gone);
   a local or Atlas `mongod` is supported.
-- **Storage is provider-agnostic & cloud-migrated:** `src/providers/` — a **`local`/`cloud` selector per data type**
-  (`DEFAULT_BACKEND` + `MEDIA_BACKEND`/`DB_BACKEND`); Cloudflare R2 SigV4 adapter (`src/providers/cloud/r2.py`, zero AWS SDK dependencies);
+- **Storage is provider-agnostic & cloud-migrated:** `core/providers/` — a **`local`/`cloud` selector per data type**
+  (`DEFAULT_BACKEND` + `MEDIA_BACKEND`/`DB_BACKEND`); Cloudflare R2 SigV4 adapter (`core/providers/cloud/r2.py`, zero AWS SDK dependencies);
   database supports distinct `LOCAL_MONGO_URI` and `ATLAS_MONGO_URI` with auto-switch logic (`dc61b13`).
 - **Render Ready:** `render.yaml` configured with production settings and Gunicorn workers.
 - **Stateless Persistence:** LinkedIn OAuth tokens persist in MongoDB (`secrets` collection) with file fallback so tokens survive container redeploys.
 - **Thin `app.py`** (~607 lines): Flask init + 25 route view functions + `app.run`; all logic lives in
-  `src/` packages.
+  `core/` packages.
 - **Tunnel:** the auto-start `cloudflared` Windows service routes `blog.potluri-krishna-priyatham.tech` →
   `127.0.0.1:5000`. Trial domain good for **≥1 year**; permanent `://kittupriyatham.com` planned.
 - **Repo tidy:** session notes in `.ai_docs/`; README images in `static/images/readme/`; runtime in `data/`.
@@ -43,7 +43,7 @@ app.py                       # Flask init + routes + app.run  (thin)
 render.yaml                  # Render service blueprint
 scripts/
   migrate_to_atlas.py        # One-off migration (local Mongo + media -> Atlas + R2)
-src/
+core/
   __init__.py                # regular package marker
   config/    settings.py     # env + constants (LOCAL_MONGO_URI, ATLAS_MONGO_URI, R2)
   providers/ base.py registry.py local.py cloud/{media,mongo,http,r2}.py   # local vs cloud storage per data type
@@ -64,7 +64,7 @@ templates/  static/  media/  data/  .ai_docs/
 - **7** — **cloud data-layer abstraction** (the providers layer); **rigorous test pass** (51/53) + fixes
   (stale Azure refs, provider error contract, orphaned draft status); `/posts`+`/articles` confirmed
   intentionally public.
-- **8** — **LinkedIn refresh-token flow** (`src/syndication/linkedin_token.py`, wired + documented;
+- **8** — **LinkedIn refresh-token flow** (`core/syndication/linkedin_token.py`, wired + documented;
   backward compatible); **free dry-run Validate** (all SocialAPI platforms valid); **Medium import**
   verified as-is.
 - **9** — **analytics dashboard** (per-post × per-platform via `socialapi_metrics.py`/`linkedin_metrics.py`,
@@ -73,7 +73,7 @@ templates/  static/  media/  data/  .ai_docs/
   (member metrics proven API-gated — `403 partnerApi…` — and the SocialAPI read path staged, inactive);
   **stale `SITE_URL` fixed** in `settings.py`. Session 9 closed out cleanly to establish the code-commit baseline.
 - **10** — **Cloud migration to Render + MongoDB Atlas + Cloudflare R2**:
-  - Implemented `src/providers/cloud/r2.py` (zero-SDK SigV4 S3 adapter for Cloudflare R2).
+  - Implemented `core/providers/cloud/r2.py` (zero-SDK SigV4 S3 adapter for Cloudflare R2).
   - Moved LinkedIn token store to MongoDB (`secrets` collection) with file fallback.
   - Added `render.yaml` blueprint with health check and environment bindings.
   - Implemented `scripts/migrate_to_atlas.py` for DB collection & media asset migration.
@@ -85,11 +85,11 @@ templates/  static/  media/  data/  .ai_docs/
 ## 5. Gotchas (read before debugging)
 - **MongoEngine:** `Model(**unknown_kwarg)` raises `FieldDoesNotExist` even with `strict=False` — pass only
   declared fields (or insert via the model's raw collection).
-- **`SITE_URL` prefers `.env`** — `src/config/settings.py` reads the `.env` value and writes it back into
+- **`SITE_URL` prefers `.env`** — `core/config/settings.py` reads the `.env` value and writes it back into
   `os.environ`, so a stale OS-level `SITE_URL` can no longer shadow it (fixed in session 9). Editing `.env` is
   enough to move domains.
 - **MongoDB URI precedence:** `MONGO_URI` takes priority. If empty, automatically selects `ATLAS_MONGO_URI` when `DB_BACKEND=cloud` (or `DEFAULT_BACKEND=cloud`), and `LOCAL_MONGO_URI` when local.
-- `src/` is a **regular** package (has `__init__.py`); no loose `.py` directly under `src/`.
+- `core/` is a **regular** package (has `__init__.py`); no loose `.py` directly under `core/`.
 - Admin *areas* need login — **except `/posts` and `/articles`, which are intentionally PUBLIC** (a
   social-style feed, like LinkedIn/Facebook; only drafts are gated). **Not an auth bug.**
 - **Only one Flask instance per port.**
