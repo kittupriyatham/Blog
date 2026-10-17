@@ -179,7 +179,7 @@ src="https://www.facebook.com/tr?id=2092273818327635&ev=PageView&noscript=1"
             <button type="button"
                     data-share="medium_import"
                     data-url="{{ article_url }}"
-                    onclick="navigator.clipboard.writeText(this.dataset.url).catch(function(){}); window.open('https://medium.com/p/import', '_blank', 'noopener');"
+                    onclick="openMediumImporter(this.dataset.url)"
                     class="text-xs px-3 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition">
               Medium Importer Fallback
             </button>
@@ -194,7 +194,7 @@ src="https://www.facebook.com/tr?id=2092273818327635&ev=PageView&noscript=1"
             <button type="button"
                     data-share="medium_import"
                     data-url="{{ article_url }}"
-                    onclick="navigator.clipboard.writeText(this.dataset.url).catch(function(){}); window.open('https://medium.com/p/import', '_blank', 'noopener');"
+                    onclick="openMediumImporter(this.dataset.url)"
                     class="text-xs px-3 py-1.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-brand-50 dark:hover:bg-slate-700 transition">
               Publish to Medium — opens Medium's importer, blog URL copied to clipboard
             </button>
@@ -273,6 +273,22 @@ src="https://www.facebook.com/tr?id=2092273818327635&ev=PageView&noscript=1"
         win.location.href = 'https://medium.com/new-story';
       } else {
         alert('Popup blocked. Please allow popups for this site to open Medium.');
+      }
+    }
+
+    function openMediumImporter(url) {
+      if (!url) return;
+      navigator.clipboard.writeText(url).catch(function(){});
+      var payload = {
+        posseMedium: true,
+        canonicalUrl: url
+      };
+      var win = window.open('about:blank', '_blank', 'noopener');
+      if (win) {
+        win.name = JSON.stringify(payload);
+        win.location.href = 'https://medium.com/p/import';
+      } else {
+        window.open('https://medium.com/p/import', '_blank', 'noopener');
       }
     }
 

@@ -40,11 +40,13 @@ Status: the north star is met for six platforms — LinkedIn, Facebook, Instagra
 13. **Analytics + editor** — completed the dashboard metrics overview panels and block composer.
 14. **Cloud Migration Engine** — built stdlib SigV4 S3 adapter for Cloudflare R2 (`core/providers/cloud/r2.py`), MongoDB token store persistence, Render deployment blueprint (`render.yaml`), and data/media migration script (`scripts/migrate_to_atlas.py`).
 15. **Dual MongoDB URI Support** — added `LOCAL_MONGO_URI` and `ATLAS_MONGO_URI` with auto-selection based on backend environment.
+16. **Stealth Admin Lockdown & Hardware Recognition** — hardened `/login`, drafts, and navigation with clean 404s for public readers; implemented 10-year HMAC-SHA256 device recognition tokens (`admin_device_token`) and mTLS header support (`X-Client-Cert-Verified`), eliminating reverse-proxy loopback vulnerabilities.
+17. **Medium Violentmonkey POSSE Integration** — deployed userscript (`medium_posse_userscript.user.js` v1.1.0) with automated URL importing (`p/import`) and rich story editor auto-pasting (`new-story`), fully retiring fragile local Playwright cookie dumps.
+18. **Documentation & Replication Guide** — complete rewrite of `README.md` with step-by-step setup from scratch, local vs. cloud configuration guides, fixed asset links, Violentmonkey setup steps, and stealth admin documentation.
 
 ---
 
-## Next (Session 10 & 11 Roadmap)
+## Next (Session 12 Roadmap)
 
-16. **Execute Live Atlas & R2 Data Migration** — Run `scripts/migrate_to_atlas.py` with valid Atlas & R2 credentials to seed cloud storage before production traffic switch.
-17. **Link & Deploy on Render** — Connect repository to Render using `render.yaml` to spin up production web service.
-18. **LinkedIn engagement** — Staged read path operations pending SocialAPI personal account metric beta validation.
+19. **LinkedIn engagement** — Staged read path operations pending SocialAPI personal account metric beta validation.
+20. **YouTube end-to-end** — Exercise live video upload and metadata syndication via SocialAPI.

@@ -1,11 +1,13 @@
 // ==UserScript==
-// @name         Medium POSSE Auto-Paster & Bridge Helper
+// @name         Medium POSSE Auto-Paster & Importer Helper
 // @namespace    https://potluri-krishna-priyatham.tech/
-// @version      1.0.0
-// @description  Bypasses Medium's API & Cloudflare bot protection by reading window.name and auto-pasting blog articles into Medium story editor.
+// @version      1.1.0
+// @description  Automates syndicating blog articles to Medium via either new-story paste bridge or p/import URL auto-filler.
 // @author       Kittu Priyatham
 // @match        https://medium.com/new-story*
 // @match        https://*.medium.com/new-story*
+// @match        https://medium.com/p/import*
+// @match        https://*.medium.com/p/import*
 // @icon         https://medium.com/favicon.ico
 // @grant        none
 // @run-at       document-idle
@@ -14,33 +16,9 @@
 (function () {
   'use strict';
 
-  console.log('[Medium POSSE Bridge] Initializing...');
+  console.log('[Medium POSSE Bridge] Initializing on:', window.location.href);
 
-  // 1. Check window.name payload
-  var rawData = window.name;
-  if (!rawData) {
-    console.log('[Medium POSSE Bridge] No window.name payload found. Normal editor session.');
-    return;
-  }
-
-  var payload = null;
-  try {
-    payload = JSON.parse(rawData);
-  } catch (e) {
-    console.log('[Medium POSSE Bridge] window.name is not JSON. Skipping.');
-    return;
-  }
-
-  if (!payload || !payload.posseMedium) {
-    console.log('[Medium POSSE Bridge] Payload not intended for POSSE Medium bridge.');
-    return;
-  }
-
-  // 2. Immediately clear window.name to prevent duplicate triggering on refresh
-  window.name = '';
-  console.log('[Medium POSSE Bridge] Captured syndication payload:', payload.title);
-
-  // 3. Helper to wait for DOM element to mount
+  // Helper to wait for DOM element to mount
   function waitForElement(selector, timeoutMs) {
     return new Promise(function (resolve, reject) {
       var startTime = Date.now();
@@ -60,7 +38,72 @@
     });
   }
 
-  // 4. Inject payload into Medium Editor
+  // --- MODE A: Medium URL Importer (https://medium.com/p/import) ---
+  if (window.location.pathname.startsWith('/p/import')) {
+    async function handleImportPage() {
+      var rawData = window.name;
+      var targetUrl = '';
+      if (rawData) {
+        try {
+          var payload = JSON.parse(rawData);
+          if (payload && payload.canonicalUrl) {
+            targetUrl = payload.canonicalUrl;
+            window.name = '';
+          }
+        } catch (e) {}
+      }
+
+      if (!targetUrl) {
+        return;
+      }
+
+      try {
+        console.log('[Medium POSSE Bridge] Target import URL detected:', targetUrl);
+        var input = await waitForElement('input[type="url"], input[type="text"], input', 10000);
+        if (input) {
+          input.focus();
+          input.value = targetUrl;
+          input.dispatchEvent(new Event('input', { bubbles: true }));
+          input.dispatchEvent(new Event('change', { bubbles: true }));
+          console.log('[Medium POSSE Bridge] Injected canonical URL into importer.');
+        }
+      } catch (err) {
+        console.warn('[Medium POSSE Bridge] Could not auto-fill import input:', err);
+      }
+    }
+
+    if (document.readyState === 'complete') {
+      handleImportPage();
+    } else {
+      window.addEventListener('load', handleImportPage);
+    }
+    return;
+  }
+
+  // --- MODE B: Medium Story Editor (https://medium.com/new-story) ---
+  var rawData = window.name;
+  if (!rawData) {
+    console.log('[Medium POSSE Bridge] No window.name payload found. Normal editor session.');
+    return;
+  }
+
+  var payload = null;
+  try {
+    payload = JSON.parse(rawData);
+  } catch (e) {
+    console.log('[Medium POSSE Bridge] window.name is not JSON. Skipping.');
+    return;
+  }
+
+  if (!payload || !payload.posseMedium) {
+    console.log('[Medium POSSE Bridge] Payload not intended for POSSE Medium bridge.');
+    return;
+  }
+
+  // Clear window.name to prevent re-triggering on manual refresh
+  window.name = '';
+  console.log('[Medium POSSE Bridge] Captured syndication payload:', payload.title);
+
   async function injectContent() {
     try {
       // Medium's story editor uses contenteditable with data-block-id or data-selectable-paragraph / role="textbox"

@@ -252,8 +252,17 @@ The blog operates under strict **POSSE** rules (*Publish Own Site, Syndicate Els
      HASHNODE_PUBLICATION_ID=your_publication_id
      ```
 
-#### 3. Medium POSSE Integration
-On any published article page (`/article/<id>`), click the **"Medium Importer"** button to copy your canonical article URL and open `https://medium.com/p/import`. Paste the URL and click **Import Story** to automatically import your content with canonical SEO attribution.
+#### 3. Medium POSSE Integration (via Violentmonkey Userscript)
+Medium has no public write API and blocks headless editor saves via Cloudflare protection. We bypass this cleanly using a Violentmonkey userscript:
+
+1. **Install Violentmonkey**: Add the [Violentmonkey extension](https://violentmonkey.github.io/) to your browser (Chrome/Edge/Firefox).
+2. **Install the Userscript**:
+   - Open Violentmonkey dashboard -> **+ (New Script)**.
+   - Paste the contents of [`static/js/medium_posse_userscript.user.js`](./static/js/medium_posse_userscript.user.js) and click **Save & Close**.
+   - *(Or visit `https://your-domain/static/js/medium_posse_userscript.user.js` directly in your browser with Violentmonkey active to install in 1 click).*
+3. **Syndicate to Medium**:
+   - **Direct Importer**: On any published article or post page, click **"Publish to Medium"** / **"Medium Importer Fallback"**. This automatically copies the canonical URL to your clipboard and opens `https://medium.com/p/import` where the userscript auto-populates the input. Click **Import Story** to fetch your story with canonical SEO backlinks intact.
+   - **Rich Story Bridge**: When logged in as Admin, clicking **"Syndicate to Medium"** opens `https://medium.com/new-story`, where the userscript automatically parses the article's rich HTML and dispatches a synthetic paste event directly into Medium's editor.
 
 ---
 

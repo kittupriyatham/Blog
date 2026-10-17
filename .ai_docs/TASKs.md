@@ -5,23 +5,40 @@ Ordered ledger. Companions: `GOAL.md` (why), `CONTEXT.md` (where we are).
 
 ---
 
-## Start here (session 10 / 11)
+## Start here (session 12)
 
 | # | Task | Why / done looks like |
 |---|------|------------------------|
-| 1 | **Execute Live Atlas & R2 Data Migration** | Run `scripts/migrate_to_atlas.py` once Atlas URI and R2 credentials are set in `.env` to copy existing posts/comments/analytics/media to the cloud. |
-| 2 | **Deploy on Render** | Connect Git repository to Render using `render.yaml` to spin up production web service. |
-| 3 | **LinkedIn engagement via SocialAPI — blocked on their reply** | LinkedIn posting is settled: it publishes **natively** as the personal profile. Its *metrics* need SocialAPI's `linkedin_page` beta + `connection_type: "personal"`. Emailed `support@social-api.ai`; reply expected **Mon**. **On reply:** set `SOCIALAPI_METRIC_PLATFORMS = {"linkedin"}` in `socialapi_metrics.py`. |
-| 4 | **Threads / X for long-form** | X stays short-post-only until `TWITTER_SUBSCRIPTION=1`; Threads is not pursued at all. |
+| 1 | **LinkedIn engagement via SocialAPI — blocked on their reply** | LinkedIn posting is settled: it publishes **natively** as the personal profile. Its *metrics* need SocialAPI's `linkedin_page` beta + `connection_type: "personal"`. Emailed `support@social-api.ai`; reply expected. **On reply:** set `SOCIALAPI_METRIC_PLATFORMS = {"linkedin"}` in `socialapi_metrics.py`. |
+| 2 | **YouTube end-to-end** | Built and UI-integrated; exercise with a real video to verify SocialAPI full upload metadata flow. |
+| 3 | **Threads / X for long-form** | X stays short-post-only until `TWITTER_SUBSCRIPTION=1`; Threads is not pursued at all. |
 
 **Dropped:** permanent domain — the user will update `SITE_URL` manually when the domain is ready.
 **Deferred (do later):** scheduling (`scheduled_at`), multi-user accounts, moderated comments.
 
 ---
 
-## In Progress / Session 10
+## Done (session 11)
 
-### Cloud Migration Architecture & Verification Checklist
+### Stealth Admin Hardening, Documentation Revamp & Medium POSSE
+
+| Item | Component Task Target | Status |
+|:---|:---|:---:|
+| 1 | Implemented HMAC-SHA256 persistent device authorization cookie (`admin_device_token`) | ✅ Verified live |
+| 2 | Enforce 404 on `/login`, `/posts` drafts, and `/articles` drafts for unauthorized devices | ✅ Verified live |
+| 3 | Hide Admin button on `/` and Draft tabs on feeds from DOM for unauthenticated public readers | ✅ Verified live |
+| 4 | Fixed Render reverse-proxy loopback flaw (`remote_addr == '127.0.0.1'`) in `app.py` | ✅ Verified live |
+| 5 | Complete `README.md` revamp with full replication guide, local vs. cloud `.env`, and stealth docs | ✅ Completed |
+| 6 | Fixed relative image references in `README.md` (`./static/images/readme/<file>`) | ✅ Completed |
+| 7 | Built & verified Violentmonkey userscript v1.1.0 (`p/import` auto-fill + `new-story` auto-paste) | ✅ Verified live |
+| 8 | Updated post and article template buttons with `openMediumImporter()` fallback bridge | ✅ Verified live |
+| 9 | Retired local `data/medium_auth.json` and Atlas `medium_auth` secret document | ✅ Completed |
+
+---
+
+## Done (session 10)
+
+### Cloud Migration Architecture & Verification
 
 | Item | Component Task Target | Status |
 |:---|:---|:---:|
@@ -33,7 +50,7 @@ Ordered ledger. Companions: `GOAL.md` (why), `CONTEXT.md` (where we are).
 | 6 | Write `scripts/migrate_to_atlas.py` (posts/comments/analytics, LinkedIn token, media) | ✅ Completed (`e7fe968`) |
 | 7 | Add dual `LOCAL_MONGO_URI` and `ATLAS_MONGO_URI` with auto-switch | ✅ Completed (`dc61b13`) |
 | 8 | Update local `.env` with new schema and live `ATLAS_MONGO_URI` credentials | ✅ Completed |
-| 9 | **Verify: import the app, run a local smoke test, confirm no regressions** | ✅ Verified (all tests pass) |
+| 9 | Verify: import the app, run a local smoke test, confirm no regressions | ✅ Verified (all tests pass) |
 
 ---
 
