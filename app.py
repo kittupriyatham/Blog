@@ -295,14 +295,16 @@ def is_cert_authorized() -> bool:
     if session.get("logged_in"):
         return True
     
-    # Check if running in a hosted environment (e.g. Render)
-    is_hosted = bool(os.environ.get("RENDER") or os.environ.get("RENDER_SERVICE_ID"))
-    if not is_hosted:
-        host = (request.host or "").split(":")[0].lower()
-        if host in ("localhost", "127.0.0.1"):
-            return True
+    # Local development bypass: strictly when accessing via localhost / 127.0.0.1 in the browser
+    host = (request.host or "").split(":")[0].lower()
+    if host in ("localhost", "127.0.0.1"):
+        return True
             
-    cf_cert_status = request.headers.get("Cf-Client-Cert-Verified", "").strip().upper()
+    cf_cert_status = (
+        request.headers.get("X-Client-Cert-Verified")
+        or request.headers.get("Cf-Client-Cert-Verified")
+        or ""
+    ).strip().upper()
     return cf_cert_status == "SUCCESS"
 
 
