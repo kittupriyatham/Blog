@@ -288,13 +288,28 @@ def share_post(post_id):
         return jsonify({"status": "success", "shares": result.get("shares", 0)})
     return jsonify({"status": "error", "message": "Post not found"}), 404
 
+import hashlib
+import hmac
+
+ADMIN_DEVICE_COOKIE = "admin_device_token"
+
+def _admin_device_signature() -> str:
+    """Generate a cryptographic HMAC digest tied to SECRET_KEY and ADMIN_USERNAME."""
+    key = (SECRET_KEY or "dev-insecure-secret-key").encode("utf-8")
+    msg = f"admin-device:{ADMIN_USERNAME}".encode("utf-8")
+    return hmac.new(key, msg, hashlib.sha256).hexdigest()
 
 def is_cert_authorized() -> bool:
-    """True when the client presented a valid Cloudflare mTLS certificate,
-    or during local development / when already authenticated."""
+    """True when the client is logged in, has the trusted admin device token,
+    presented a Cloudflare mTLS cert, or is on local development."""
     if session.get("logged_in"):
         return True
     
+    # Check for cryptographically signed admin device cookie
+    cookie_val = request.cookies.get(ADMIN_DEVICE_COOKIE)
+    if cookie_val and hmac.compare_digest(cookie_val, _admin_device_signature()):
+        return True
+
     # Local development bypass: strictly when accessing via localhost / 127.0.0.1 in the browser
     host = (request.host or "").split(":")[0].lower()
     if host in ("localhost", "127.0.0.1"):
@@ -325,7 +340,17 @@ def login():
     if request.method == "POST":
         if request.form.get("username") == ADMIN_USERNAME and request.form.get("password") == ADMIN_PASSWORD:
             session["logged_in"] = True
-            return redirect(url_for("index"))
+            resp = make_response(redirect(url_for("index")))
+            # Permanently mark this specific browser as the Admin's device (10 years)
+            resp.set_cookie(
+                ADMIN_DEVICE_COOKIE,
+                _admin_device_signature(),
+                max_age=10 * 365 * 24 * 3600,
+                httponly=True,
+                samesite="Lax",
+                secure=True
+            )
+            return resp
         flash("Invalid credentials.", "error")
     return render_template("login.html")
 
