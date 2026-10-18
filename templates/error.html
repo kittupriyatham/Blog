@@ -1,69 +1,151 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="dark">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{{ error_code }} - {{ error_title }} | Kittu's Blog</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     tailwind.config = {
       darkMode: 'class',
       theme: {
         extend: {
-          fontFamily: { sans: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'] },
-          colors: { brand: { 50:'#eef2ff',100:'#e0e7ff',400:'#818cf8',500:'#6366f1',600:'#4f46e5',700:'#4338ca' } },
+          fontFamily: {
+            sans: ['"Plus Jakarta Sans"', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+            mono: ['"JetBrains Mono"', 'ui-monospace', 'monospace'],
+          },
+          colors: {
+            brand: {
+              50: '#eef2ff', 100: '#e0e7ff', 200: '#c7d2fe',
+              300: '#a5b4fc', 400: '#818cf8', 500: '#6366f1',
+              600: '#4f46e5', 700: '#4338ca', 800: '#3730a3',
+              900: '#312e81', 950: '#1e1b4b'
+            }
+          },
+          animation: {
+            'blob': 'blob 10s infinite cubic-bezier(0.4, 0, 0.2, 1)',
+            'float': 'float 4s ease-in-out infinite',
+          },
+          keyframes: {
+            blob: {
+              '0%, 100%': { transform: 'translate(0px, 0px) scale(1)' },
+              '33%': { transform: 'translate(30px, -40px) scale(1.1)' },
+              '66%': { transform: 'translate(-20px, 20px) scale(0.95)' },
+            },
+            float: {
+              '0%, 100%': { transform: 'translateY(0)' },
+              '50%': { transform: 'translateY(-6px)' },
+            }
+          }
         },
       },
     };
   </script>
-  <style>body { font-family: 'Inter', ui-sans-serif, system-ui, sans-serif; }</style>
+  <style>
+    body { font-family: 'Plus Jakarta Sans', ui-sans-serif, system-ui, sans-serif; }
+    .glass-card {
+      background: rgba(15, 23, 42, 0.65);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5), inset 0 1px 0 0 rgba(255, 255, 255, 0.1);
+    }
+  </style>
 </head>
-<body class="bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-200 min-h-screen flex flex-col antialiased selection:bg-brand-500 selection:text-white">
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col antialiased selection:bg-brand-500 selection:text-white relative overflow-x-hidden">
 
-  <nav class="bg-white/80 dark:bg-slate-900/80 backdrop-blur-lg border-b border-slate-200/70 dark:border-slate-800/70 sticky top-0 z-10">
-    <div class="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between">
-      <a href="{{ url_for('index') }}" class="flex items-center gap-2.5 group">
-        <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-brand-500 to-blue-600 flex items-center justify-center text-white font-bold text-sm shadow-sm">K</div>
-        <span class="font-bold text-slate-900 dark:text-white tracking-tight group-hover:text-brand-600 dark:group-hover:text-brand-400 transition">Kittu's Blog</span>
+  <!-- Ambient Glow Backgrounds -->
+  <div class="fixed inset-0 pointer-events-none -z-10 overflow-hidden">
+    <div class="absolute -top-40 -left-40 w-96 h-96 bg-brand-600/20 rounded-full blur-3xl animate-blob"></div>
+    <div class="absolute top-1/3 -right-40 w-96 h-96 bg-cyan-600/15 rounded-full blur-3xl animate-blob" style="animation-delay: 3s;"></div>
+    <div class="absolute -bottom-40 left-1/3 w-96 h-96 bg-purple-600/15 rounded-full blur-3xl animate-blob" style="animation-delay: 6s;"></div>
+    <div class="absolute inset-0 bg-[radial-gradient(#334155_1px,transparent_1px)] [background-size:24px_24px] opacity-25"></div>
+  </div>
+
+  <!-- Navigation -->
+  <nav class="bg-slate-900/60 backdrop-blur-xl border-b border-slate-800/80 sticky top-0 z-20">
+    <div class="max-w-5xl mx-auto px-4 sm:px-6 py-3.5 flex items-center justify-between">
+      <a href="{{ url_for('index') }}" class="flex items-center gap-3 group">
+        <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-brand-600 via-indigo-600 to-cyan-500 p-[1px] shadow-lg shadow-brand-500/20 group-hover:shadow-brand-500/40 transition duration-300">
+          <div class="w-full h-full bg-slate-950 rounded-[11px] flex items-center justify-center">
+            <span class="font-bold text-transparent bg-clip-text bg-gradient-to-tr from-white to-slate-300 text-sm">K</span>
+          </div>
+        </div>
+        <span class="font-bold text-white tracking-tight group-hover:text-brand-300 transition duration-200">Kittu's Blog</span>
       </a>
-      <div class="flex items-center gap-2">
-        <a href="{{ url_for('articles_dashboard') }}" class="text-xs sm:text-sm font-medium px-2.5 py-1.5 rounded-full text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition">Articles</a>
-        <a href="{{ url_for('posts_dashboard') }}" class="text-xs sm:text-sm font-medium px-2.5 py-1.5 rounded-full text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition">Posts</a>
+      <div class="flex items-center gap-1.5 sm:gap-2">
+        <a href="{{ url_for('articles_dashboard') }}" class="text-xs sm:text-sm font-medium px-3.5 py-1.5 rounded-full text-slate-300 hover:text-white hover:bg-slate-800/80 transition duration-200">Articles</a>
+        <a href="{{ url_for('posts_dashboard') }}" class="text-xs sm:text-sm font-medium px-3.5 py-1.5 rounded-full text-slate-300 hover:text-white hover:bg-slate-800/80 transition duration-200">Posts</a>
       </div>
     </div>
   </nav>
 
-  <main class="flex-1 max-w-xl mx-auto px-4 py-16 sm:py-24 flex items-center justify-center w-full">
-    <div class="w-full text-center">
-      <div class="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-brand-50 dark:bg-brand-950/40 text-brand-600 dark:text-brand-400 border border-brand-100 dark:border-brand-900/50 shadow-sm mb-6">
-        <span class="text-3xl font-extrabold tracking-tight">{{ error_code }}</span>
+  <!-- Main Hero Card -->
+  <main class="flex-1 max-w-2xl mx-auto px-4 sm:px-6 py-16 sm:py-24 flex items-center justify-center w-full z-10">
+    <div class="w-full glass-card rounded-3xl p-8 sm:p-12 text-center relative overflow-hidden">
+      
+      <!-- Top Subtle Light Beam -->
+      <div class="absolute -top-12 left-1/2 -translate-x-1/2 w-72 h-24 bg-gradient-to-b from-brand-500/30 to-transparent blur-2xl pointer-events-none"></div>
+
+      <!-- Error Status Badge -->
+      <div class="relative inline-block mb-6">
+        <div class="inline-flex items-center gap-2.5 px-5 py-2 rounded-2xl bg-slate-900/90 border border-brand-500/30 shadow-inner text-brand-300 font-mono text-sm tracking-wider uppercase">
+          <span class="relative flex h-2 w-2">
+            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+            <span class="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
+          </span>
+          HTTP Status {{ error_code }}
+        </div>
       </div>
 
-      <h1 class="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white tracking-tight mb-3">
+      <!-- Giant Glowing Code -->
+      <div class="text-7xl sm:text-8xl font-black font-mono tracking-tighter mb-4 text-transparent bg-clip-text bg-gradient-to-b from-white via-slate-200 to-slate-500 select-none animate-float">
+        {{ error_code }}
+      </div>
+
+      <!-- Descriptive Title -->
+      <h1 class="text-2xl sm:text-3xl font-extrabold text-white tracking-tight mb-3">
         {{ error_title }}
       </h1>
 
-      <p class="text-slate-600 dark:text-slate-400 text-sm sm:text-base leading-relaxed mb-8 max-w-md mx-auto">
+      <!-- Context Message -->
+      <p class="text-slate-400 text-sm sm:text-base leading-relaxed mb-8 max-w-lg mx-auto">
         {{ error_message }}
       </p>
 
-      <div class="flex flex-col sm:flex-row items-center justify-center gap-3">
-        <a href="{{ url_for('index') }}" class="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-2.5 rounded-full bg-gradient-to-r from-brand-600 to-blue-600 hover:from-brand-700 hover:to-blue-700 text-white font-medium text-sm shadow-sm hover:shadow transition">
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
-          Back to Home Feed
+      <!-- Action Buttons -->
+      <div class="flex flex-col sm:flex-row items-center justify-center gap-3.5 mb-10">
+        <a href="{{ url_for('index') }}" class="w-full sm:w-auto inline-flex items-center justify-center gap-2.5 px-6 py-3 rounded-xl bg-gradient-to-r from-brand-600 via-indigo-600 to-blue-600 hover:from-brand-500 hover:to-blue-500 text-white font-semibold text-sm shadow-lg shadow-brand-600/30 hover:shadow-brand-500/50 hover:-translate-y-0.5 transition duration-200">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/>
+          </svg>
+          Return to Home Feed
         </a>
-        <button onclick="window.history.back()" class="w-full sm:w-auto inline-flex items-center justify-center px-5 py-2.5 rounded-full border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 font-medium text-sm transition">
+        <button onclick="window.history.back()" class="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-slate-900/80 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-800 hover:border-slate-700 font-semibold text-sm transition duration-200">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+          </svg>
           Go Back
         </button>
       </div>
+
+      <!-- Quick Helpful Navigation -->
+      <div class="pt-6 border-t border-slate-800/80 flex flex-wrap items-center justify-center gap-4 text-xs text-slate-400">
+        <span class="text-slate-500 font-medium">Looking for something?</span>
+        <a href="{{ url_for('articles_dashboard') }}" class="hover:text-brand-300 underline underline-offset-4 decoration-slate-700 hover:decoration-brand-400 transition">Read Articles</a>
+        <span class="text-slate-700">&bull;</span>
+        <a href="{{ url_for('posts_dashboard') }}" class="hover:text-brand-300 underline underline-offset-4 decoration-slate-700 hover:decoration-brand-400 transition">Latest Short Posts</a>
+      </div>
+
     </div>
   </main>
 
-  <footer class="border-t border-slate-200 dark:border-slate-800 py-6 text-center text-xs text-slate-400 dark:text-slate-600">
-    &copy; Kittu Priyatham &bull; Personal POSSE Publication
+  <!-- Footer -->
+  <footer class="border-t border-slate-900 py-6 text-center text-xs text-slate-500 z-10">
+    &copy; Kittu Priyatham &bull; Personal Publication
   </footer>
 
 </body>
