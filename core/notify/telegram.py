@@ -61,7 +61,16 @@ def notify_telegram(doc, results=None, post_url=None):
     if not (TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID):
         return None
 
-    title = (doc.get("title") or doc.get("content") or "New story").strip()[:120]
+    # Extract best available title/snippet: title for articles, text block content for posts
+    title = (doc.get("title") or doc.get("content") or "").strip()
+    if not title and doc.get("blocks"):
+        for b in doc.get("blocks", []):
+            if b.get("type") == "text" and b.get("content"):
+                title = b.get("content").strip()
+                break
+    if not title:
+        title = "New story"
+    title = title[:120]
     pid = doc.get("post_id")
     ptype = (doc.get("type") or "post").capitalize()
     
