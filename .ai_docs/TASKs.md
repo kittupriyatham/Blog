@@ -16,6 +16,7 @@ Ordered ledger. Companions: `GOAL.md` (why), `CONTEXT.md` (where we are).
 | 1.3 | **Static Admin Decoy 404** | Create `templates/admin_not_found.html` with raw, unstyled Apache/Nginx generic browser 404 text (zero branding/scripts/links) | ✅ Completed |
 | 1.4 | **Edge Admin Decoy Interception** | In `@app.before_request`, intercept unauthorized requests to admin paths (`/login`, `/analytics`, `/admin/*`, editors) with `admin_not_found.html` (404) | ✅ Completed |
 | 2.1 | **Lightweight `/health` Endpoint** | Implement `@app.route('/health')` returning plain text `OK` (200) without database connection, storage access, or template rendering | ✅ Completed |
+| 2.2 | **External Uptime Monitor Setup** | Configure cron-job.org monitor pinging `/health` every 10–12 minutes to prevent Render cold starts | ✅ Completed |
 | 3.1 | **Anti-Indexing `X-Robots-Tag` Hook** | In `@app.after_request`, inject `X-Robots-Tag: noindex, nofollow, noarchive, nosnippet` on private/admin routes and error responses | ✅ Completed |
 | 3.2 | **Standard `robots.txt`** | Implement `@app.route('/robots.txt')` allowing public feeds and `/llms.txt`, disallowing admin paths, referencing dynamic `Sitemap:` URL | ✅ Completed |
 | 3.3 | **Dynamic XML Sitemap Engine** | Implement `@app.route('/sitemap.xml')` (schema 0.9) querying published posts/articles with `<loc>` and ISO `<lastmod>` | ✅ Completed |
