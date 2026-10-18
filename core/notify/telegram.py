@@ -138,6 +138,58 @@ def handle_webhook_update(update):
     posts_coll = Post._get_collection()
     issues_coll = IssueReport._get_collection()
 
+    # Handle bot command: /start or /help
+    if user_text in ("/start", "/help"):
+        help_text = (
+            "👋 Welcome to your Blog Notification & Feedback Bot!\n\n"
+            "✨ What you can do:\n"
+            "• Reply directly to any post notification to report an issue or typo.\n"
+            "• Send /status to check unresolved issues.\n"
+            "• Send /resolve [id] or /resolve all to close issues.\n"
+            "• When issues are OPEN, cron-job.org alerts you via email."
+        )
+        send_message(help_text, reply_to_message_id=incoming_msg_id)
+        return {"status": "command_handled", "command": user_text}
+
+    # Handle bot command: /status
+    if user_text == "/status":
+        open_items = list(issues_coll.find({"status": "open"}).sort("created_at", -1))
+        if not open_items:
+            send_message("✅ All clear! There are currently 0 open issues.", reply_to_message_id=incoming_msg_id)
+        else:
+            lines = [f"⚠️ {len(open_items)} open issue(s):"]
+            for it in open_items[:10]:
+                lines.append(f"• #{it.get('report_id')}: \"{it.get('text')}\" (Post: {it.get('post_id')})")
+            lines.append("\nTip: Send `/resolve all` or `/resolve <id>` to close.")
+            send_message("\n".join(lines), reply_to_message_id=incoming_msg_id)
+        return {"status": "command_handled", "command": "/status"}
+
+    # Handle bot command: /resolve
+    if user_text.startswith("/resolve"):
+        parts = user_text.split()
+        now_ts = now_str()
+        if len(parts) > 1 and parts[1].lower() == "all":
+            result = issues_coll.update_many({"status": "open"}, {"$set": {"status": "resolved", "resolved_at": now_ts}})
+            send_message(f"✅ Resolved {result.modified_count} issue(s).", reply_to_message_id=incoming_msg_id)
+            return {"status": "command_handled", "resolved_count": result.modified_count}
+        elif len(parts) > 1:
+            target_id = parts[1].lstrip("#")
+            result = issues_coll.update_one({"report_id": target_id}, {"$set": {"status": "resolved", "resolved_at": now_ts}})
+            if result.modified_count:
+                send_message(f"✅ Issue #{target_id} marked as resolved.", reply_to_message_id=incoming_msg_id)
+            else:
+                send_message(f"❓ Could not find open issue #{target_id}.", reply_to_message_id=incoming_msg_id)
+            return {"status": "command_handled", "target_id": target_id}
+        else:
+            # If replied to an issue ack or no argument given, resolve latest open issue
+            latest_open = issues_coll.find_one({"status": "open"}, sort=[("created_at", -1)])
+            if latest_open:
+                issues_coll.update_one({"_id": latest_open["_id"]}, {"$set": {"status": "resolved", "resolved_at": now_ts}})
+                send_message(f"✅ Resolved latest issue #{latest_open.get('report_id')}.", reply_to_message_id=incoming_msg_id)
+            else:
+                send_message("✅ No open issues to resolve.", reply_to_message_id=incoming_msg_id)
+            return {"status": "command_handled", "command": "/resolve"}
+
     matched_post = None
     target_post_id = None
 
