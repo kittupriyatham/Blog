@@ -22,8 +22,11 @@ def connect_db():
     (app startup and any other importer may both call it).
     """
     from core.providers import ProviderKind, get
+    from core.providers.base import DatabaseProvider
+    from typing import cast
 
-    return get(ProviderKind.DATABASE).connect()
+    db_provider = cast(DatabaseProvider, get(ProviderKind.DATABASE))
+    return db_provider.connect()
 
 
 def ensure_schema():
@@ -35,10 +38,13 @@ def ensure_schema():
     data.
     """
     from core.providers import ProviderKind, get
+    from core.providers.base import DatabaseProvider
+    from typing import cast
 
-    get(ProviderKind.DATABASE).ensure_schema()
+    db_provider = cast(DatabaseProvider, get(ProviderKind.DATABASE))
+    db_provider.ensure_schema()
 
 
-from .models import AnalyticsEvent, Comment, Post  # re-export for app.py
+from .models import AnalyticsEvent, Comment, Post, IssueReport  # re-export for app.py
 
-__all__ = ["connect_db", "ensure_schema", "DEFAULT_DB", "Post", "Comment", "AnalyticsEvent"]
+__all__ = ["connect_db", "ensure_schema", "DEFAULT_DB", "Post", "Comment", "AnalyticsEvent", "IssueReport"]

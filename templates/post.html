@@ -124,6 +124,14 @@ src="https://www.facebook.com/tr?id=2092273818327635&ev=PageView&noscript=1"
           </div>
         {% endif %}
 
+        {% if post.youtube and post.youtube.url %}
+          {% set yt_raw = post.youtube.url %}
+          {% set yt_id = yt_raw.split('v=')[-1].split('&')[0].split('/')[-1] %}
+          <div class="mb-6 rounded-2xl overflow-hidden shadow-lg border border-slate-200 dark:border-slate-800 aspect-video bg-black">
+            <iframe class="w-full h-full" src="https://www.youtube-nocookie.com/embed/{{ yt_id }}" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
+          </div>
+        {% endif %}
+
         {% if post.media_paths %}
           <div class="space-y-4">
             {% for media in post.media_paths %}

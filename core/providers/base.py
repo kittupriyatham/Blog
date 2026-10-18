@@ -112,8 +112,8 @@ def ensure_model_indexes():
     An index conflict (an externally managed index that differs from the model)
     is caught and skipped rather than dropped - production data is never touched.
     """
-    from core.db.models import AnalyticsEvent, Comment, Post
-    for model in (Post, Comment, AnalyticsEvent):
+    from core.db.models import AnalyticsEvent, Comment, Post, IssueReport
+    for model in (Post, Comment, AnalyticsEvent, IssueReport):
         try:
             model.ensure_indexes()
         except Exception as e:  # idempotent: ignore conflicts with existing indexes

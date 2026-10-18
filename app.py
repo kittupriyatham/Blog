@@ -16,10 +16,12 @@ package's public API):
 The route bodies are unchanged: they call those packages through their module
 namespaces (media.upload_to_server(...), content.canonical(...), ...).
 """
+import datetime
 import json
 import os
 import re
 import secrets
+import threading
 from typing import Any
 
 from dotenv import load_dotenv
@@ -47,7 +49,8 @@ from flask_wtf.csrf import CSRFProtect
 from core import analytics, content, media, syndication
 from core.config import (ADMIN_PASSWORD, ADMIN_USERNAME, ANALYTICS_STORE, MEDIA_FOLDER,
                         SECRET_KEY, SITE_URL, YOUTUBE_CATEGORY, YOUTUBE_VISIBILITY)
-from core.db import Comment, Post, connect_db, ensure_schema
+from core.db import Comment, Post, IssueReport, connect_db, ensure_schema
+from core.notify import auto_register_webhook, handle_webhook_update, notify_telegram
 from core.syndication import runner, socialapi_metrics
 
 app = Flask(__name__)
@@ -65,12 +68,16 @@ connect_db()
 ensure_schema()
 posts_collection = Post._get_collection()
 comments_collection = Comment._get_collection()
+issues_collection = IssueReport._get_collection()
 
 # Wire the moved pieces into the app object: the rich_text template filter, the
 # canonical/site_url context processor, and the syndication background worker.
 content.register(app)
 content.register_urls(app)
 runner.start_worker()
+
+# Automatically register Telegram webhook on startup in the background
+threading.Thread(target=auto_register_webhook, daemon=True).start()
 
 # ---------------------------------------------------------------------------
 # Routes — Public
@@ -1038,6 +1045,55 @@ def api_syndication_check():
     s = syndication.get(request.form.get("platform", "linkedin"))
     if not s: return jsonify({"ok": False, "detail": "Unknown platform"}), 404
     return jsonify(s.check())
+
+
+# ---------------------------------------------------------------------------
+# Telegram Webhook & Cron-Job Health Monitor
+# ---------------------------------------------------------------------------
+
+@csrf.exempt
+@app.route("/api/telegram/webhook", methods=["POST"])
+def telegram_webhook():
+    """Inbound webhook handler for Telegram Bot updates.
+    Handles two-way issue reporting by replying to bot notification messages.
+    """
+    payload = request.get_json(force=True, silent=True) or {}
+    result = handle_webhook_update(payload)
+    return jsonify(result or {"status": "ignored"})
+
+
+@app.route("/health/syndication", methods=["GET", "HEAD"])
+def health_syndication():
+    """Health check endpoint for cron-job.org / uptime monitoring.
+    - If there are unresolved reported issues (status='open' in IssueReport), returns HTTP 500.
+    - If any post in the last 48 hours experienced syndication failure, returns HTTP 500.
+    - Otherwise returns HTTP 200 'OK'.
+    When cron-job.org receives HTTP 500, it triggers an alert email to the author.
+    """
+    open_issues = list(issues_collection.find({"status": "open"}))
+    
+    # Check for recent failed syndications
+    cutoff_dt = datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(hours=48)
+    cutoff_str = cutoff_dt.strftime("%Y-%m-%d %H:%M:%S")
+    recent_failures = list(posts_collection.find({
+        "timestamp": {"$gte": cutoff_str},
+        "syndications": {"$elemMatch": {"status": "failed"}}
+    }))
+
+    if open_issues or recent_failures:
+        issue_msgs = [f"Issue #{i.get('report_id')}: {i.get('text')}" for i in open_issues[:5]]
+        failure_msgs = [f"Post {p.get('post_id')} has failed syndication" for p in recent_failures[:5]]
+        all_problems = issue_msgs + failure_msgs
+        error_body = (
+            f"ALERT: Syndication Health Degraded\n"
+            f"Open Telegram Issues: {len(open_issues)}\n"
+            f"Recent Failed Posts: {len(recent_failures)}\n\n"
+            + "\n".join(all_problems)
+        )
+        return Response(error_body, status=500, mimetype="text/plain")
+
+    return Response("OK - All systems operational", status=200, mimetype="text/plain")
+
 
 @app.route("/api/syndication/retry", methods=["POST"])
 def api_syndication_retry():

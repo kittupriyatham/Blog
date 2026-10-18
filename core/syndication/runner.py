@@ -51,6 +51,22 @@ def run_syndication(doc_id, url, platforms):
             outcome = syndication.publish_detailed_to(pid, text, url, platform_media, doc)
             rec = {"platform": pid, "label": syndication.label_for(pid), "url": outcome.get("url"),
                    "remote_id": outcome.get("remote_id"), "status": "posted", "posted_at": now_str(), "error": None}
+            # Auto-cleanup for YouTube: once YouTube confirms upload success,
+            # save the public YouTube URL in the post record, keeping all audit logs intact.
+            if pid == "youtube" and outcome.get("url"):
+                yt_url = outcome.get("url")
+                posts_collection.update_one(
+                    {"post_id": doc_id},
+                    {"$set": {"youtube.url": yt_url, "youtube.posted_at": now_str()}}
+                )
+                try:
+                    import os
+                    vpath = syndication.video_path_for(doc_id)
+                    if vpath and os.path.exists(vpath):
+                        os.remove(vpath)
+                        print(f"[syndication] Safely deleted staging video file for {doc_id} after YouTube upload: {vpath}")
+                except Exception as clean_err:
+                    print(f"[syndication] Warning: failed cleaning staging video for {doc_id}: {clean_err}")
         except Exception as e:
             rec = {"platform": pid, "label": syndication.label_for(pid), "url": None,
                    "remote_id": None, "status": "failed", "posted_at": now_str(), "error": str(e)[:300]}
@@ -62,11 +78,59 @@ def run_syndication(doc_id, url, platforms):
     return results
 
 
+def cleanup_stale_videos(max_age_days=30):
+    """Periodic maintenance rule: clean up video files from static/video/
+    that have already been uploaded to YouTube or are orphaned older than max_age_days (30 days).
+    Runs conservatively once every 30 days so the server does practically zero redundant work.
+    """
+    import os
+    import time
+    posts_collection = Post._get_collection()
+    vdir = getattr(syndication, "VIDEO_DIR", None)
+    if not vdir or not os.path.exists(vdir):
+        return
+
+    now = time.time()
+    max_age_seconds = max_age_days * 86400.0
+    try:
+        for name in os.listdir(vdir):
+            if not name.startswith("video_"):
+                continue
+            fpath = os.path.join(vdir, name)
+            try:
+                # Extract post_id from 'video_<post_id>.<ext>'
+                base_part = name[len("video_"):]
+                post_id = base_part.rsplit(".", 1)[0] if "." in base_part else base_part
+                doc = posts_collection.find_one({"post_id": post_id})
+                
+                # Rule 1: If YouTube URL is already recorded in DB, delete the staging file immediately
+                if doc and doc.get("youtube", {}).get("url"):
+                    os.remove(fpath)
+                    print(f"[video-cleanup] Removed uploaded video for {post_id}: {name}")
+                    continue
+
+                # Rule 2: If the file is older than max_age_days (e.g. 30-day abandoned draft), purge it
+                age_seconds = now - os.path.getmtime(fpath)
+                if age_seconds > max_age_seconds:
+                    os.remove(fpath)
+                    print(f"[video-cleanup] Removed stale abandoned video (age {age_seconds / 86400:.1f} days): {name}")
+            except Exception as e:
+                print(f"[video-cleanup] Error processing {name}: {e}")
+    except Exception as scan_err:
+        print(f"[video-cleanup] Directory scan error: {scan_err}")
+
+
 def enqueue_syndication(doc_id, url, platforms):
-    """Mark platforms queued and hand the work to the background worker."""
+    """Mark platforms queued and hand the work to the background worker.
+    If no external platforms were chosen (local-only publish), trigger the universal
+    Telegram notification immediately.
+    """
     posts_collection = Post._get_collection()
     platforms = [p for p in (platforms or []) if p]
     if not platforms:
+        doc = posts_collection.find_one({"post_id": doc_id})
+        if doc:
+            notify_telegram(doc, results=[], post_url=url)
         return
     for pid in platforms:
         posts_collection.update_one({"post_id": doc_id}, {"$pull": {"syndications": {"platform": pid}}})
@@ -80,18 +144,35 @@ _worker_started = False
 
 
 def _syndication_worker():
+    import time
+    last_cleanup = 0.0
+    # 30 days in seconds: 30 * 24 * 3600 = 2,592,000 seconds
+    THIRTY_DAYS = 30 * 86400.0
     while True:
-        doc_id, url, platforms = _syn_queue.get()
         try:
-            run_syndication(doc_id, url, platforms)
-        except Exception as e:
-            print("[syndication] error:", e)
-        finally:
-            _syn_queue.task_done()
+            # Drain tasks or timeout after 60s to check maintenance timers
+            doc_id, url, platforms = _syn_queue.get(timeout=60)
+            try:
+                run_syndication(doc_id, url, platforms)
+            except Exception as e:
+                print("[syndication] error:", e)
+            finally:
+                _syn_queue.task_done()
+        except queue.Empty:
+            pass
+
+        # Run maintenance sweep conservatively once every 30 days
+        now = time.time()
+        if now - last_cleanup > THIRTY_DAYS:
+            try:
+                cleanup_stale_videos(max_age_days=30)
+            except Exception as err:
+                print("[video-cleanup] Periodic cleanup error:", err)
+            last_cleanup = now
 
 
 def start_worker():
-    """Start the daemon thread that drains the syndication queue (once)."""
+    """Start the daemon thread that drains the syndication queue and sweeps stale video files."""
     global _worker_started
     if _worker_started:
         return

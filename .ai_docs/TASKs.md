@@ -22,14 +22,19 @@ Ordered ledger. Companions: `GOAL.md` (why), `CONTEXT.md` (where we are).
 | 3.3 | **Dynamic XML Sitemap Engine** | Implement `@app.route('/sitemap.xml')` (schema 0.9) querying published posts/articles with `<loc>` and ISO `<lastmod>` | ✅ Completed |
 | 4.1 | **AI Context Feed (`/llms.txt`)** | Implement `@app.route('/llms.txt')` outputting structured markdown catalog of posts/articles for LLMs & AI agents | ✅ Completed |
 | 5.1 | **Horizontal More Options (`...`) Menu** | Add horizontal `...` button menu with Edit & Delete for published items, and Delete for drafts across feeds (`/`, `/posts`, `/articles`) and detail views (`/post/<id>`, `/article/<id>`) | ✅ Completed |
+| 5.2 | **YouTube Staging Cleanup & Embed Player** | Preserve database video logs, store public YouTube URL, auto-delete local staging file post-upload, and run 30-day periodic cleaner for abandoned uploads | ✅ Completed |
+| 6.1 | **Universal Telegram Publication Alerts** | Trigger clear Telegram publication notifications on *every* post/article (whether social syndication platforms were checked or local-only) with counts of tried vs. succeeded | ✅ Completed |
+| 6.2 | **Two-Way Issue Reporting via Bot Reply** | Inbound Telegram webhook (`/api/telegram/webhook`) captures author replies to notification messages, maps to matching post, and records `IssueReport` in DB | ✅ Completed |
+| 6.3 | **Automated Webhook Registration** | Automatically register Telegram webhook URL idempotently on server startup in background thread with zero manual clicks | ✅ Completed |
+| 6.4 | **Syndication Health & Email Escalation** | `/health/syndication` endpoint returns HTTP 500 when open issues or syndication failures exist, alerting author via cron-job.org email | ✅ Completed |
 
 ---
 
 ### Retained & Deferred (Do Later)
 - **Multi-user system**: Deferred for future multi-author expansion.
 - **Permanent domain (`kittupriyatham.com`)**: Retained until purchased and DNS configured.
-- **LinkedIn engagement**: Awaiting SocialAPI partner beta reply.
-- **YouTube end-to-end**: Exercise with real video upload.
+- **LinkedIn engagement analytics**: Deferred (native post publishing is 100% active; fetching like/comment metrics into /analytics dashboard is deferred).
+- **YouTube syndication**: Feature is 100% built and operational in code (real video upload is user-side testing when ready).
 
 ### Struck Off / Dropped
 - **Scheduling (`scheduled_at`)**: Dropped (immediate publication preferred).

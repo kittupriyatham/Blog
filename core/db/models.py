@@ -76,3 +76,22 @@ class AnalyticsEvent(Document):
         "strict": False,  # event payloads vary by type (geo, time_spent, shares, ...)
         "indexes": ["event", "ts", "ip_hash", "event_id"],
     }
+
+
+class IssueReport(Document):
+    report_id = StringField(required=True, unique=True)
+    post_id = StringField()
+    telegram_message_id = StringField()
+    reply_message_id = StringField()
+    reporter = StringField()
+    text = StringField(required=True)
+    status = StringField(default="open")  # 'open', 'resolved'
+    created_at = StringField()
+    resolved_at = StringField()
+
+    meta = {
+        "collection": "issue_reports",
+        "strict": False,
+        "indexes": ["report_id", "post_id", "status", "created_at"],
+        "ordering": ["-created_at"],
+    }
