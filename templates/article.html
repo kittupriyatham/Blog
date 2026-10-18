@@ -90,12 +90,21 @@ src="https://www.facebook.com/tr?id=2092273818327635&ev=PageView&noscript=1"
         </div>
       {% endif %}
 
-      <div class="flex items-center gap-3 px-5 pt-5 pb-3">
-        <div class="w-12 h-12 rounded-full bg-gradient-to-br from-brand-500 to-blue-600 flex items-center justify-center flex-shrink-0 shadow-sm"><span class="text-white font-bold text-lg">K</span></div>
-        <div>
-          <p class="font-semibold text-slate-800 dark:text-slate-100 leading-tight">Kittu Priyatham</p>
-          <span class="text-xs text-slate-400 dark:text-slate-500">{{ post.timestamp }} &bull; {{ post.views }} views</span>
+      <div class="flex items-center justify-between px-5 pt-5 pb-3">
+        <div class="flex items-center gap-3">
+          <div class="w-12 h-12 rounded-full bg-gradient-to-br from-brand-500 to-blue-600 flex items-center justify-center flex-shrink-0 shadow-sm"><span class="text-white font-bold text-lg">K</span></div>
+          <div>
+            <p class="font-semibold text-slate-800 dark:text-slate-100 leading-tight">Kittu Priyatham</p>
+            <span class="text-xs text-slate-400 dark:text-slate-500">{{ post.timestamp }} &bull; {{ post.views }} views</span>
+          </div>
         </div>
+        {% if session.get('logged_in') or is_cert_authorized %}
+        <div class="relative z-20">
+          {% with item=post, item_type='article', is_draft=(post.status == 'draft') %}
+            {% include '_post_action_menu.html' %}
+          {% endwith %}
+        </div>
+        {% endif %}
       </div>
 
       <div class="px-5 py-3 pb-8">
@@ -362,6 +371,35 @@ src="https://www.facebook.com/tr?id=2092273818327635&ev=PageView&noscript=1"
       })
       .catch(console.error);
     }
+
+    function toggleActionMenu(btn) {
+      const dropdown = btn.closest('.js-action-dropdown');
+      if (!dropdown) return;
+      const panel = dropdown.querySelector('.js-action-menu-panel');
+      if (!panel) return;
+      const isExpanded = btn.getAttribute('aria-expanded') === 'true';
+      // Close all other open action menus
+      document.querySelectorAll('.js-action-menu-panel').forEach(p => {
+        if (p !== panel) p.classList.add('hidden');
+      });
+      document.querySelectorAll('.js-action-dropdown button').forEach(b => {
+        if (b !== btn) b.setAttribute('aria-expanded', 'false');
+      });
+      if (isExpanded) {
+        panel.classList.add('hidden');
+        btn.setAttribute('aria-expanded', 'false');
+      } else {
+        panel.classList.remove('hidden');
+        btn.setAttribute('aria-expanded', 'true');
+      }
+    }
+
+    document.addEventListener('click', function(e) {
+      if (!e.target.closest('.js-action-dropdown')) {
+        document.querySelectorAll('.js-action-menu-panel').forEach(p => p.classList.add('hidden'));
+        document.querySelectorAll('.js-action-dropdown button').forEach(b => b.setAttribute('aria-expanded', 'false'));
+      }
+    });
   </script>
 </body>
 </html>

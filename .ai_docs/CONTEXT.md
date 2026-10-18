@@ -84,7 +84,6 @@ templates/  static/  media/  data/  .ai_docs/
 ---
 
 ## 5. Gotchas (read before debugging)
-- **Render Reverse Proxy Loopback:** Behind Gunicorn on Render, `request.remote_addr` is always `127.0.0.1`. Never use `remote_addr in ('127.0.0.1', '::1')` to grant administrative access.
 - **Cloudflare Edge mTLS vs. Origin:** Cloudflare terminates TLS at its edge and strips client certificates before hitting the origin. If passing verification to origin, Cloudflare Transform Rules must set a custom header like `X-Client-Cert-Verified: true` (Cloudflare blocks setting `cf-*` headers via Transform Rules).
 - **Stealth 404 Access:** If accessing `/login` on a new authorized hardware device, author must either authenticate through Cloudflare mTLS or set the HMAC-SHA256 signature cookie. Once logged in, the 10-year device token cookie is minted automatically.
 - **MongoEngine:** `Model(**unknown_kwarg)` raises `FieldDoesNotExist` even with `strict=False` — pass only declared fields.
@@ -93,7 +92,9 @@ templates/  static/  media/  data/  .ai_docs/
 
 ---
 
-## 6. Open items / next
-- **LinkedIn engagement** — blocked on SocialAPI's reply (`TASKs.md` #1); the read path is staged.
-- **YouTube end-to-end** — built but not yet exercised with a real video (spends a SocialAPI credit).
-- **SocialAPI quota** = 10 posts/month (validate is free).
+## 6. Open items / next (Session 12 Active Sprint)
+- **Error Handling & Admin Decoy**: Implement `templates/error.html`, `templates/admin_not_found.html`, and `@app.before_request` decoy interception.
+- **Uptime Health Check**: Deploy isolated `@app.route('/health')` (200 OK text/plain) for cold-start prevention.
+- **SEO & Anti-Indexing Suite**: Add dynamic `robots.txt`, dynamic XML `sitemap.xml`, and `@app.after_request` `X-Robots-Tag: noindex, nofollow, noarchive` on private routes.
+- **AI Context Feed**: Deploy `/llms.txt` adhering to llmstxt.org specification.
+- **LinkedIn engagement & YouTube end-to-end**: Pending external SocialAPI beta response and real video test.

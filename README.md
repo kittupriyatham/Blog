@@ -303,3 +303,13 @@ To block unauthorized traffic even before it reaches your origin server:
 3. In **Rules > Transform Rules (Modify Request Header)**, forward the verification status:
    - Match: `cf.tls_client_auth.cert_verified`
    - Set static header: `X-Client-Cert-Verified = SUCCESS`
+
+---
+
+## Production Operations, SEO & AI Context
+
+- **Uptime & Cold Start Prevention (`/health`):** Isolated, zero-overhead health check endpoint returning `200 OK` (plaintext) designed for free external uptime monitors (such as cron-job.org) to prevent Render from idling.
+- **Dynamic Error Pages & 404 Decoy:** Dynamic, dark-palette error page (`templates/error.html`) for 404, 403, and 500 errors. Unauthorized requests to protected admin endpoints are met with an unstyled, generic 404 decoy (`templates/admin_not_found.html`) with anti-indexing headers.
+- **SEO & Anti-Indexing (`robots.txt` & `sitemap.xml`):** Fully compliant schema 0.9 XML sitemap dynamically indexing all published articles and posts. Automatic `X-Robots-Tag: noindex, nofollow, noarchive, nosnippet` injection for administrative paths and error responses.
+- **AI Context Feed (`/llms.txt`):** Structured markdown catalog adhering to the llmstxt.org standard, enabling AI assistants and LLMs to ingest published work with clean markdown context instead of scraping rendered HTML.
+- **Horizontal Management Menus:** Clean horizontal `...` buttons across all feeds and post detail views for quick editing and deletion (with CSRF and confirmation protection).

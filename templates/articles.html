@@ -107,14 +107,11 @@ src="https://www.facebook.com/tr?id=2092273818327635&ev=PageView&noscript=1"
           {% for article in published %}
             <div class="group relative bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm hover:shadow-xl hover:border-brand-200 dark:hover:border-brand-800 hover:-translate-y-0.5 transition duration-300 overflow-hidden flex flex-col cursor-pointer" data-url="{{ url_for('article_detail', article_id=article.post_id) }}" onclick="window.location.href=this.dataset.url">
 
-              {% if session.get('logged_in') %}
+              {% if session.get('logged_in') or is_cert_authorized %}
               <div class="absolute top-3 right-3 z-20">
-                <form method="POST" action="{{ url_for('delete_post', post_id=article.post_id) }}" onsubmit="event.stopPropagation(); return confirm('Delete permanently?');">
-                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                  <button type="submit" aria-label="Delete article" onclick="event.stopPropagation();" class="p-1.5 bg-white/90 dark:bg-slate-900/90 backdrop-blur text-slate-400 hover:text-red-500 rounded-md border border-slate-100 dark:border-slate-700 shadow-sm">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                  </button>
-                </form>
+                {% with item=article, item_type='article', is_draft=false %}
+                  {% include '_post_action_menu.html' %}
+                {% endwith %}
               </div>
               {% endif %}
 
@@ -166,6 +163,11 @@ src="https://www.facebook.com/tr?id=2092273818327635&ev=PageView&noscript=1"
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {% for draft in drafts %}
             <div class="group relative bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm hover:shadow-xl hover:border-orange-300 dark:hover:border-orange-800 hover:-translate-y-0.5 transition duration-300 overflow-hidden flex flex-col cursor-pointer" data-url="{{ url_for('edit_article', article_id=draft.post_id) }}" onclick="window.location.href=this.dataset.url">
+              <div class="absolute top-3 right-3 z-20">
+                {% with item=draft, item_type='article', is_draft=true %}
+                  {% include '_post_action_menu.html' %}
+                {% endwith %}
+              </div>
               <div class="w-full aspect-[16/9] bg-slate-50 dark:bg-slate-800 relative overflow-hidden border-b border-slate-100 dark:border-slate-800">
                 {% if draft.cover_image %}
                   <img src="{{ draft.cover_image }}" alt="Cover" class="w-full h-full object-cover grayscale-[30%]">
@@ -267,6 +269,35 @@ src="https://www.facebook.com/tr?id=2092273818327635&ev=PageView&noscript=1"
         alert('Popup blocked. Please allow popups to syndicate to Medium.');
       }
     }
+
+    function toggleActionMenu(btn) {
+      const dropdown = btn.closest('.js-action-dropdown');
+      if (!dropdown) return;
+      const panel = dropdown.querySelector('.js-action-menu-panel');
+      if (!panel) return;
+      const isExpanded = btn.getAttribute('aria-expanded') === 'true';
+      // Close all other open action menus
+      document.querySelectorAll('.js-action-menu-panel').forEach(p => {
+        if (p !== panel) p.classList.add('hidden');
+      });
+      document.querySelectorAll('.js-action-dropdown button').forEach(b => {
+        if (b !== btn) b.setAttribute('aria-expanded', 'false');
+      });
+      if (isExpanded) {
+        panel.classList.add('hidden');
+        btn.setAttribute('aria-expanded', 'false');
+      } else {
+        panel.classList.remove('hidden');
+        btn.setAttribute('aria-expanded', 'true');
+      }
+    }
+
+    document.addEventListener('click', function(e) {
+      if (!e.target.closest('.js-action-dropdown')) {
+        document.querySelectorAll('.js-action-menu-panel').forEach(p => p.classList.add('hidden'));
+        document.querySelectorAll('.js-action-dropdown button').forEach(b => b.setAttribute('aria-expanded', 'false'));
+      }
+    });
   </script>
 </body>
 </html>

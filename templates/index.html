@@ -181,6 +181,13 @@ src="https://www.facebook.com/tr?id=2092273818327635&ev=PageView&noscript=1"
             <span class="text-xs text-slate-400 dark:text-slate-500 ml-1">&bull; {{ post.views }} views</span>
           {% endif %}
         </div>
+        {% if session.get('logged_in') or is_cert_authorized %}
+        <div class="relative z-20">
+          {% with item=post, item_type=post.type or 'post', is_draft=(post.status == 'draft') %}
+            {% include '_post_action_menu.html' %}
+          {% endwith %}
+        </div>
+        {% endif %}
       </div>
 
       {% set view_route = 'article_detail' if post.type == 'article' else 'post_detail' %}
@@ -510,13 +517,40 @@ src="https://www.facebook.com/tr?id=2092273818327635&ev=PageView&noscript=1"
             feedMediaPreview.appendChild(img);
           } else {
             const chip = document.createElement('span');
-            chip.textContent = file.name;
-            chip.className = 'px-2 py-1 rounded-lg text-xs bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 max-w-[10rem] truncate';
             feedMediaPreview.appendChild(chip);
           }
         });
       });
     }
+
+    function toggleActionMenu(btn) {
+      const dropdown = btn.closest('.js-action-dropdown');
+      if (!dropdown) return;
+      const panel = dropdown.querySelector('.js-action-menu-panel');
+      if (!panel) return;
+      const isExpanded = btn.getAttribute('aria-expanded') === 'true';
+      // Close all other open action menus
+      document.querySelectorAll('.js-action-menu-panel').forEach(p => {
+        if (p !== panel) p.classList.add('hidden');
+      });
+      document.querySelectorAll('.js-action-dropdown button').forEach(b => {
+        if (b !== btn) b.setAttribute('aria-expanded', 'false');
+      });
+      if (isExpanded) {
+        panel.classList.add('hidden');
+        btn.setAttribute('aria-expanded', 'false');
+      } else {
+        panel.classList.remove('hidden');
+        btn.setAttribute('aria-expanded', 'true');
+      }
+    }
+
+    document.addEventListener('click', function(e) {
+      if (!e.target.closest('.js-action-dropdown')) {
+        document.querySelectorAll('.js-action-menu-panel').forEach(p => p.classList.add('hidden'));
+        document.querySelectorAll('.js-action-dropdown button').forEach(b => b.setAttribute('aria-expanded', 'false'));
+      }
+    });
   </script>
 </body>
 </html>

@@ -46,7 +46,10 @@ Status: the north star is met for six platforms — LinkedIn, Facebook, Instagra
 
 ---
 
-## Next (Session 12 Roadmap)
+## Next (Session 12 Roadmap: Error Handling, Uptime, SEO & AI Context)
 
-19. **LinkedIn engagement** — Staged read path operations pending SocialAPI personal account metric beta validation.
-20. **YouTube end-to-end** — Exercise live video upload and metadata syndication via SocialAPI.
+19. **Dynamic Error Architecture & Admin Decoy Route**: Implement styled dark-palette public error page (`templates/error.html`), generic unstyled 404 decoy (`templates/admin_not_found.html`), and edge-aware interception in `@app.before_request` for unauthorized hits to admin paths.
+20. **Cold-Start Elimination (`/health`)**: Ultra-lightweight, zero-DB, plain-text 200 OK endpoint for external uptime monitors.
+21. **SEO Crawling, Dynamic XML Sitemap & Anti-Indexing**: Dynamic `robots.txt`, XML `sitemap.xml` conforming to schema 0.9, and automatic `X-Robots-Tag: noindex, nofollow, noarchive` injection on private routes and errors via `@app.after_request`.
+22. **AI Context & LLM-Friendly Plain-Text Feed (`/llms.txt`)**: Clean Markdown feed of published posts/articles adhering to llmstxt.org specification for AI browsing agents.
+23. **LinkedIn engagement & YouTube live run**: Pending SocialAPI personal account beta reply and video upload exercise.

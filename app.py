@@ -30,6 +30,7 @@ load_dotenv()
 
 from flask import (
     Flask,
+    Response,
     abort,
     flash,
     make_response,
@@ -45,7 +46,7 @@ from flask_wtf.csrf import CSRFProtect
 
 from core import analytics, content, media, syndication
 from core.config import (ADMIN_PASSWORD, ADMIN_USERNAME, ANALYTICS_STORE, MEDIA_FOLDER,
-                        SECRET_KEY, YOUTUBE_CATEGORY, YOUTUBE_VISIBILITY)
+                        SECRET_KEY, SITE_URL, YOUTUBE_CATEGORY, YOUTUBE_VISIBILITY)
 from core.db import Comment, Post, connect_db, ensure_schema
 from core.syndication import runner, socialapi_metrics
 
@@ -318,15 +319,220 @@ def is_cert_authorized() -> bool:
     cf_cert_status = (
         request.headers.get("X-Client-Cert-Verified")
         or request.headers.get("Cf-Client-Cert-Verified")
+        or request.headers.get("Cf-Client-Cert-Sha256")
+        or request.headers.get("Cf-Access-Jwt-Assertion")
         or ""
     ).strip().upper()
-    return cf_cert_status == "SUCCESS"
+    return cf_cert_status in ("SUCCESS", "1", "TRUE") or bool(request.headers.get("Cf-Access-Jwt-Assertion"))
 
 
 
 @app.context_processor
 def inject_cert_auth():
     return {"is_cert_authorized": is_cert_authorized()}
+
+
+# ---------------------------------------------------------------------------
+# Edge Decoy & Anti-Indexing Hooks
+# ---------------------------------------------------------------------------
+
+_ADMIN_PROTECTED_PREFIXES = (
+    "/login",
+    "/admin",
+    "/analytics",
+    "/post/editor",
+    "/article/create",
+    "/edit/",
+    "/youtube/",
+)
+
+
+@app.before_request
+def intercept_admin_decoy():
+    """Intercept unauthorized visits to sensitive admin paths and serve a generic 404 decoy."""
+    path = request.path.rstrip("/") or "/"
+    if any(path == prefix or path.startswith(prefix + "/") or path.startswith(prefix) for prefix in _ADMIN_PROTECTED_PREFIXES):
+        if not is_cert_authorized():
+            resp = make_response(render_template("admin_not_found.html"), 404)
+            resp.headers["X-Robots-Tag"] = "noindex, nofollow, noarchive, nosnippet"
+            return resp
+
+
+@app.after_request
+def enforce_security_and_seo_headers(response):
+    """Enforce strict anti-indexing on administrative areas and error responses."""
+    path = request.path.rstrip("/") or "/"
+    is_admin_path = any(path == prefix or path.startswith(prefix + "/") or path.startswith(prefix) for prefix in _ADMIN_PROTECTED_PREFIXES)
+    if is_admin_path or response.status_code in (401, 403, 404, 500):
+        response.headers["X-Robots-Tag"] = "noindex, nofollow, noarchive, nosnippet"
+    return response
+
+
+# ---------------------------------------------------------------------------
+# Global Dynamic Error Handlers
+# ---------------------------------------------------------------------------
+
+@app.errorhandler(404)
+def handle_404(e):
+    return render_template(
+        "error.html",
+        error_code=404,
+        error_title="Page Not Found",
+        error_message="The story or resource you are looking for does not exist, has been removed, or is temporarily unavailable.",
+    ), 404
+
+
+@app.errorhandler(403)
+def handle_403(e):
+    return render_template(
+        "error.html",
+        error_code=403,
+        error_title="Access Forbidden",
+        error_message="You do not have permission to access this area.",
+    ), 403
+
+
+@app.errorhandler(500)
+def handle_500(e):
+    return render_template(
+        "error.html",
+        error_code=500,
+        error_title="Internal Server Error",
+        error_message="An unexpected server error occurred while processing your request. Please try again shortly.",
+    ), 500
+
+
+# ---------------------------------------------------------------------------
+# Utility Routes — Health Check, Robots, Sitemap & AI Context
+# ---------------------------------------------------------------------------
+
+@app.route("/health", methods=["GET", "HEAD"])
+def health_check():
+    """Ultra-lightweight endpoint for external uptime pingers to prevent cold starts."""
+    return Response("OK", status=200, mimetype="text/plain")
+
+
+@app.route("/robots.txt")
+def robots_txt():
+    """Standard robots.txt with dynamic Sitemap URL."""
+    base_url = (SITE_URL or request.host_url.rstrip("/")).rstrip("/")
+    body = (
+        "User-agent: *\n"
+        "Allow: /\n"
+        "Allow: /llms.txt\n"
+        "Disallow: /login\n"
+        "Disallow: /admin/\n"
+        "Disallow: /analytics\n"
+        "Disallow: /health\n"
+        "Disallow: /static/\n\n"
+        f"Sitemap: {base_url}/sitemap.xml\n"
+    )
+    return Response(body, status=200, mimetype="text/plain")
+
+
+@app.route("/sitemap.xml")
+def sitemap_xml():
+    """Dynamic XML sitemap conforming to sitemaps.org schema 0.9."""
+    base_url = (SITE_URL or request.host_url.rstrip("/")).rstrip("/")
+    now_iso = content.now_str().split(" ")[0]
+
+    xml_lines = [
+        '<?xml version="1.0" encoding="UTF-8"?>',
+        '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">',
+        '  <url>',
+        f'    <loc>{base_url}/</loc>',
+        f'    <lastmod>{now_iso}</lastmod>',
+        '    <changefreq>daily</changefreq>',
+        '    <priority>1.0</priority>',
+        '  </url>',
+        '  <url>',
+        f'    <loc>{base_url}/articles</loc>',
+        f'    <lastmod>{now_iso}</lastmod>',
+        '    <changefreq>daily</changefreq>',
+        '    <priority>0.8</priority>',
+        '  </url>',
+        '  <url>',
+        f'    <loc>{base_url}/posts</loc>',
+        f'    <lastmod>{now_iso}</lastmod>',
+        '    <changefreq>daily</changefreq>',
+        '    <priority>0.8</priority>',
+        '  </url>',
+    ]
+
+    # Query published public posts and articles
+    try:
+        query = {"status": "published"}
+        docs = list(posts_collection.find(query).sort("timestamp", -1))
+        for doc in docs:
+            pid = doc.get("post_id")
+            if not pid:
+                continue
+            item_type = doc.get("type", "post")
+            loc = f"{base_url}/article/{pid}" if item_type == "article" else f"{base_url}/post/{pid}"
+            ts = doc.get("timestamp") or now_iso
+            date_str = ts.split(" ")[0] if " " in ts else ts[:10]
+            priority = "0.7" if item_type == "article" else "0.6"
+            xml_lines.extend([
+                '  <url>',
+                f'    <loc>{loc}</loc>',
+                f'    <lastmod>{date_str}</lastmod>',
+                '    <changefreq>monthly</changefreq>',
+                f'    <priority>{priority}</priority>',
+                '  </url>',
+            ])
+    except Exception as e:
+        print("[sitemap] Failed querying posts:", e)
+
+    xml_lines.append('</urlset>')
+    return Response("\n".join(xml_lines), status=200, mimetype="application/xml; charset=utf-8")
+
+
+@app.route("/llms.txt")
+def llms_txt():
+    """Structured markdown document for AI agents and LLMs (llmstxt.org standard)."""
+    base_url = (SITE_URL or request.host_url.rstrip("/")).rstrip("/")
+    lines = [
+        "# Kittu Priyatham's Personal Publication",
+        "",
+        "> Personal technical blog, long-form articles, and thoughts on AI, software architecture, and technology.",
+        "",
+        f"- Canonical Site: {base_url}",
+        f"- Author: Kittu Priyatham",
+        "",
+        "## Core Feeds",
+        "",
+        f"- [Home]({base_url}/): Latest mixed feed of articles and micro-posts.",
+        f"- [Articles]({base_url}/articles): Full-length essays, architecture notes, and in-depth guides.",
+        f"- [Posts]({base_url}/posts): Short-form updates, announcements, and notes.",
+        "",
+        "## Published Content Catalog",
+        "",
+    ]
+
+    try:
+        query = {"status": "published"}
+        docs = list(posts_collection.find(query).sort("timestamp", -1))
+        if not docs:
+            lines.append("No published stories yet.")
+        for doc in docs:
+            pid = doc.get("post_id")
+            if not pid:
+                continue
+            item_type = doc.get("type", "post")
+            title = doc.get("title") or (doc.get("content") or f"Post {pid}")[:60].strip()
+            loc = f"{base_url}/article/{pid}" if item_type == "article" else f"{base_url}/post/{pid}"
+            date_str = (doc.get("timestamp") or "")[:10]
+            summary = (doc.get("content") or "").replace("\n", " ")[:140].strip()
+            lines.append(f"- [{title}]({loc}) ({date_str})")
+            if summary and item_type == "article":
+                lines.append(f"  > {summary}...")
+    except Exception as e:
+        lines.append(f"- Error loading catalog: {e}")
+
+    lines.append("")
+    resp = Response("\n".join(lines), status=200, mimetype="text/markdown; charset=utf-8")
+    resp.headers["X-Robots-Tag"] = "noindex"
+    return resp
 
 
 # ---------------------------------------------------------------------------

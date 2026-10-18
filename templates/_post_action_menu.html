@@ -1,0 +1,62 @@
+{% if is_cert_authorized or session.get('logged_in') %}
+{#- Reusable horizontal '...' menu with Edit & Delete options for published posts/articles, and Delete for drafts.
+    Parameters expected:
+      - item: the post or article document
+      - item_type: 'post' or 'article'
+      - is_draft: boolean (true if draft)
+-#}
+{% set _item_type = item_type or item.type or 'post' %}
+{% set _is_draft = is_draft or (item.status == 'draft') %}
+{% set _item_id = item.post_id %}
+{% set _edit_route = 'edit_article' if _item_type == 'article' else 'edit_post' %}
+{% set _kwarg = {'article_id': _item_id} if _item_type == 'article' else {'post_id': _item_id} %}
+
+<div class="relative inline-block text-left js-action-dropdown" onclick="event.stopPropagation();">
+  <button type="button"
+          onclick="event.preventDefault(); event.stopPropagation(); toggleActionMenu(this);"
+          aria-haspopup="true"
+          aria-expanded="false"
+          title="More options"
+          class="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 bg-white/90 dark:bg-slate-900/90 backdrop-blur border border-slate-200/70 dark:border-slate-700/70 shadow-sm transition hover:bg-slate-50 dark:hover:bg-slate-800">
+    {#- Horizontal three dots (...) SVG -#}
+    <svg class="w-4 h-4 fill-current" viewBox="0 0 24 24">
+      <circle cx="5" cy="12" r="2"/>
+      <circle cx="12" cy="12" r="2"/>
+      <circle cx="19" cy="12" r="2"/>
+    </svg>
+  </button>
+
+  {#- Dropdown Panel -#}
+  <div class="hidden js-action-menu-panel absolute right-0 mt-1 w-36 origin-top-right rounded-xl bg-white dark:bg-slate-900 shadow-xl border border-slate-200 dark:border-slate-800 py-1.5 z-50 text-xs font-medium divide-y divide-slate-100 dark:divide-slate-800 focus:outline-none">
+    
+    {% if not _is_draft %}
+      <div class="py-1">
+        <a href="{{ url_for(_edit_route, **_kwarg) }}"
+           onclick="event.stopPropagation();"
+           class="flex items-center gap-2 px-3 py-1.5 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition">
+          <svg class="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+          </svg>
+          Edit
+        </a>
+      </div>
+    {% endif %}
+
+    <div class="py-1">
+      <form method="POST" action="{{ url_for('delete_post', post_id=_item_id) }}"
+            onsubmit="event.stopPropagation(); return confirm('Permanently delete this {{ _item_type }}?');">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button type="submit"
+                onclick="event.stopPropagation();"
+                class="w-full text-left flex items-center gap-2 px-3 py-1.5 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40 transition">
+          <svg class="w-3.5 h-3.5 text-red-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+          </svg>
+          Delete
+        </button>
+      </form>
+    </div>
+
+  </div>
+</div>
+{% endif %}

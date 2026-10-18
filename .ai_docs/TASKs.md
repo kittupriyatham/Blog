@@ -5,16 +5,34 @@ Ordered ledger. Companions: `GOAL.md` (why), `CONTEXT.md` (where we are).
 
 ---
 
-## Start here (session 12)
+## Start here (session 12: Error Handling, Uptime, SEO & AI Context)
 
-| # | Task | Why / done looks like |
-|---|------|------------------------|
-| 1 | **LinkedIn engagement via SocialAPI — blocked on their reply** | LinkedIn posting is settled: it publishes **natively** as the personal profile. Its *metrics* need SocialAPI's `linkedin_page` beta + `connection_type: "personal"`. Emailed `support@social-api.ai`; reply expected. **On reply:** set `SOCIALAPI_METRIC_PLATFORMS = {"linkedin"}` in `socialapi_metrics.py`. |
-| 2 | **YouTube end-to-end** | Built and UI-integrated; exercise with a real video to verify SocialAPI full upload metadata flow. |
-| 3 | **Threads / X for long-form** | X stays short-post-only until `TWITTER_SUBSCRIPTION=1`; Threads is not pursued at all. |
+### Session 12 Implementation Checklist
 
-**Dropped:** permanent domain — the user will update `SITE_URL` manually when the domain is ready.
-**Deferred (do later):** scheduling (`scheduled_at`), multi-user accounts, moderated comments.
+| # | Component Task Target | Scope / Specification | Status |
+|:---|:---|:---|:---:|
+| 1.1 | **Dynamic Public Error Template** | Create `templates/error.html` styled with dark palette, dynamic `error_code`, `error_title`, `error_message`, and home feed return button | ✅ Completed |
+| 1.2 | **Global Error Handlers** | Register `@app.errorhandler(404)`, `403`, and `500` in `app.py` returning `templates/error.html` | ✅ Completed |
+| 1.3 | **Static Admin Decoy 404** | Create `templates/admin_not_found.html` with raw, unstyled Apache/Nginx generic browser 404 text (zero branding/scripts/links) | ✅ Completed |
+| 1.4 | **Edge Admin Decoy Interception** | In `@app.before_request`, intercept unauthorized requests to admin paths (`/login`, `/analytics`, `/admin/*`, editors) with `admin_not_found.html` (404) | ✅ Completed |
+| 2.1 | **Lightweight `/health` Endpoint** | Implement `@app.route('/health')` returning plain text `OK` (200) without database connection, storage access, or template rendering | ✅ Completed |
+| 3.1 | **Anti-Indexing `X-Robots-Tag` Hook** | In `@app.after_request`, inject `X-Robots-Tag: noindex, nofollow, noarchive, nosnippet` on private/admin routes and error responses | ✅ Completed |
+| 3.2 | **Standard `robots.txt`** | Implement `@app.route('/robots.txt')` allowing public feeds and `/llms.txt`, disallowing admin paths, referencing dynamic `Sitemap:` URL | ✅ Completed |
+| 3.3 | **Dynamic XML Sitemap Engine** | Implement `@app.route('/sitemap.xml')` (schema 0.9) querying published posts/articles with `<loc>` and ISO `<lastmod>` | ✅ Completed |
+| 4.1 | **AI Context Feed (`/llms.txt`)** | Implement `@app.route('/llms.txt')` outputting structured markdown catalog of posts/articles for LLMs & AI agents | ✅ Completed |
+| 5.1 | **Horizontal More Options (`...`) Menu** | Add horizontal `...` button menu with Edit & Delete for published items, and Delete for drafts across feeds (`/`, `/posts`, `/articles`) and detail views (`/post/<id>`, `/article/<id>`) | ✅ Completed |
+
+---
+
+### Retained & Deferred (Do Later)
+- **Multi-user system**: Deferred for future multi-author expansion.
+- **Permanent domain (`kittupriyatham.com`)**: Retained until purchased and DNS configured.
+- **LinkedIn engagement**: Awaiting SocialAPI partner beta reply.
+- **YouTube end-to-end**: Exercise with real video upload.
+
+### Struck Off / Dropped
+- **Scheduling (`scheduled_at`)**: Dropped (immediate publication preferred).
+- **Threads syndication**: Dropped.
 
 ---
 
