@@ -1090,6 +1090,17 @@ def health_syndication():
             f"Recent Failed Posts: {len(recent_failures)}\n\n"
             + "\n".join(all_problems)
         )
+        # One-shot alert delivery:
+        # Mark open issues as 'alerted' (with timestamp) right after returning this 500 error.
+        # This guarantees cron-job.org receives the 500 failure and sends your email alert,
+        # but the very next cron ping immediately returns 200 OK (error status cleared!).
+        now_ts = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
+        if open_issues:
+            open_ids = [i.get("_id") for i in open_issues if i.get("_id")]
+            issues_collection.update_many(
+                {"_id": {"$in": open_ids}},
+                {"$set": {"status": "alerted", "alerted_at": now_ts}}
+            )
         return Response(error_body, status=500, mimetype="text/plain")
 
     return Response("OK - All systems operational", status=200, mimetype="text/plain")
