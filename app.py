@@ -358,6 +358,9 @@ _ADMIN_PROTECTED_PREFIXES = (
 def intercept_admin_decoy():
     """Intercept unauthorized visits to sensitive admin paths and serve a generic 404 decoy."""
     path = request.path.rstrip("/") or "/"
+    # Allow emergency unlock endpoint to process its token verification
+    if path == "/admin/unlock":
+        return None
     if any(path == prefix or path.startswith(prefix + "/") or path.startswith(prefix) for prefix in _ADMIN_PROTECTED_PREFIXES):
         if not is_cert_authorized():
             resp = make_response(render_template("admin_not_found.html"), 404)
