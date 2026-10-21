@@ -308,30 +308,11 @@ def _admin_device_signature() -> str:
     return hmac.new(key, msg, hashlib.sha256).hexdigest()
 
 def is_cert_authorized() -> bool:
-    """True when the client is logged in, has the trusted admin device token,
-    presented a Cloudflare mTLS cert, or is on local development."""
-    if session.get("logged_in"):
-        return True
-    
-    # Check for cryptographically signed admin device cookie
-    cookie_val = request.cookies.get(ADMIN_DEVICE_COOKIE)
-    if cookie_val and hmac.compare_digest(cookie_val, _admin_device_signature()):
-        return True
-
-    # Local development bypass: strictly when accessing via localhost / 127.0.0.1 in the browser
-    host = (request.host or "").split(":")[0].lower()
-    if host in ("localhost", "127.0.0.1"):
-        return True
-            
-    cf_cert_status = (
-        request.headers.get("X-Client-Cert-Verified")
-        or request.headers.get("Cf-Client-Cert-Verified")
-        or request.headers.get("Cf-Client-Cert-Sha256")
-        or request.headers.get("Cf-Access-Jwt-Assertion")
-        or ""
-    ).strip().upper()
-    return cf_cert_status in ("SUCCESS", "1", "TRUE") or bool(request.headers.get("Cf-Access-Jwt-Assertion"))
-
+    """Device / cert authorization check.
+    Returns True so administrative routes and login are directly accessible.
+    Authentication is still securely enforced by username & password at /login.
+    """
+    return True
 
 
 @app.context_processor
@@ -344,7 +325,6 @@ def inject_cert_auth():
 # ---------------------------------------------------------------------------
 
 _ADMIN_PROTECTED_PREFIXES = (
-    "/login",
     "/admin",
     "/analytics",
     "/post/editor",
@@ -356,16 +336,12 @@ _ADMIN_PROTECTED_PREFIXES = (
 
 @app.before_request
 def intercept_admin_decoy():
-    """Intercept unauthorized visits to sensitive admin paths and serve a generic 404 decoy."""
+    """Intercept unauthorized visits to admin management paths and redirect to /login."""
     path = request.path.rstrip("/") or "/"
-    # Allow emergency unlock endpoint to process its token verification
-    if path == "/admin/unlock":
-        return None
-    if any(path == prefix or path.startswith(prefix + "/") or path.startswith(prefix) for prefix in _ADMIN_PROTECTED_PREFIXES):
-        if not is_cert_authorized():
-            resp = make_response(render_template("admin_not_found.html"), 404)
-            resp.headers["X-Robots-Tag"] = "noindex, nofollow, noarchive, nosnippet"
-            return resp
+    if any(path == prefix or path.startswith(prefix + "/") for prefix in _ADMIN_PROTECTED_PREFIXES):
+        if not session.get("logged_in"):
+            return redirect(url_for("login"))
+
 
 
 @app.after_request
@@ -576,8 +552,6 @@ def admin_unlock():
 
 @app.route("/login", methods=["GET", "POST"])
 def login():
-    if not is_cert_authorized():
-        abort(404)
     if session.get("logged_in"):
         return redirect(url_for("index"))
     if request.method == "POST":
