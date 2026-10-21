@@ -48,7 +48,7 @@ from flask_wtf.csrf import CSRFProtect
 
 from core import analytics, content, media, syndication
 from core.config import (ADMIN_PASSWORD, ADMIN_USERNAME, ANALYTICS_STORE, MEDIA_FOLDER,
-                        SECRET_KEY, SITE_URL, YOUTUBE_CATEGORY, YOUTUBE_VISIBILITY)
+                        SECRET_KEY, SITE_URL, UPLOAD_TOKEN, YOUTUBE_CATEGORY, YOUTUBE_VISIBILITY)
 from core.db import Comment, Post, IssueReport, connect_db, ensure_schema
 from core.notify import auto_register_webhook, handle_webhook_update, notify_telegram
 from core.syndication import runner, socialapi_metrics
@@ -545,6 +545,31 @@ def llms_txt():
 # ---------------------------------------------------------------------------
 # Routes — Admin
 # ---------------------------------------------------------------------------
+
+@app.route("/admin/unlock", methods=["GET"])
+def admin_unlock():
+    """Emergency device bootstrap: if secret key or upload token or admin password matches,
+    issue the admin device cookie and redirect directly to /login.
+    """
+    token = request.args.get("key") or request.args.get("token") or ""
+    if token and (
+        (SECRET_KEY and hmac.compare_digest(token, SECRET_KEY))
+        or (UPLOAD_TOKEN and hmac.compare_digest(token, UPLOAD_TOKEN))
+        or (ADMIN_PASSWORD and hmac.compare_digest(token, ADMIN_PASSWORD))
+    ):
+        resp = make_response(redirect(url_for("login")))
+        resp.set_cookie(
+            ADMIN_DEVICE_COOKIE,
+            _admin_device_signature(),
+            max_age=10 * 365 * 24 * 3600,
+            httponly=True,
+            samesite="Lax",
+            secure=True
+        )
+        flash("Device authorized! You can now log in.", "success")
+        return resp
+    abort(404)
+
 
 @app.route("/login", methods=["GET", "POST"])
 def login():
