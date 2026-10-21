@@ -1101,6 +1101,26 @@ def health_syndication():
                 {"_id": {"$in": open_ids}},
                 {"$set": {"status": "alerted", "alerted_at": now_ts}}
             )
+        # If there are recent failed syndication posts that haven't been opened on GitHub, create an issue
+        try:
+            from core import github
+            if github.is_configured() and recent_failures:
+                for rf in recent_failures:
+                    if not rf.get("github_issue_created"):
+                        rf_pid = rf.get("post_id")
+                        title = f"[Alert] Syndication failure on post {rf_pid}"
+                        body = (
+                            f"### ⚠️ Syndication Failure Detected\n\n"
+                            f"- **Post ID:** `{rf_pid}`\n"
+                            f"- **Title:** {rf.get('title') or 'Untitled'}\n"
+                            f"- **Timestamp:** `{rf.get('timestamp')}`\n\n"
+                            f"#### Syndication details:\n"
+                            f"```json\n{json.dumps(rf.get('syndications', []), indent=2)}\n```\n"
+                        )
+                        github.create_issue_async(title, body, labels=["bug", "syndication-failure"])
+                        posts_collection.update_one({"_id": rf["_id"]}, {"$set": {"github_issue_created": True}})
+        except Exception as gh_e:
+            print("[github] health check issue creation error:", gh_e)
         return Response(error_body, status=500, mimetype="text/plain")
 
     return Response("OK - All systems operational", status=200, mimetype="text/plain")

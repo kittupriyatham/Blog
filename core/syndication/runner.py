@@ -136,11 +136,24 @@ def enqueue_syndication(doc_id, url, platforms):
         posts_collection.update_one({"post_id": doc_id}, {"$pull": {"syndications": {"platform": pid}}})
         posts_collection.update_one({"post_id": doc_id}, {"$push": {"syndications": {
             "platform": pid, "label": syndication.label_for(pid), "url": None, "status": "queued", "posted_at": now_str(), "error": None}}})
+    print(f"[syndication] Enqueued {doc_id} for platforms: {platforms}")
+    # Put into the queue and also launch an immediate worker thread so execution is instantaneous
+    # and not vulnerable to thread stalling or dropped queue states
     _syn_queue.put((doc_id, url, platforms))
+    threading.Thread(target=_run_job, args=(doc_id, url, platforms), daemon=True).start()
 
 
 _syn_queue: "queue.Queue[tuple[str, str, list[str]]]" = queue.Queue()
 _worker_started = False
+
+
+def _run_job(doc_id, url, platforms):
+    try:
+        print(f"[syndication] Starting job for {doc_id} on {platforms}")
+        results = run_syndication(doc_id, url, platforms)
+        print(f"[syndication] Completed job for {doc_id}: {results}")
+    except Exception as e:
+        print(f"[syndication] Error executing job for {doc_id}: {e}")
 
 
 def _syndication_worker():
@@ -153,13 +166,13 @@ def _syndication_worker():
             # Drain tasks or timeout after 60s to check maintenance timers
             doc_id, url, platforms = _syn_queue.get(timeout=60)
             try:
-                run_syndication(doc_id, url, platforms)
-            except Exception as e:
-                print("[syndication] error:", e)
+                _run_job(doc_id, url, platforms)
             finally:
                 _syn_queue.task_done()
         except queue.Empty:
             pass
+        except Exception as e:
+            print("[syndication] queue error:", e)
 
         # Run maintenance sweep conservatively once every 30 days
         now = time.time()
@@ -171,10 +184,40 @@ def _syndication_worker():
             last_cleanup = now
 
 
+def recover_stuck_syndications():
+    """Find any posts or articles in MongoDB left with status 'queued' (e.g. from server restarts)
+    and resume them.
+    """
+    try:
+        posts_collection = Post._get_collection()
+        stuck_docs = list(posts_collection.find({"syndications.status": "queued"}))
+        for doc in stuck_docs:
+            pid = doc.get("post_id")
+            if not pid:
+                continue
+            ptype = doc.get("type") or "post"
+            from core import content
+            if ptype == "article":
+                url = content.canonical("article_detail", article_id=pid)
+            else:
+                url = content.canonical("post_detail", post_id=pid)
+            queued_platforms = [
+                s.get("platform") for s in doc.get("syndications", [])
+                if s.get("status") == "queued" and s.get("platform")
+            ]
+            if queued_platforms:
+                print(f"[syndication] Recovering stranded job for {pid} on {queued_platforms}")
+                threading.Thread(target=_run_job, args=(pid, url, queued_platforms), daemon=True).start()
+    except Exception as err:
+        print("[syndication] Error checking for stranded jobs on startup:", err)
+
+
 def start_worker():
     """Start the daemon thread that drains the syndication queue and sweeps stale video files."""
     global _worker_started
     if _worker_started:
         return
     threading.Thread(target=_syndication_worker, daemon=True).start()
+    threading.Thread(target=recover_stuck_syndications, daemon=True).start()
     _worker_started = True
+

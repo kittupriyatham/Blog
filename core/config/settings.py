@@ -130,6 +130,10 @@ ANALYTICS_GEO = os.environ.get("ANALYTICS_GEO", "1") == "1"
 TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "").strip()
 TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID", "").strip()
 
+# --- GitHub issue creation integration --------------------------------------
+GITHUB_TOKEN = os.environ.get("GITHUB_TOKEN", "").strip()
+GITHUB_REPO = os.environ.get("GITHUB_REPO", "kittupriyatham/Blog").strip()
+
 # --- LinkedIn author (Organization / Company Page, with a person fallback) ---
 # `LINKEDIN_ORGANIZATION_URN` (the Page) is preferred so posts publish as the
 # Company Page and its `organizationalEntityShareStatistics` can be read;
@@ -182,6 +186,8 @@ __all__ = [
     "ANALYTICS_GEO",
     "TELEGRAM_BOT_TOKEN",
     "TELEGRAM_CHAT_ID",
+    "GITHUB_TOKEN",
+    "GITHUB_REPO",
     "LINKEDIN_ORGANIZATION_URN",
     "LINKEDIN_AUTHOR_URN",
     "YOUTUBE_CATEGORY",

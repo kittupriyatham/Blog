@@ -240,12 +240,20 @@ def handle_webhook_update(update):
     }
     issues_coll.insert_one(issue_doc)
 
+    # Automatically open an issue on GitHub if configured
+    try:
+        from core import github
+        if github.is_configured():
+            github.create_report_issue_async(issue_doc)
+    except Exception as gh_err:
+        print("[github] Failed to dispatch async issue creation:", gh_err)
+
     post_title = (matched_post.get("title") or target_post_id or "Recent Post") if matched_post else "Recent Post"
     ack_lines = [
         f"🚨 Issue Reported & Logged!",
         f"📌 Target: {post_title}",
         f"📝 Note: \"{user_text}\"",
-        f"⚡ Status: Marked as OPEN for cron-job / email escalation.",
+        f"⚡ Status: Marked as OPEN and queued for GitHub issue & email escalation.",
         f"🆔 Report ID: {report_id}",
     ]
     send_message("\n".join(ack_lines), reply_to_message_id=incoming_msg_id)
