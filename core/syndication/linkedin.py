@@ -104,60 +104,145 @@ class LinkedinSyndicator(Syndicator):
                 order.append(v)
         return order
 
+    @staticmethod
+    def _resolve_image_to_local(src: str) -> tuple[str | None, bool]:
+        """Resolve a media reference (local path, /media/..., or remote URL) to a local file.
+
+        Returns (local_path, is_temporary).
+        If is_temporary is True, the caller is responsible for deleting the local file after use.
+        """
+        if not src or not isinstance(src, str):
+            return None, False
+
+        # 1. Already an existing local file
+        if os.path.isfile(src):
+            return src, False
+
+        # 2. Check local MEDIA_FOLDER for /media/<name> or bare filename
+        from core.config import MEDIA_FOLDER
+        clean_name = src.split("/media/", 1)[-1].lstrip("/").replace("/", os.sep)
+        candidate = os.path.join(MEDIA_FOLDER, clean_name)
+        if os.path.isfile(candidate):
+            return candidate, False
+
+        # 3. If it's not a full URL yet, normalize via media provider (e.g. /media/.. -> R2 URL)
+        url = src
+        if not (url.startswith("http://") or url.startswith("https://")):
+            from core.media import normalize_media_path
+            try:
+                url = normalize_media_path(src)
+            except Exception:
+                url = None
+
+        if not url or not (url.startswith("http://") or url.startswith("https://")):
+            return None, False
+
+        # 4. Remote HTTP/HTTPS URL - download to a temp file
+        import tempfile
+        ext = os.path.splitext(urllib.parse.urlparse(url).path)[1].lower()
+        if not ext:
+            ext = ".jpg"
+        fd, temp_path = tempfile.mkstemp(prefix="blog_li_", suffix=ext)
+        os.close(fd)
+
+        req = urllib.request.Request(
+            url,
+            headers={"User-Agent": "KittuBlog-LinkedIn/1.0"}
+        )
+        try:
+            with urllib.request.urlopen(req, timeout=30) as resp, open(temp_path, "wb") as out:
+                if resp.status not in (200, 206):
+                    os.unlink(temp_path)
+                    return None, False
+                chunk = resp.read(65536)
+                while chunk:
+                    out.write(chunk)
+                    chunk = resp.read(65536)
+            return temp_path, True
+        except Exception as e:
+            try:
+                os.unlink(temp_path)
+            except OSError:
+                pass
+            print(f"[linkedin] could not fetch remote image {url}: {e}")
+            return None, False
+
     def _upload_image(self, token: str, author: str, path: str) -> str | None:
-        """Upload a local image and return its LinkedIn image URN.
+        """Upload a local or remote image and return its LinkedIn image URN.
 
         Two steps: initializeUpload hands back a signed URL plus the URN the post
         must reference, then the bytes are PUT to that URL. Returns None when the
         file is missing or not an image, so a text-only post still goes out.
         """
         from . import imageprep
-        if not path or not os.path.isfile(path) or not imageprep.is_image(path):
+
+        resolved_path, is_temp = self._resolve_image_to_local(path)
+        if not resolved_path or not os.path.isfile(resolved_path) or not imageprep.is_image(resolved_path):
+            if is_temp and resolved_path and os.path.isfile(resolved_path):
+                try:
+                    os.unlink(resolved_path)
+                except OSError:
+                    pass
             return None
-        prepared = imageprep.prepare_image(path)
+
+        prepared = imageprep.prepare_image(resolved_path)
 
         init_body = json.dumps({"initializeUploadRequest": {"owner": author}}).encode("utf-8")
         last_error: str | None = None
-        for version in self._version_candidates():
-            req = urllib.request.Request(
-                "https://api.linkedin.com/rest/images?action=initializeUpload",
-                data=init_body,
-                headers={
-                    "Authorization": "Bearer " + token,
-                    "Content-Type": "application/json",
-                    "X-Restli-Protocol-Version": "2.0.0",
-                    "LinkedIn-Version": version,
-                },
-                method="POST",
-            )
-            try:
-                with urllib.request.urlopen(req, timeout=30) as resp:
-                    value = (json.loads(resp.read().decode("utf-8")) or {}).get("value") or {}
-                upload_url = value.get("uploadUrl")
-                image_urn = value.get("image")
-                if not upload_url or not image_urn:
-                    raise SyndicationError("LinkedIn initializeUpload returned no uploadUrl/image.")
-                with open(prepared, "rb") as fh:
-                    put = urllib.request.Request(
-                        upload_url, data=fh.read(),
-                        headers={"Authorization": "Bearer " + token,
-                                 "Content-Type": "application/jpeg"},
-                        method="PUT")
-                    with urllib.request.urlopen(put, timeout=120) as put_resp:
-                        if put_resp.status not in (200, 201):
-                            raise SyndicationError("LinkedIn image upload returned HTTP %s" % put_resp.status)
-                return str(image_urn)
-            except urllib.error.HTTPError as e:
-                body = e.read().decode("utf-8", "replace")[:300]
-                if e.code == 426:  # NONEXISTENT_VERSION -> try the next candidate
-                    last_error = "LinkedIn HTTP 426 (version %s): %s" % (version, body)
-                    continue
-                raise SyndicationError("LinkedIn image upload failed - HTTP %s: %s" % (e.code, body))
-            except SyndicationError:
-                raise
-            except Exception as e:
-                raise SyndicationError("LinkedIn image upload failed: %s" % e)
-        raise SyndicationError(last_error or "LinkedIn: no active API version accepted images.")
+        try:
+            for version in self._version_candidates():
+                req = urllib.request.Request(
+                    "https://api.linkedin.com/rest/images?action=initializeUpload",
+                    data=init_body,
+                    headers={
+                        "Authorization": "Bearer " + token,
+                        "Content-Type": "application/json",
+                        "X-Restli-Protocol-Version": "2.0.0",
+                        "LinkedIn-Version": version,
+                    },
+                    method="POST",
+                )
+                try:
+                    with urllib.request.urlopen(req, timeout=30) as resp:
+                        value = (json.loads(resp.read().decode("utf-8")) or {}).get("value") or {}
+                    upload_url = value.get("uploadUrl")
+                    image_urn = value.get("image")
+                    if not upload_url or not image_urn:
+                        raise SyndicationError("LinkedIn initializeUpload returned no uploadUrl/image.")
+                    with open(prepared, "rb") as fh:
+                        put = urllib.request.Request(
+                            upload_url, data=fh.read(),
+                            headers={"Authorization": "Bearer " + token,
+                                     "Content-Type": "application/jpeg"},
+                            method="PUT")
+                        with urllib.request.urlopen(put, timeout=120) as put_resp:
+                            if put_resp.status not in (200, 201):
+                                raise SyndicationError("LinkedIn image upload returned HTTP %s" % put_resp.status)
+                    return str(image_urn)
+                except urllib.error.HTTPError as e:
+                    body = e.read().decode("utf-8", "replace")[:300]
+                    if e.code == 426:  # NONEXISTENT_VERSION -> try the next candidate
+                        last_error = "LinkedIn HTTP 426 (version %s): %s" % (version, body)
+                        continue
+                    raise SyndicationError("LinkedIn image upload failed - HTTP %s: %s" % (e.code, body))
+                except SyndicationError:
+                    raise
+                except Exception as e:
+                    raise SyndicationError("LinkedIn image upload failed: %s" % e)
+            raise SyndicationError(last_error or "LinkedIn: no active API version accepted images.")
+        finally:
+            # Clean up temporary downloads and prepared derivatives
+            if is_temp:
+                if prepared and prepared != resolved_path and os.path.isfile(prepared):
+                    try:
+                        os.unlink(prepared)
+                    except OSError:
+                        pass
+                if resolved_path and os.path.isfile(resolved_path):
+                    try:
+                        os.unlink(resolved_path)
+                    except OSError:
+                        pass
 
     def _create_post(self, text: str, url: str, media: list[str] | None,
                      doc: dict | None) -> tuple[str, str | None]:
