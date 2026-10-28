@@ -198,11 +198,7 @@ src="https://www.facebook.com/tr?id=2092273818327635&ev=PageView&noscript=1"
       let saveTimer = null;
 
       // Extract existing data (Hydration)
-      const existingDataJSON = '{{ (article.blocks | tojson) if article else "[]" }}';
-      let existingBlocks = [];
-      try {
-        existingBlocks = JSON.parse(existingDataJSON);
-      } catch(e) { }
+      const existingBlocks = {{ (article.blocks if article and article.blocks else []) | tojson }};
 
       // --- Interaction Indicators ---
       function markDirty() {
@@ -428,9 +424,9 @@ src="https://www.facebook.com/tr?id=2092273818327635&ev=PageView&noscript=1"
         else container.appendChild(wrapper);
         markDirty();
       }
-
+    
       // --- Execute Hydration on Load ---
-      if (existingBlocks.length > 0) {
+      if (existingBlocks && existingBlocks.length > 0) {
         existingBlocks.forEach(block => {
           if (block.type === 'text') {
              insertTextBlock(null, block.content);
@@ -438,7 +434,10 @@ src="https://www.facebook.com/tr?id=2092273818327635&ev=PageView&noscript=1"
              insertLoadedMediaBlock(block.media_paths[0], null);
           }
         });
-        isDirty = false; // Fresh load, not dirty yet
+        isDirty = false;
+        saveStatus.innerText = 'All changes saved locally';
+        saveStatus.classList.remove('text-orange-400');
+        saveStatus.classList.add('text-gray-400');
       } else {
         insertTextBlock(null);
         isDirty = false;
