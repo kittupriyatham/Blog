@@ -258,6 +258,19 @@ class LinkedinSyndicator(Syndicator):
         author = author_urn(strict=True)
         if not token:
             raise SyndicationError("LinkedIn is not configured (missing access token).")
+        # Determine if we are publishing a rich-media long-form article versus a brief micro-post
+        is_article = doc and doc.get("type") == "article"
+
+        # Resolve Cover Image or attached Media first
+        # (articles have covers in .cover_image, standard posts use media paths)
+        first_image = None
+        if is_article:
+            first_image = doc.get("cover_image")
+        if not first_image:
+            first_image = next((m for m in (media or []) if m), None)
+
+        image_urn = self._upload_image(token, author, first_image) if first_image else None
+
         payload: dict[str, Any] = {
             "author": author,
             "commentary": text[:3000],
@@ -267,9 +280,22 @@ class LinkedinSyndicator(Syndicator):
             "lifecycleState": "PUBLISHED",
             "isReshareDisabledByAuthor": False,
         }
-        first_image = next((m for m in (media or []) if m), None)
-        image_urn = self._upload_image(token, author, first_image) if first_image else None
-        if image_urn:
+
+        # Handle Article shares using LinkedIn's rich article bookmark style
+        if is_article:
+            # Shorten rich commentary if text exceeds limit, standard is 3000 but articles need room
+            # We enforce a clean promotion and hook back to the original self-hosted domain
+            payload["content"] = {
+                "article": {
+                    "source": url,
+                    "title": doc.get("title") or "Article Update",
+                    "description": "Read the full story on my blog."
+                }
+            }
+            if image_urn:
+                payload["content"]["article"]["thumbnail"] = image_urn
+        # Handle regular native media / micro-posts as flat image uploads or commentary-only
+        elif image_urn:
             payload["content"] = {"media": {"id": image_urn}}
         data = json.dumps(payload).encode("utf-8")
         last_error: str | None = None
