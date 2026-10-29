@@ -189,6 +189,12 @@ def read_metrics(syn: dict, timeout: int = DEFAULT_TIMEOUT) -> dict:
 
     org = organization_urn()
     if not org:
+        # Validate connection / token health
+        check_res = LinkedinSyndicator().check()
+        if not check_res.ok:
+            entry["error"] = f"LinkedIn access token revoked or invalid ({check_res.detail})"
+            entry["is_broken"] = True
+            return entry
         entry["error"] = ("LinkedIn posts publish as your personal profile, and LinkedIn's API "
                           "does not expose a member's own post engagement to an app like this one "
                           "(that endpoint is partner-gated). Only Page posts expose metrics.")
@@ -231,12 +237,14 @@ def read_metrics(syn: dict, timeout: int = DEFAULT_TIMEOUT) -> dict:
         return entry
 
     if status in (401, 403):
+        entry["is_broken"] = True
         entry["error"] = ("LinkedIn organization metrics need the r_organization_social scope "
                           "and a token re-authenticated for the Page (HTTP %s). Re-run "
                           "`python -m core.syndication.linkedin_token` with the organization "
                           "scopes. %s" % (status, str(body.get("raw") or "")[:160]))
     elif status == 404:
-        entry["error"] = "No LinkedIn share statistics found for this syndication (HTTP 404)."
+        entry["is_broken"] = True
+        entry["error"] = "No LinkedIn share statistics found for this syndication (HTTP 404 - post deleted or not found)."
     elif status == 0:
         entry["error"] = "LinkedIn metrics request failed: %s" % (body.get("raw") or "network error")
     else:

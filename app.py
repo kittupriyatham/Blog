@@ -1378,11 +1378,35 @@ def api_disconnect_syndication():
     is_known_broken = bool("404" in err_text or "not found" in err_text or "revoked" in err_text or cached_metrics.get("is_broken"))
 
     if not is_known_broken and not force:
-        # Check if access token is revoked/invalid for native platforms like LinkedIn
+        # Check if platform syndicator token or credentials are valid
         if platform == "linkedin":
-            from core.syndication import linkedin_token
-            if not linkedin_token.access_token():
-                is_known_broken = True
+            try:
+                from core.syndication.linkedin import LinkedinSyndicator
+                res = LinkedinSyndicator().check()
+                if not res.ok:
+                    is_known_broken = True
+            except Exception:
+                pass
+
+        # Also probe the URL directly if available to detect dead/deleted links
+        target_url = target_syn.get("url")
+        if not is_known_broken and target_url:
+            try:
+                import urllib.request
+                probe_req = urllib.request.Request(
+                    target_url,
+                    headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"}
+                )
+                with urllib.request.urlopen(probe_req, timeout=5) as probe_resp:
+                    final_url = probe_resp.url or ""
+                    # LinkedIn redirects deleted posts to signup/cold-join or login
+                    if "linkedin.com" in target_url and ("cold-join" in final_url or "uas/login" in final_url):
+                        is_known_broken = True
+            except urllib.error.HTTPError as e:
+                if e.code in (401, 403, 404, 410):
+                    is_known_broken = True
+            except Exception:
+                pass
 
     if not is_known_broken and not force:
         return jsonify({
