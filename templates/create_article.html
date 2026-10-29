@@ -604,10 +604,11 @@ src="https://www.facebook.com/tr?id=2092273818327635&ev=PageView&noscript=1"
             const content = item.querySelector('textarea').value.trim();
             if (content) blocksMeta.push({ type: 'text', content: content });
           } else if (type === 'media') {
-            // Check if it's newly uploaded vs already hydrated
-            if (item.fileData) {
+            // Check if it's newly uploaded / replaced vs already hydrated
+            const file = item.fileData || (item.querySelector('.replace-file-input') && item.querySelector('.replace-file-input').files && item.querySelector('.replace-file-input').files[0]);
+            if (file) {
               blocksMeta.push({ type: 'media', fileIndex: fileIndex });
-              formData.append(`file_${fileIndex}`, item.fileData);
+              formData.append(`file_${fileIndex}`, file);
               fileIndex++;
             } else if (item.hasAttribute('data-saved-path')) {
               blocksMeta.push({ type: 'media', saved_path: item.getAttribute('data-saved-path') });
@@ -624,7 +625,8 @@ src="https://www.facebook.com/tr?id=2092273818327635&ev=PageView&noscript=1"
       window.collectSyndicationMedia = function () {
         var out = [];
         container.querySelectorAll('.block-item[data-type="media"]').forEach(function (item) {
-          if (item.fileData) out.push({ type: item.fileData.type });
+          const f = item.fileData || (item.querySelector('.replace-file-input') && item.querySelector('.replace-file-input').files && item.querySelector('.replace-file-input').files[0]);
+          if (f) out.push({ type: f.type });
           else if (item.hasAttribute('data-saved-path')) out.push({ path: item.getAttribute('data-saved-path') });
         });
         if (coverRemoved) {

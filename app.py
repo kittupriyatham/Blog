@@ -991,6 +991,12 @@ def api_save_article():
         # Promote the stored draft's URL from draft_* to article_* when published.
         article_id = "article_" + media.generate_post_id()
     taken: set = set()
+    if existing_article:
+        if existing_article.get("cover_image"):
+            taken.add(str(existing_article["cover_image"]).split("/")[-1])
+        for b in existing_article.get("blocks", []):
+            for mp in b.get("media_paths", []):
+                taken.add(str(mp).split("/")[-1])
     stem = media.media_stem(article_id)
     skipped = []
     # An explicit Remove clears the saved cover; otherwise a new upload replaces

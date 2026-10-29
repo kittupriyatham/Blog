@@ -11,6 +11,8 @@ name is already taken). Both providers call `_ext_of` / `_unique_name`.
 """
 import hashlib
 import os
+import time
+import uuid
 
 from flask import request, session
 from werkzeug.utils import secure_filename
@@ -49,19 +51,20 @@ def _ext_of(filename: str) -> str:
 
 
 def _unique_name(stem: str, ext: str, taken: set, check_disk: bool = True) -> str:
-    """`stem+ext`, or `stem_1+ext`, `stem_2+ext`... when that name is taken.
+    """Generate a unique media filename: `stem_<token>+ext`.
 
-    Checks this request's uploads via `taken` and (for local storage) what is
-    already on disk, so adding a second image to an existing post cannot
-    silently overwrite the first.
+    Each upload generates a unique token based on timestamp and randomness so
+    cloud storage (R2/S3) and browser/CDN caches never serve stale cached
+    versions when media or covers are replaced or added.
     """
-    n = 0
-    while True:
-        name = (stem if n == 0 else "%s_%d" % (stem, n)) + ext
-        if name not in taken and not (check_disk and os.path.exists(os.path.join(MEDIA_FOLDER, name))):
-            taken.add(name)
-            return name
-        n += 1
+    taken = taken if taken is not None else set()
+    token = hex(int(time.time()))[2:] + "_" + uuid.uuid4().hex[:6]
+    name = f"{stem}_{token}{ext}"
+    while name in taken or (check_disk and os.path.exists(os.path.join(MEDIA_FOLDER, name))):
+        token = hex(int(time.time()))[2:] + "_" + uuid.uuid4().hex[:6]
+        name = f"{stem}_{token}{ext}"
+    taken.add(name)
+    return name
 
 
 def upload_to_server(file, stem, taken):
