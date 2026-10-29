@@ -27,15 +27,15 @@ else 'text-xs text-slate-500 dark:text-slate-400' %}
 {% for _s in _posted %}
 {% set _ = _urls.update({_s.platform: _s.url}) %}
 {% endfor %}
+{% set _names = {'linkedin': 'LinkedIn', 'facebook': 'Facebook', 'instagram': 'Instagram',
+'youtube': 'YouTube', 'twitter': 'X', 'bluesky': 'Bluesky',
+'pinterest': 'Pinterest', 'medium': 'Medium'} %}
 
 <div class="{{ _sep }}  dark:border-slate-800">
   <div class="flex items-center {{ _gap }} flex-wrap">
     <span class="font-medium {{ _heading }}">{{ _intro }}</span>
     {% for _pid in ['linkedin', 'facebook', 'instagram', 'youtube', 'twitter', 'bluesky', 'pinterest', 'medium'] %}
     {% set _u = _urls.get(_pid) %}
-    {% set _names = {'linkedin': 'LinkedIn', 'facebook': 'Facebook', 'instagram': 'Instagram',
-    'youtube': 'YouTube', 'twitter': 'X', 'bluesky': 'Bluesky',
-    'pinterest': 'Pinterest', 'medium': 'Medium'} %}
     {% if _u %}
     <a href="{{ _u }}" target="_blank" rel="noopener" title="{{ _names[_pid] }}" data-platform="{{ _pid }}"
       class="text-slate-500 dark:text-slate-400 hover:text-brand-600 dark:hover:text-brand-400 transition">
@@ -88,4 +88,58 @@ else 'text-xs text-slate-500 dark:text-slate-400' %}
         {% if _u %}</a>{% else %}</span>{% endif %}
     {% endfor %}
   </div>
+  {% if session.get('logged_in') and not _compact %}
+    {% set _syndicated = (post.syndications or []) | selectattr('url') | list %}
+    {% if _syndicated %}
+      <div class="mt-2.5 flex items-center gap-2 flex-wrap text-xs text-slate-500">
+        <span class="font-medium text-slate-400 dark:text-slate-500 text-[11px]">Syndicated links:</span>
+        {% for s in _syndicated %}
+          {% set _is_broken = s.get('is_broken') or ('404' in (s.get('error') or '')|lower) or ('not found' in (s.get('error') or '')|lower) or ('revoked' in (s.get('error') or '')|lower) %}
+          <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/60 text-[11px]">
+            <span class="capitalize font-medium text-slate-700 dark:text-slate-300">{{ _names.get(s.platform, s.platform) }}</span>
+            {% if _is_broken %}
+              <span class="px-1 py-0.2 rounded text-[9px] bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300 font-semibold uppercase">Dead Link</span>
+              <button type="button" onclick="disconnectSocial('{{ post.post_id }}', '{{ s.platform }}', true)" class="text-red-600 dark:text-red-400 hover:text-red-700 font-bold ml-1 hover:underline cursor-pointer" title="Remove dead link & purge from analytics">Remove Dead Link</button>
+            {% else %}
+              <button type="button" onclick="disconnectSocial('{{ post.post_id }}', '{{ s.platform }}', false)" class="text-slate-400 hover:text-red-500 hover:underline ml-1 cursor-pointer" title="Disconnect social link">Disconnect</button>
+            {% endif %}
+          </span>
+        {% endfor %}
+      </div>
+      <script>
+      if (!window.disconnectSocial) {
+        window.disconnectSocial = async function(postId, platform, isBroken, force = false) {
+          if (!isBroken && !force) {
+            const ok = confirm(`Are you sure you want to disconnect ${platform.toUpperCase()} from this post?\n\nThis will remove the syndication link from your blog, grey out the icon, and delete tracking and analytics for this link.`);
+            if (!ok) return;
+          }
+          try {
+            const res = await fetch('/api/disconnect_syndication', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token() }}'
+              },
+              body: JSON.stringify({ post_id: postId, platform: platform, force: force, csrf_token: '{{ csrf_token() }}' })
+            });
+            const data = await res.json();
+            if (data.status === "guard_warning") {
+              if (confirm(data.message + "\n\nDo you want to proceed and force disconnect anyway?")) {
+                return window.disconnectSocial(postId, platform, isBroken, true);
+              }
+              return;
+            }
+            if (data.status !== "success") {
+              alert('Error: ' + (data.message || data.error || 'Failed to disconnect'));
+              return;
+            }
+            location.reload();
+          } catch (err) {
+            alert('Network error disconnecting social link: ' + err.message);
+          }
+        };
+      }
+      </script>
+    {% endif %}
+  {% endif %}
 </div>

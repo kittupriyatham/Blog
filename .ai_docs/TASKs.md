@@ -5,7 +5,21 @@ Ordered ledger. Companions: `GOAL.md` (why), `CONTEXT.md` (where we are).
 
 ---
 
-## Start here (session 12: Error Handling, Uptime, SEO & AI Context)
+## Start here (session 13: Inbound AI Draft & Syndication Workflow)
+
+### Session 13 Implementation Checklist: `/idea` AI Drafting & Conversational Publishing
+
+| # | Component Task Target | Scope / Specification | Status |
+|:---|:---|:---|:---:|
+| 1.1 | **Inbound Command Parser (`/idea`)** | Extend Telegram webhook (`/api/telegram/webhook`) to parse `/idea <text>` commands from authorized author | ⏳ Pending |
+| 1.2 | **AI Content Drafting Engine** | Integrate LLM generation service (Gemini/OpenAI) with author's brand voice to draft title, body, and per-platform adaptations into a new `Draft` post in MongoDB | ⏳ Pending |
+| 1.3 | **Conversational Review & Refinement** | Send draft preview back to Telegram chat; allow conversational revisions or edit requests before final approval | ⏳ Pending |
+| 1.4 | **Media Attachment Ingestion** | Accept photo/video attachments sent via Telegram, automatically upload to Cloudflare R2 / media storage, and attach to the draft post | ⏳ Pending |
+| 1.5 | **Selected Syndication Publishing** | Author selects target syndication channels (LinkedIn, X, Bluesky, Instagram, etc.) via Telegram inline buttons/commands; trigger instant blog publish + POSSE syndication | ⏳ Pending |
+
+---
+
+## Session 12 (Completed: Error Handling, Uptime, SEO & AI Context)
 
 ### Session 12 Implementation Checklist
 

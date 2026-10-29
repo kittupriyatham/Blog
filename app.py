@@ -1344,6 +1344,79 @@ def api_syndication_status(post_id):
         for s in rows]})
 
 
+@app.route("/api/disconnect_syndication", methods=["POST"])
+def api_disconnect_syndication():
+    """Disconnect and remove a syndicated social link from a post or article.
+
+    Removes the platform from `post.syndications`, unsets cached metrics from
+    `post.platform_metrics`, and deletes associated click-out analytics events.
+    Enforces a validation guard (Option C): if the link is not known to be broken
+    and force is False, prompts for explicit confirmation before severing.
+    """
+    if not session.get("logged_in"):
+        return jsonify({"status": "error", "message": "Unauthorized"}), 401
+
+    post_id = (request.form.get("post_id") or (request.get_json(silent=True) or {}).get("post_id") or "").strip()
+    platform = (request.form.get("platform") or (request.get_json(silent=True) or {}).get("platform") or "").strip().lower()
+    force = str(request.form.get("force") or (request.get_json(silent=True) or {}).get("force") or "").lower() in ("1", "true", "yes")
+
+    if not post_id or not platform:
+        return jsonify({"status": "error", "message": "Missing post_id or platform"}), 400
+
+    doc = posts_collection.find_one({"post_id": post_id})
+    if not doc:
+        return jsonify({"status": "error", "message": "Post not found"}), 404
+
+    syndications = doc.get("syndications") or []
+    target_syn = next((s for s in syndications if (s.get("platform") or "").lower() == platform), None)
+    if not target_syn:
+        return jsonify({"status": "error", "message": f"No syndication found for platform '{platform}'"}), 404
+
+    # Validation Guard (Option C):
+    cached_metrics = (doc.get("platform_metrics") or {}).get(platform) or {}
+    err_text = str(cached_metrics.get("error") or target_syn.get("error") or "").lower()
+    is_known_broken = bool("404" in err_text or "not found" in err_text or "revoked" in err_text or cached_metrics.get("is_broken"))
+
+    if not is_known_broken and not force:
+        # Check if access token is revoked/invalid for native platforms like LinkedIn
+        if platform == "linkedin":
+            from core.syndication import linkedin_token
+            if not linkedin_token.access_token():
+                is_known_broken = True
+
+    if not is_known_broken and not force:
+        return jsonify({
+            "status": "guard_warning",
+            "needs_confirmation": True,
+            "message": f"The {platform.capitalize()} link does not currently show an error/404. Are you sure you want to disconnect it from the blog and analytics?"
+        }), 200
+
+    # 1. Pull from post.syndications & unset platform_metrics
+    posts_collection.update_one(
+        {"post_id": post_id},
+        {
+            "$pull": {"syndications": {"platform": platform}},
+            "$unset": {f"platform_metrics.{platform}": ""}
+        }
+    )
+
+    # 2. Delete click_out tracking events for this post & platform
+    try:
+        from core.db import AnalyticsEvent
+        AnalyticsEvent._get_collection().delete_many({
+            "post_id": post_id,
+            "platform": platform,
+            "event": "click_out"
+        })
+    except Exception as e:
+        print(f"[analytics] Could not purge click_out events: {e}")
+
+    return jsonify({
+        "status": "success",
+        "message": f"Successfully disconnected {platform.capitalize()} from {post_id}. Link and tracking removed."
+    })
+
+
 @app.route("/delete/<post_id>", methods=["POST"])
 def delete_post(post_id):
     if not session.get("logged_in"): abort(401)

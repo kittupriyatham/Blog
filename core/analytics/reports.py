@@ -219,6 +219,8 @@ def _platform_row(syn, cached):
         # else a generic note. Never the amber API-error treatment.
         row["note"] = (metrics.get("error")
                        or "%s metrics are not tracked." % (row["label"] or platform.capitalize()))
+    err_or_note = (str(row.get("error") or "") + " " + str(row.get("note") or "")).lower()
+    row["is_broken"] = bool("404" in err_or_note or "not found" in err_or_note or "revoked" in err_or_note or metrics.get("is_broken"))
     for key in SOCIAL_METRIC_KEYS:
         row[key] = _metric(metrics.get(key)) if row["available"] else None
     return row

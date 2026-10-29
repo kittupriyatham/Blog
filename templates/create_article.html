@@ -171,6 +171,7 @@ src="https://www.facebook.com/tr?id=2092273818327635&ev=PageView&noscript=1"
       const coverOverlay = document.getElementById('cover-overlay');
       const coverRemoveBtn = document.getElementById('cover-remove-btn');
       const saveStatus = document.getElementById('save-status');
+      const ALLOWED_EXT = ['png', 'jpg', 'jpeg', 'gif', 'webp', 'mp4', 'webm', 'ogg', 'mov', 'avi', 'mkv', 'wmv', 'mp3', 'wav', 'm4a', 'aac', 'flac', 'oga', 'pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'txt'];
 
       // Feeds the shared "Preview per platform" control (see
       // _syndication_options.html): the article's current, unsaved content.
@@ -290,14 +291,60 @@ src="https://www.facebook.com/tr?id=2092273818327635&ev=PageView&noscript=1"
         wrapper.insertAdjacentHTML('beforeend', document.getElementById('insert-menu-template').innerHTML);
       }
 
+      function renderMediaHtml(srcUrl, fileName, ext) {
+        if (['mp4', 'webm', 'ogg', 'mov', 'avi', 'mkv', 'wmv'].includes(ext)) {
+          return `<video controls src="${srcUrl}" class="w-full rounded-2xl bg-black max-h-[500px] border border-slate-100 dark:border-slate-800"></video>`;
+        } else if (['mp3', 'wav', 'm4a', 'aac', 'flac', 'oga'].includes(ext)) {
+          return `<audio controls src="${srcUrl}" class="w-full"></audio>`;
+        } else if (ext === 'pdf') {
+          return `<div class="w-full border border-slate-200 dark:border-slate-700 rounded-2xl overflow-hidden relative" style="min-height: 850px; aspect-ratio: 1 / 1.5;">
+              <embed src="${srcUrl}#toolbar=0&view=Fit" type="application/pdf" class="absolute inset-0 w-full h-full" />
+            </div>`;
+        } else if (ext === 'txt') {
+          return `<iframe src="${srcUrl}" class="w-full h-[500px] rounded-2xl border border-slate-200 dark:border-slate-700 bg-white" title="Text preview"></iframe>`;
+        } else if (['png', 'jpg', 'jpeg', 'gif', 'webp'].includes(ext)) {
+          return `<img src="${srcUrl}" class="w-full rounded-2xl object-contain bg-slate-50 dark:bg-slate-800 max-h-[600px] border border-slate-100 dark:border-slate-800" />`;
+        } else {
+          return `<div class="border border-orange-200 dark:border-orange-900 bg-orange-50 dark:bg-orange-950/30 rounded-2xl p-5 flex items-center gap-4 w-full text-orange-700 dark:text-orange-300">
+              <svg class="w-6 h-6 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"></path></svg>
+              <div class="overflow-hidden"><p class="font-medium truncate">${fileName || 'Uploaded file'}</p><p class="text-xs mt-0.5">This file type can't be previewed here, but it will be saved and linked.</p></div>
+            </div>`;
+        }
+      }
+
+      function buildToolbarHtml(type) {
+        return `
+          <div class="block-toolbar absolute top-2 right-2 z-20 flex items-center gap-1 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md px-2 py-1 rounded-xl shadow-md border border-slate-200/90 dark:border-slate-700/90 ${type === 'media' ? 'opacity-90' : 'opacity-0'} group-hover:opacity-100 focus-within:opacity-100 transition-opacity duration-150">
+            <button type="button" class="move-block-up-btn p-1 text-slate-400 hover:text-slate-800 dark:hover:text-slate-100 rounded hover:bg-slate-100 dark:hover:bg-slate-800 transition" title="Move Up" aria-label="Move block up">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 15l7-7 7 7"/></svg>
+            </button>
+            <button type="button" class="move-block-down-btn p-1 text-slate-400 hover:text-slate-800 dark:hover:text-slate-100 rounded hover:bg-slate-100 dark:hover:bg-slate-800 transition" title="Move Down" aria-label="Move block down">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
+            </button>
+            ${type === 'media' ? `
+            <button type="button" class="replace-media-btn px-2 py-0.5 text-brand-600 dark:text-brand-400 hover:bg-brand-50 dark:hover:bg-brand-950/50 rounded-lg transition flex items-center gap-1 text-xs font-semibold" title="Replace file" aria-label="Replace file">
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+              <span>Replace</span>
+            </button>
+            ` : ''}
+            <div class="h-3.5 w-px bg-slate-200 dark:bg-slate-700 mx-0.5"></div>
+            <button type="button" class="remove-block-btn p-1 text-slate-400 hover:text-red-600 dark:hover:text-red-400 rounded hover:bg-red-50 dark:hover:bg-red-950/40 transition" title="Remove block" aria-label="Remove block">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+            </button>
+          </div>
+        `;
+      }
+
       function insertTextBlock(afterNode, initValue = "") {
         const wrapper = createBlockWrapper();
         wrapper.innerHTML = `
           <div class="block-item relative" data-type="text">
             <textarea name="text_block_${blockCounter}" rows="1" placeholder="Write your segment here..."
-              class="w-full text-xl leading-relaxed text-slate-800 dark:text-slate-100 placeholder-slate-300 dark:placeholder-slate-600 focus:outline-none bg-transparent min-h-[30px] block resize-none"></textarea>
+              class="w-full text-xl leading-relaxed text-slate-800 dark:text-slate-100 placeholder-slate-300 dark:placeholder-slate-600 focus:outline-none bg-transparent min-h-[30px] block resize-none pr-28"></textarea>
 
-            <div class="absolute -left-12 top-0 bottom-0 flex items-start pt-1.5 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition duration-200">
+            ${buildToolbarHtml('text')}
+
+            <div class="absolute -left-12 top-0 bottom-0 hidden lg:flex items-start pt-1.5 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition duration-200">
                <button type="button" class="remove-block-btn text-slate-300 dark:text-slate-600 hover:text-red-500 bg-white dark:bg-slate-900 p-1 rounded-md" aria-label="Remove block" title="Remove block">
                  <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
                </button>
@@ -339,79 +386,42 @@ src="https://www.facebook.com/tr?id=2092273818327635&ev=PageView&noscript=1"
       function insertLoadedMediaBlock(urlPath, afterNode) {
         // Specifically rebuilds a visual block for already-existing URLs from the db
         const wrapper = createBlockWrapper();
-
-        let mediaHtml = '';
         const ext = urlPath.split('.').pop().toLowerCase();
-        // urlPath is the value saved in the DB, which is already a browser-usable
-        // URL ("/media/filename" for local storage, or a full https:// URL for a
-        // cloud provider) — use it as-is instead of re-prefixing.
         const baseSrc = urlPath;
-
-        if (['mp4', 'webm', 'ogg', 'mov', 'avi', 'mkv', 'wmv'].includes(ext)) {
-          mediaHtml = `<video controls src="${baseSrc}" class="w-full rounded-2xl bg-black max-h-[500px] border border-slate-100 dark:border-slate-800"></video>`;
-        } else if (['mp3', 'wav', 'm4a', 'aac', 'flac', 'oga'].includes(ext)) {
-          mediaHtml = `<audio controls src="${baseSrc}" class="w-full"></audio>`;
-        } else if (ext === 'pdf') {
-          mediaHtml = `<div class="w-full border border-slate-200 dark:border-slate-700 rounded-2xl overflow-hidden relative" style="min-height: 850px; aspect-ratio: 1 / 1.5;">
-              <embed src="${baseSrc}#toolbar=0&view=Fit" type="application/pdf" class="absolute inset-0 w-full h-full" />
-            </div>`;
-        } else if (ext === 'txt') {
-          mediaHtml = `<iframe src="${baseSrc}" class="w-full h-[500px] rounded-2xl border border-slate-200 dark:border-slate-700 bg-white" title="Text preview"></iframe>`;
-        } else if (['png', 'jpg', 'jpeg', 'gif', 'webp'].includes(ext)) {
-          mediaHtml = `<img src="${baseSrc}" class="w-full rounded-2xl object-contain bg-slate-50 dark:bg-slate-800 max-h-[600px] border border-slate-100 dark:border-slate-800" />`;
-        } else {
-          const name = urlPath.split('/').pop();
-          mediaHtml = `<div class="border border-orange-200 dark:border-orange-900 bg-orange-50 dark:bg-orange-950/30 rounded-2xl p-5 flex items-center gap-4 w-full text-orange-700 dark:text-orange-300">
-              <svg class="w-6 h-6 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"></path></svg>
-              <div class="overflow-hidden"><p class="font-medium truncate">${name}</p><p class="text-xs mt-0.5">This file type can't be previewed here, but it will be saved and linked.</p></div>
-            </div>`;
-        }
+        const fileName = urlPath.split('/').pop();
+        const mediaHtml = renderMediaHtml(baseSrc, fileName, ext);
 
         wrapper.innerHTML = `
           <div class="block-item relative" data-type="media" data-saved-path="${urlPath}">
-            <div class="relative flex flex-col items-center justify-center rounded-xl p-0.5">${mediaHtml}</div>
-            <div class="absolute -left-12 top-0 bottom-0 flex items-start pt-1.5 opacity-0 group-hover:opacity-100 transition duration-200 z-10">
+            ${buildToolbarHtml('media')}
+            <input type="file" class="replace-file-input hidden" accept="image/png,image/jpeg,image/gif,image/webp,video/mp4,video/webm,video/ogg,audio/mpeg,audio/wav,audio/mp4,audio/aac,audio/flac,audio/ogg,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation,text/plain">
+            <div class="media-preview-container relative flex flex-col items-center justify-center rounded-xl p-0.5">${mediaHtml}</div>
+            <div class="absolute -left-12 top-0 bottom-0 hidden lg:flex items-start pt-1.5 opacity-0 group-hover:opacity-100 transition duration-200 z-10">
                <button type="button" class="remove-block-btn text-slate-300 dark:text-slate-600 hover:text-red-500 bg-white dark:bg-slate-900 p-1 rounded-md shadow-sm border border-slate-100 dark:border-slate-700" aria-label="Remove block">
                  <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
                </button>
             </div>
           </div>`;
         attachInsertionMenu(wrapper);
-        container.appendChild(wrapper);
+        if (afterNode) afterNode.after(wrapper);
+        else container.appendChild(wrapper);
       }
 
       function insertMediaBlock(file, afterNode) {
         const wrapper = createBlockWrapper();
         const previewUrl = URL.createObjectURL(file);
         const ext = file.name.split('.').pop().toLowerCase();
-        let mediaHtml = '';
-
-        if (['mp4', 'webm', 'ogg', 'mov', 'avi', 'mkv', 'wmv'].includes(ext)) {
-          mediaHtml = `<video controls src="${previewUrl}" class="w-full rounded-2xl bg-black max-h-[500px] border border-slate-200 dark:border-slate-700"></video>`;
-        } else if (['mp3', 'wav', 'm4a', 'aac', 'flac', 'oga'].includes(ext)) {
-          mediaHtml = `<audio controls src="${previewUrl}" class="w-full"></audio>`;
-        } else if (ext === 'pdf') {
-          mediaHtml = `<div class="w-full border border-slate-200 dark:border-slate-700 rounded-2xl overflow-hidden relative" style="min-height: 850px; aspect-ratio: 1 / 1.5;">
-              <embed src="${previewUrl}#toolbar=0&view=Fit" type="application/pdf" class="absolute inset-0 w-full h-full" />
-            </div>`;
-        } else if (ext === 'txt') {
-          mediaHtml = `<iframe src="${previewUrl}" class="w-full h-[500px] rounded-2xl border border-slate-200 dark:border-slate-700 bg-white" title="Text preview"></iframe>`;
-        } else if (['png', 'jpg', 'jpeg', 'gif', 'webp'].includes(ext)) {
-          mediaHtml = `<img src="${previewUrl}" class="w-full rounded-2xl object-contain bg-slate-50 dark:bg-slate-800 max-h-[600px] border border-slate-100 dark:border-slate-800" />`;
-        } else {
-          mediaHtml = `<div class="border border-orange-200 dark:border-orange-900 bg-orange-50 dark:bg-orange-950/30 rounded-2xl p-5 flex items-center gap-4 w-full text-orange-700 dark:text-orange-300">
-              <svg class="w-6 h-6 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"></path></svg>
-              <div class="overflow-hidden"><p class="font-medium truncate">${file.name}</p><p class="text-xs mt-0.5">This file type can't be previewed here, but it will be saved and linked.</p></div>
-            </div>`;
-        }
+        const mediaHtml = renderMediaHtml(previewUrl, file.name, ext);
 
         wrapper.innerHTML = `
           <div class="block-item relative" data-type="media">
-            <div class="relative flex flex-col items-center justify-center rounded-xl p-0.5">
+            ${buildToolbarHtml('media')}
+            <input type="file" class="replace-file-input hidden" accept="image/png,image/jpeg,image/gif,image/webp,video/mp4,video/webm,video/ogg,audio/mpeg,audio/wav,audio/mp4,audio/aac,audio/flac,audio/ogg,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation,text/plain">
+            <div class="media-preview-container relative flex flex-col items-center justify-center rounded-xl p-0.5">
               ${mediaHtml}
-              <p class="text-[11px] text-slate-500 dark:text-slate-400 mt-2 font-mono truncate w-full px-2 w-full text-center">${file.name}</p>
+              <p class="text-[11px] text-slate-500 dark:text-slate-400 mt-2 font-mono truncate w-full px-2 text-center">${file.name}</p>
             </div>
-            <div class="absolute -left-12 top-0 bottom-0 flex items-start pt-1.5 opacity-0 group-hover:opacity-100 transition duration-200 z-10">
+            <div class="absolute -left-12 top-0 bottom-0 hidden lg:flex items-start pt-1.5 opacity-0 group-hover:opacity-100 transition duration-200 z-10">
                <button type="button" class="remove-block-btn text-slate-300 dark:text-slate-600 hover:text-red-500 bg-white dark:bg-slate-900 p-1 rounded-md shadow-sm border border-slate-100 dark:border-slate-700" aria-label="Remove block">
                  <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
                </button>
@@ -456,6 +466,43 @@ src="https://www.facebook.com/tr?id=2092273818327635&ev=PageView&noscript=1"
           return;
         }
 
+        // Reorder: Move Up
+        const moveUpBtn = e.target.closest('.move-block-up-btn');
+        if (moveUpBtn) {
+          const wrapper = moveUpBtn.closest('.group');
+          const prev = wrapper.previousElementSibling;
+          if (prev && prev.classList.contains('group')) {
+            prev.before(wrapper);
+            markDirty();
+            wrapper.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+          }
+          return;
+        }
+
+        // Reorder: Move Down
+        const moveDownBtn = e.target.closest('.move-block-down-btn');
+        if (moveDownBtn) {
+          const wrapper = moveDownBtn.closest('.group');
+          const next = wrapper.nextElementSibling;
+          if (next && next.classList.contains('group')) {
+            next.after(wrapper);
+            markDirty();
+            wrapper.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+          }
+          return;
+        }
+
+        // Replace Media Block
+        const replaceBtn = e.target.closest('.replace-media-btn');
+        if (replaceBtn) {
+          const wrapper = replaceBtn.closest('.group');
+          const replaceInput = wrapper.querySelector('.replace-file-input');
+          if (replaceInput) {
+            replaceInput.click();
+          }
+          return;
+        }
+
         const removeBtn = e.target.closest('.remove-block-btn');
         if (removeBtn) {
           const wrapper = removeBtn.closest('.group');
@@ -481,7 +528,36 @@ src="https://www.facebook.com/tr?id=2092273818327635&ev=PageView&noscript=1"
         }
       });
 
-      const ALLOWED_EXT = ['png', 'jpg', 'jpeg', 'gif', 'webp', 'mp4', 'webm', 'ogg', 'mov', 'avi', 'mkv', 'wmv', 'mp3', 'wav', 'm4a', 'aac', 'flac', 'oga', 'pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'txt'];
+      // Handle replace-file-input changes across all media blocks
+      container.addEventListener('change', (e) => {
+        if (e.target.classList.contains('replace-file-input')) {
+          const file = e.target.files && e.target.files[0];
+          if (!file) return;
+          const fileExt = file.name.split('.').pop().toLowerCase();
+          if (!ALLOWED_EXT.includes(fileExt)) {
+            alert(`"${file.name}" can't be uploaded — unsupported file type.`);
+            e.target.value = '';
+            return;
+          }
+          const wrapper = e.target.closest('.group');
+          const blockItem = wrapper.querySelector('.block-item');
+          const previewContainer = wrapper.querySelector('.media-preview-container');
+          const previewUrl = URL.createObjectURL(file);
+
+          // Update block data for backend payload
+          blockItem.fileData = file;
+          blockItem.removeAttribute('data-saved-path');
+
+          // Re-render preview inside the block
+          const newMediaHtml = renderMediaHtml(previewUrl, file.name, fileExt);
+          previewContainer.innerHTML = `
+            ${newMediaHtml}
+            <p class="text-[11px] text-slate-500 dark:text-slate-400 mt-2 font-mono truncate w-full px-2 text-center">${file.name} (Replaced)</p>
+          `;
+          markDirty();
+        }
+      });
+
       inlineMediaInput.addEventListener('change', (e) => {
         if (e.target.files && e.target.files[0]) {
           const file = e.target.files[0];

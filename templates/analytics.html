@@ -192,11 +192,12 @@ src="https://www.facebook.com/tr?id=2092273818327635&ev=PageView&noscript=1"
             <thead><tr class="text-xs text-slate-400 dark:text-slate-500 uppercase">
               <th class="pb-2">Platform</th><th class="pb-2">Post link</th><th class="pb-2">Likes</th>
               <th class="pb-2">Comments</th><th class="pb-2">Views</th><th class="pb-2">Metrics synced</th>
+              <th class="pb-2 text-right">Action</th>
             </tr></thead>
             <tbody>
               {% for p in s.posts %}
               <tr class="border-t border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50">
-                <td colspan="6" class="py-2">
+                <td colspan="7" class="py-2">
                   <div class="flex items-center justify-between gap-3">
                     <div class="min-w-0">
                       <span class="font-semibold text-slate-700 dark:text-slate-100">{{ p.title }}</span>
@@ -212,10 +213,15 @@ src="https://www.facebook.com/tr?id=2092273818327635&ev=PageView&noscript=1"
                 </td>
               </tr>
               {% for r in p.platforms %}
-              <tr class="border-t border-slate-100 dark:border-slate-800">
+              <tr class="border-t border-slate-100 dark:border-slate-800" data-platform-row="{{ r.platform }}">
                 <td class="py-1.5 pr-2 font-medium text-slate-700 dark:text-slate-300">
-                  {{ r.label }}
-                  <span class="text-[11px] text-slate-400 dark:text-slate-500">{{ r.status }}</span>
+                  <div class="flex items-center gap-1.5 flex-wrap">
+                    <span>{{ r.label }}</span>
+                    <span class="text-[11px] text-slate-400 dark:text-slate-500">{{ r.status }}</span>
+                    {% if r.is_broken %}
+                      <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-red-100 text-red-700 dark:bg-red-950/60 dark:text-red-400">Broken / 404</span>
+                    {% endif %}
+                  </div>
                   {% if r.error %}<div class="text-[11px] text-amber-600 dark:text-amber-400 max-w-[240px]">{{ r.error }}</div>
                   {% elif r.note %}<div class="text-[11px] text-slate-400 dark:text-slate-500 max-w-[240px]">{{ r.note }}</div>{% endif %}
                 </td>
@@ -227,10 +233,28 @@ src="https://www.facebook.com/tr?id=2092273818327635&ev=PageView&noscript=1"
                 <td class="py-1.5 pr-2">{{ r.comments if r.comments is not none else '—' }}</td>
                 <td class="py-1.5 pr-2">{{ r.views if r.views is not none else '—' }}</td>
                 <td class="py-1.5 pr-2 text-[11px] text-slate-400 dark:text-slate-500">{{ r.synced_at if r.synced_at else '—' }}</td>
+                <td class="py-1.5 text-right whitespace-nowrap">
+                  {% if r.is_broken %}
+                    <button type="button"
+                            onclick="disconnectSocial('{{ p.post_id }}', '{{ r.platform }}', '{{ r.label }}', true, this)"
+                            class="text-[11px] font-semibold px-2.5 py-1 rounded-full bg-red-50 text-red-600 hover:bg-red-100 dark:bg-red-950/50 dark:text-red-400 dark:hover:bg-red-900/60 transition inline-flex items-center gap-1 shadow-sm"
+                            title="Remove broken social link from blog and analytics">
+                      <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                      Remove Dead Link
+                    </button>
+                  {% else %}
+                    <button type="button"
+                            onclick="disconnectSocial('{{ p.post_id }}', '{{ r.platform }}', '{{ r.label }}', false, this)"
+                            class="text-[11px] font-medium px-2 py-0.5 rounded text-slate-500 hover:text-red-600 dark:text-slate-400 dark:hover:text-red-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition"
+                            title="Disconnect social link">
+                      Disconnect
+                    </button>
+                  {% endif %}
+                </td>
               </tr>
               {% endfor %}
               {% else %}
-              <tr><td colspan="6" class="py-6 text-center text-sm text-slate-400">
+              <tr><td colspan="7" class="py-6 text-center text-sm text-slate-400">
                 No syndicated posts yet. Syndicate a post to a social platform, then press
                 <span class="font-medium">Refresh all</span>.
               </td></tr>
@@ -303,5 +327,68 @@ src="https://www.facebook.com/tr?id=2092273818327635&ev=PageView&noscript=1"
     </div>
   </main>
   <script src="{{ url_for('static', filename='js/analytics-dashboard.js') }}"></script>
+  <script>
+    function disconnectSocial(postId, platform, label, isBroken, btn) {
+      var promptMsg = isBroken
+        ? "Remove broken " + label + " link from this post? This will grey out the icon on your blog and remove tracking from analytics."
+        : "Disconnect " + label + " link from this post? (Note: If this link is still active on " + label + ", it will only be unlinked from your blog and analytics).";
+
+      if (!confirm(promptMsg)) return;
+
+      var oldText = btn.innerHTML;
+      btn.disabled = true;
+      btn.innerText = "Removing...";
+
+      var fd = new FormData();
+      fd.append("csrf_token", "{{ csrf_token() }}");
+      fd.append("post_id", postId);
+      fd.append("platform", platform);
+      if (isBroken) {
+        fd.append("force", "1");
+      }
+
+      fetch("{{ url_for('api_disconnect_syndication') }}", {
+        method: "POST",
+        body: fd
+      })
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        if (data.status === "guard_warning") {
+          // Option C validation guard: ask confirmation if not yet known broken
+          if (confirm(data.message)) {
+            fd.set("force", "1");
+            return fetch("{{ url_for('api_disconnect_syndication') }}", { method: "POST", body: fd }).then(function(r) { return r.json(); });
+          } else {
+            btn.disabled = false;
+            btn.innerHTML = oldText;
+            return null;
+          }
+        }
+        return data;
+      })
+      .then(function(data) {
+        if (!data) return;
+        if (data.status === "success") {
+          var tr = btn.closest("tr");
+          if (tr) {
+            tr.style.transition = "opacity 0.3s ease";
+            tr.style.opacity = "0";
+            setTimeout(function() {
+              tr.remove();
+            }, 300);
+          }
+        } else {
+          alert(data.message || "Could not disconnect link.");
+          btn.disabled = false;
+          btn.innerHTML = oldText;
+        }
+      })
+      .catch(function(err) {
+        alert("Request failed: " + err);
+        btn.disabled = false;
+        btn.innerHTML = oldText;
+      });
+    }
+  </script>
 </body>
 </html>
