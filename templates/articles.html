@@ -63,6 +63,10 @@ src="https://www.facebook.com/tr?id=2092273818327635&ev=PageView&noscript=1"
           <a href="{{ url_for('articles_dashboard') }}" class="px-3 py-1.5 rounded-full text-brand-600 dark:text-brand-400 bg-brand-50 dark:bg-brand-950/50 transition">Articles</a>
         </div>
         {% if session.get('logged_in') %}
+        <a href="{{ url_for('ai_studio', mode='article') }}" class="text-xs sm:text-sm font-semibold px-2.5 py-1.5 rounded-full text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/50 transition flex items-center gap-1">
+          <svg class="w-3.5 h-3.5 text-indigo-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z"></path></svg>
+          <span>AI Studio</span>
+        </a>
         <a href="{{ url_for('create_article') }}" class="bg-gradient-to-r from-brand-600 to-blue-600 hover:from-brand-700 hover:to-blue-700 text-white font-medium px-4 py-1.5 rounded-full text-sm shadow-sm hover:shadow-md transition flex items-center gap-2">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"></path></svg>
           <span class="hidden sm:inline">New Article</span>

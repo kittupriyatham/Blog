@@ -46,7 +46,7 @@ from flask import (
 )
 from flask_wtf.csrf import CSRFProtect
 
-from core import analytics, content, media, syndication
+from core import ai, analytics, content, media, syndication
 from core.config import (ADMIN_PASSWORD, ADMIN_USERNAME, ANALYTICS_STORE, MEDIA_FOLDER,
                         SECRET_KEY, SITE_URL, UPLOAD_TOKEN, YOUTUBE_CATEGORY, YOUTUBE_VISIBILITY)
 from core.db import Comment, Post, IssueReport, connect_db, ensure_schema
@@ -1053,6 +1053,147 @@ def api_syndication_check():
     s = syndication.get(request.form.get("platform", "linkedin"))
     if not s: return jsonify({"ok": False, "detail": "Unknown platform"}), 404
     return jsonify(s.check())
+
+
+# ---------------------------------------------------------------------------
+# Native In-App AI Studio (Ideation, Conversational Drafting & Formatting)
+# ---------------------------------------------------------------------------
+
+@app.route("/ai_studio", methods=["GET"])
+def ai_studio():
+    if not session.get("logged_in"):
+        return redirect(url_for("login"))
+    mode = request.args.get("mode", "post").strip().lower()
+    if mode not in ("post", "article"):
+        mode = "post"
+    return render_template(
+        "ai_studio.html",
+        initial_mode=mode,
+        syndication_platforms=syndication.available_platforms(kind=mode),
+        ai_available=ai.is_available()
+    )
+
+
+@app.route("/api/ai/studio/chat", methods=["POST"])
+def api_ai_studio_chat():
+    if not session.get("logged_in"):
+        return jsonify({"status": "error", "message": "Unauthorized"}), 401
+    
+    payload = request.get_json(silent=True) or {}
+    mode = payload.get("mode", "post").strip().lower()
+    if mode not in ("post", "article"):
+        mode = "post"
+    messages = payload.get("messages", [])
+    current_draft = payload.get("current_draft")
+
+    result = ai.chat_turn(mode, messages, current_draft)
+    return jsonify({
+        "status": "success",
+        "reply": result.get("reply", ""),
+        "draft": result.get("draft", {})
+    })
+
+
+@app.route("/api/ai/studio/finalize", methods=["POST"])
+def api_ai_studio_finalize():
+    if not session.get("logged_in"):
+        return jsonify({"status": "error", "message": "Unauthorized"}), 401
+    
+    mode = request.form.get("mode", "post").strip().lower()
+    action = request.form.get("action", "draft").strip().lower()
+    try:
+        draft = json.loads(request.form.get("draft", "{}"))
+    except (TypeError, ValueError):
+        return jsonify({"status": "error", "message": "Invalid draft payload"}), 400
+
+    platforms = request.form.getlist("platforms")
+    current_time = content.now_str()
+
+    if mode == "article":
+        title = (draft.get("title") or "Untitled Article").strip()
+        tags = draft.get("tags") or []
+        if isinstance(tags, str):
+            tags = [t.strip() for t in tags.split(",") if t.strip()]
+        
+        raw_blocks = draft.get("blocks") or []
+        blocks = []
+        for b in raw_blocks:
+            if isinstance(b, dict) and b.get("content"):
+                blocks.append({"type": "text", "content": b.get("content").strip()})
+            elif isinstance(b, str) and b.strip():
+                blocks.append({"type": "text", "content": b.strip()})
+        
+        if not blocks and draft.get("body"):
+            blocks.append({"type": "text", "content": draft.get("body").strip()})
+
+        article_id = ("article_" if action == "publish" else "draft_") + media.generate_post_id()
+        doc = {
+            "post_id": article_id,
+            "type": "article",
+            "title": title,
+            "cover_image": None,
+            "blocks": blocks,
+            "tags": tags,
+            "status": "published" if action == "publish" else "draft",
+            "timestamp": current_time,
+            "likes": 0,
+            "views": 0,
+            "shares": 0
+        }
+        posts_collection.insert_one(doc)
+
+        if action == "publish":
+            runner.enqueue_syndication(
+                article_id,
+                content.canonical("article_detail", article_id=article_id),
+                [p for p in platforms if p != "youtube"]
+            )
+            redirect_url = url_for("article_detail", article_id=article_id)
+        else:
+            redirect_url = url_for("edit_article", article_id=article_id)
+
+        return jsonify({
+            "status": "success",
+            "article_id": article_id,
+            "redirect_url": redirect_url
+        })
+
+    else:
+        body = (draft.get("body") or "").strip()
+        tags = draft.get("tags") or []
+        if isinstance(tags, str):
+            tags = [t.strip() for t in tags.split(",") if t.strip()]
+
+        blocks = [{"type": "text", "content": body}] if body else []
+        post_id = ("draft_" if action == "draft" else "") + media.generate_post_id()
+        doc = {
+            "post_id": post_id,
+            "type": "post",
+            "blocks": blocks,
+            "tags": tags,
+            "status": "published" if action == "publish" else "draft",
+            "timestamp": current_time,
+            "likes": 0,
+            "views": 0
+        }
+        posts_collection.insert_one(doc)
+
+        if action == "publish":
+            runner.enqueue_syndication(
+                post_id,
+                content.canonical("post_detail", post_id=post_id),
+                [p for p in platforms if p != "youtube"]
+            )
+            flash("Post published to blog and enqueued for syndication!", "success")
+            redirect_url = url_for("index")
+        else:
+            redirect_url = url_for("edit_post", post_id=post_id)
+
+        return jsonify({
+            "status": "success",
+            "post_id": post_id,
+            "redirect_url": redirect_url
+        })
 
 
 # ---------------------------------------------------------------------------

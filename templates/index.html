@@ -66,6 +66,10 @@ src="https://www.facebook.com/tr?id=2092273818327635&ev=PageView&noscript=1"
         <a href="{{ url_for('articles_dashboard') }}" class="px-3 py-1.5 rounded-full text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition">Articles</a>
         {% if session.get('logged_in') %}
           <div class="flex items-center gap-2">
+            <a href="{{ url_for('ai_studio') }}" class="px-2.5 py-1.5 rounded-full text-indigo-600 dark:text-indigo-400 font-semibold hover:bg-indigo-50 dark:hover:bg-indigo-950/50 transition flex items-center gap-1 text-xs sm:text-sm">
+              <svg class="w-3.5 h-3.5 text-indigo-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z"></path></svg>
+              <span>AI Studio</span>
+            </a>
             <a href="{{ url_for('analytics_dashboard') }}" class="px-2.5 py-1.5 rounded-full text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition">Analytics</a>
             <span class="text-slate-300 dark:text-slate-700 select-none">|</span>
             <form method="POST" action="{{ url_for('logout') }}">
@@ -137,6 +141,13 @@ src="https://www.facebook.com/tr?id=2092273818327635&ev=PageView&noscript=1"
                   <path stroke-linecap="round" stroke-linejoin="round" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z" />
                 </svg>
                 <span>Write article</span>
+              </a>
+              <div class="w-px h-4 bg-slate-200 dark:bg-slate-700"></div>
+              <a href="{{ url_for('ai_studio', mode='post') }}" class="text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 text-sm font-medium flex items-center gap-1.5 transition" title="Draft post with AI">
+                <svg class="w-4 h-4 text-indigo-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z"></path>
+                </svg>
+                <span>Draft with AI</span>
               </a>
             </div>
             <button type="submit" class="bg-gradient-to-r from-brand-600 to-blue-600 hover:from-brand-700 hover:to-blue-700 text-white font-semibold px-5 py-1.5 rounded-full text-sm transition shadow-sm hover:shadow-md">
@@ -482,6 +493,23 @@ src="https://www.facebook.com/tr?id=2092273818327635&ev=PageView&noscript=1"
     // A post needs text only when it carries no video and YouTube is not
     // selected: a video-only post — typically for YouTube — is valid. The server
     // enforces the same rule in create_post().
+    // Hydrate AI drafted post if coming from AI Studio
+    const pendingPostDraft = sessionStorage.getItem('ai_post_draft');
+    if (pendingPostDraft) {
+      try {
+        const parsed = JSON.parse(pendingPostDraft);
+        sessionStorage.removeItem('ai_post_draft');
+        if (parsed.content) {
+          const ta = document.getElementById('post-content');
+          if (ta) ta.value = parsed.content;
+        }
+        if (parsed.tags && parsed.tags.length) {
+          const tagsInput = document.querySelector('input[name="tags"]');
+          if (tagsInput) tagsInput.value = parsed.tags.join(', ');
+        }
+      } catch(e) {}
+    }
+
     const composerForm = document.getElementById('post-content').closest('form');
     if (composerForm) {
       composerForm.addEventListener('submit', function (e) {

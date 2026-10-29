@@ -1,0 +1,702 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Studio — Conversational Drafting & Formatting</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'system-ui', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+          },
+          colors: {
+            brand: { 50:'#eef2ff', 100:'#e0e7ff', 400:'#818cf8', 500:'#6366f1', 600:'#4f46e5', 700:'#4338ca' }
+          }
+        }
+      }
+    };
+    if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  </script>
+  <style>
+    body { font-family: 'Inter', system-ui, sans-serif; }
+    ::-webkit-scrollbar { width: 8px; height: 8px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 9999px; }
+    .dark ::-webkit-scrollbar-thumb { background: #475569; }
+    .chat-scroll { scroll-behavior: smooth; }
+  </style>
+</head>
+<body class="bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-200 min-h-screen flex flex-col antialiased">
+
+  <!-- Top Navigation -->
+  <header class="bg-white/80 dark:bg-slate-900/80 backdrop-blur-lg border-b border-slate-200/70 dark:border-slate-800/70 sticky top-0 z-40">
+    <div class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <a href="{{ url_for('index') }}" class="flex items-center gap-2.5 group">
+          <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-sm group-hover:scale-105 transition-transform">
+            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456z"></path>
+            </svg>
+          </div>
+          <div>
+            <span class="font-bold text-slate-900 dark:text-white text-lg tracking-tight">AI Studio</span>
+            <span class="text-xs bg-indigo-100 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 font-semibold px-2 py-0.5 rounded-full ml-1.5">Co-Author</span>
+          </div>
+        </a>
+      </div>
+
+      <!-- Mode Switcher -->
+      <div class="flex items-center bg-slate-100 dark:bg-slate-800 p-1 rounded-xl text-xs font-semibold">
+        <button id="mode-post-btn" type="button" onclick="setMode('post')" class="px-4 py-1.5 rounded-lg transition shadow-sm bg-white dark:bg-slate-700 text-slate-900 dark:text-white">
+          Micro-Post
+        </button>
+        <button id="mode-article-btn" type="button" onclick="setMode('article')" class="px-4 py-1.5 rounded-lg transition text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white">
+          Long-form Article
+        </button>
+      </div>
+
+      <!-- Quick Links -->
+      <div class="flex items-center gap-2 text-sm">
+        <a href="{{ url_for('index') }}" class="text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white px-3 py-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition">Feed</a>
+        <a href="{{ url_for('articles_dashboard') }}" class="text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white px-3 py-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition">Articles</a>
+        <a href="{{ url_for('create_article') }}" class="text-indigo-600 dark:text-indigo-400 font-medium px-3 py-1.5 rounded-lg hover:bg-indigo-50 dark:hover:bg-indigo-950/50 transition flex items-center gap-1">
+          <span>Editor</span>
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <!-- Workspace Container (2-Column Grid) -->
+  <main class="max-w-7xl mx-auto px-4 py-6 w-full flex-1 grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+    
+    <!-- LEFT COLUMN: Conversational Discussion & Ideation -->
+    <section class="lg:col-span-6 flex flex-col bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden h-[calc(100vh-120px)] min-h-[600px]">
+      
+      <!-- Chat Header -->
+      <div class="px-5 py-3.5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-slate-50/50 dark:bg-slate-900/50">
+        <div class="flex items-center gap-2">
+          <div class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></div>
+          <h2 class="font-semibold text-sm text-slate-800 dark:text-slate-200">Ideation & Refinement Discussion</h2>
+        </div>
+        <button type="button" onclick="clearConversation()" class="text-xs text-slate-400 hover:text-red-500 dark:hover:text-red-400 transition flex items-center gap-1">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+          Reset
+        </button>
+      </div>
+
+      <!-- Messages Stream -->
+      <div id="chat-messages" class="flex-1 p-5 overflow-y-auto space-y-4 chat-scroll">
+        <!-- Assistant Welcome Message -->
+        <div class="flex items-start gap-3">
+          <div class="w-8 h-8 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center flex-shrink-0 text-white font-bold text-xs shadow-sm">
+            AI
+          </div>
+          <div class="flex-1 bg-slate-100 dark:bg-slate-800/80 rounded-2xl rounded-tl-sm px-4 py-3 text-sm text-slate-700 dark:text-slate-300 leading-relaxed shadow-sm">
+            <p class="font-medium text-slate-900 dark:text-white mb-1">What are we building today?</p>
+            <p>Share an initial spark, rough thoughts, or a topic you're exploring. We'll discuss and refine the angles, hook, and structure together, while the live draft on the right updates automatically.</p>
+            <p class="mt-2 text-xs text-slate-500 dark:text-slate-400">💡 <em>Tip: For long-form articles, we draft all headings, explanations, and code blocks. You can manually upload and attach media in the editor once finalized.</em></p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick Prompts / Feedback Chips -->
+      <div class="px-5 pt-2 pb-1 border-t border-slate-100 dark:border-slate-800 bg-slate-50/40 dark:bg-slate-900/40 overflow-x-auto whitespace-nowrap space-x-1.5 text-xs">
+        <button type="button" onclick="sendQuickPrompt('Suggest a stronger, more engaging hook for the opening.')" class="px-3 py-1 rounded-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:border-indigo-500 text-slate-600 dark:text-slate-300 transition">
+          ✨ Stronger hook
+        </button>
+        <button type="button" onclick="sendQuickPrompt('Make it punchier and cut out any fluff or repetition.')" class="px-3 py-1 rounded-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:border-indigo-500 text-slate-600 dark:text-slate-300 transition">
+          ✂️ Make it punchier
+        </button>
+        <button type="button" onclick="sendQuickPrompt('Add clear bullet points highlighting key architectural takeaways.')" class="px-3 py-1 rounded-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:border-indigo-500 text-slate-600 dark:text-slate-300 transition">
+          📋 Key takeaways
+        </button>
+        <button type="button" onclick="sendQuickPrompt('Suggest 3 alternative compelling titles for this.')" class="px-3 py-1 rounded-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:border-indigo-500 text-slate-600 dark:text-slate-300 transition">
+          🏷️ Alternate titles
+        </button>
+      </div>
+
+      <!-- Chat Input Form -->
+      <div class="p-4 bg-white dark:bg-slate-900 border-t border-slate-100 dark:border-slate-800">
+        <form id="chat-form" onsubmit="handleSend(event)" class="relative flex items-end gap-2">
+          <textarea
+            id="chat-input"
+            rows="2"
+            placeholder="Type your idea or feedback... (Press Enter to send, Shift+Enter for newline)"
+            class="flex-1 bg-slate-50 dark:bg-slate-800/90 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 resize-none transition"
+            onkeydown="if(event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); handleSend(event); }"
+          ></textarea>
+          <button
+            id="send-btn"
+            type="submit"
+            class="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-medium p-2.5 rounded-xl transition shadow-sm hover:shadow disabled:opacity-50 flex items-center justify-center flex-shrink-0"
+          >
+            <svg id="send-icon" class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path>
+            </svg>
+            <svg id="send-spinner" class="w-5 h-5 animate-spin hidden" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+          </button>
+        </form>
+      </div>
+    </section>
+
+    <!-- RIGHT COLUMN: Working Draft & Live Actions -->
+    <section class="lg:col-span-6 flex flex-col bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden h-[calc(100vh-120px)] min-h-[600px]">
+      
+      <!-- Draft Header -->
+      <div class="px-5 py-3.5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-slate-50/50 dark:bg-slate-900/50">
+        <div class="flex items-center gap-2">
+          <span class="font-semibold text-sm text-slate-800 dark:text-slate-200">Working Draft</span>
+          <span id="draft-mode-pill" class="text-[11px] font-bold uppercase tracking-wider bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 px-2 py-0.5 rounded-md">
+            POST
+          </span>
+        </div>
+        <div class="flex items-center gap-3 text-xs text-slate-400">
+          <span id="word-count">0 words</span>
+          <span>•</span>
+          <span id="char-count">0 chars</span>
+          <button type="button" onclick="copyDraft()" class="hover:text-indigo-600 dark:hover:text-indigo-400 transition font-medium ml-1">
+            Copy
+          </button>
+        </div>
+      </div>
+
+      <!-- Draft Body Content Area -->
+      <div class="flex-1 p-5 overflow-y-auto space-y-4">
+
+        <!-- ARTICLE VIEW: Title & Tags -->
+        <div id="article-fields" class="hidden space-y-3">
+          <div>
+            <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1">Article Title</label>
+            <input
+              id="draft-title"
+              type="text"
+              placeholder="Article title will generate here..."
+              class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white font-bold text-lg rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 transition"
+              oninput="syncStats()"
+            />
+          </div>
+          <div class="bg-indigo-50/60 dark:bg-indigo-950/30 border border-indigo-100 dark:border-indigo-900/50 rounded-xl p-3 flex items-start gap-2.5 text-xs text-indigo-700 dark:text-indigo-300">
+            <svg class="w-4 h-4 flex-shrink-0 mt-0.5 text-indigo-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+            <div>
+              <strong>Text & Headings:</strong> The AI drafts all text blocks, headers, code, and takeaways. When you click <strong>Open in Editor</strong>, you can manually upload images, add media blocks, and configure YouTube embeds.
+            </div>
+          </div>
+        </div>
+
+        <!-- POST VIEW: Body Textarea -->
+        <div id="post-fields" class="space-y-3">
+          <div>
+            <div class="flex items-center justify-between mb-1">
+              <label class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Post Body</label>
+              <span id="x-limit" class="text-xs text-slate-400">0 / 280 (X)</span>
+            </div>
+            <textarea
+              id="draft-body"
+              rows="9"
+              placeholder="Drafted post text will appear here. You can also edit it directly..."
+              class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 resize-y transition leading-relaxed"
+              oninput="syncStats()"
+            ></textarea>
+          </div>
+        </div>
+
+        <!-- Tags Input (Both Modes) -->
+        <div>
+          <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1">Tags (Comma-separated)</label>
+          <input
+            id="draft-tags"
+            type="text"
+            placeholder="e.g. WebDev, Architecture, POSSE"
+            class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 transition"
+          />
+        </div>
+
+        <!-- ARTICLE BLOCKS CONTAINER -->
+        <div id="article-blocks-container" class="hidden space-y-3 pt-2">
+          <div class="flex items-center justify-between">
+            <label class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Drafted Text & Heading Blocks</label>
+            <span id="blocks-count-pill" class="text-xs font-semibold px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">0 blocks</span>
+          </div>
+          <div id="blocks-list" class="space-y-3">
+            <div class="text-center py-8 text-sm text-slate-400 border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-xl">
+              No blocks yet. Share your initial idea in the chat to begin drafting!
+            </div>
+          </div>
+        </div>
+
+        <!-- POST PREVIEW CARD -->
+        <div id="post-card-preview" class="pt-2">
+          <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">Feed Preview</label>
+          <div class="border border-slate-200 dark:border-slate-800 rounded-2xl p-4 bg-slate-50/60 dark:bg-slate-900/60">
+            <div class="flex items-center gap-3 mb-2.5">
+              <div class="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-bold text-xs shadow-sm">
+                K
+              </div>
+              <div>
+                <p class="text-xs font-bold text-slate-900 dark:text-white">Krishna Priyatham</p>
+                <p class="text-[10px] text-slate-400">Just now • Live AI Draft</p>
+              </div>
+            </div>
+            <div id="preview-text" class="text-sm text-slate-800 dark:text-slate-200 leading-relaxed whitespace-pre-wrap">
+              Your generated draft will be previewed here.
+            </div>
+            <div id="preview-tags" class="flex flex-wrap gap-1.5 mt-3"></div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Action Toolbar (Bottom of Right Column) -->
+      <div class="p-4 bg-slate-50/80 dark:bg-slate-900/80 border-t border-slate-100 dark:border-slate-800 flex flex-wrap items-center justify-between gap-3">
+        <div class="flex items-center gap-2">
+          <input type="hidden" id="csrf-token" value="{{ csrf_token() }}">
+          <button
+            type="button"
+            onclick="clearDraft()"
+            class="text-xs font-medium text-slate-500 hover:text-red-500 dark:hover:text-red-400 px-3 py-2 rounded-xl transition"
+          >
+            Clear Draft
+          </button>
+        </div>
+
+        <!-- Mode-Specific Action Buttons -->
+        <div class="flex items-center gap-2">
+          <!-- In Article Mode -->
+          <button
+            id="article-edit-btn"
+            type="button"
+            onclick="openInArticleEditor()"
+            class="hidden bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 font-semibold px-4 py-2 rounded-xl text-xs transition flex items-center gap-1.5 shadow-sm"
+          >
+            <svg class="w-4 h-4 text-indigo-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
+            <span>Open in Editor (Add Media)</span>
+          </button>
+          <button
+            id="article-draft-btn"
+            type="button"
+            onclick="finalizeDraft('draft')"
+            class="hidden bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-semibold px-4 py-2 rounded-xl text-xs transition shadow-sm hover:shadow flex items-center gap-1.5"
+          >
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"></path></svg>
+            <span>Save as Draft</span>
+          </button>
+
+          <!-- In Post Mode -->
+          <button
+            id="post-edit-btn"
+            type="button"
+            onclick="openInPostComposer()"
+            class="bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 font-semibold px-4 py-2 rounded-xl text-xs transition flex items-center gap-1.5 shadow-sm"
+          >
+            <svg class="w-4 h-4 text-indigo-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
+            <span>Open in Composer</span>
+          </button>
+          <button
+            id="post-publish-btn"
+            type="button"
+            onclick="finalizeDraft('publish')"
+            class="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-semibold px-5 py-2 rounded-xl text-xs transition shadow-sm hover:shadow flex items-center gap-1.5"
+          >
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13 5l7 7-7 7M5 5l7 7-7 7"></path></svg>
+            <span>Post to Blog</span>
+          </button>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <script>
+    // State
+    let currentMode = '{{ initial_mode or "post" }}';
+    let conversation = [];
+    let currentDraft = {
+      title: '',
+      body: '',
+      tags: [],
+      blocks: []
+    };
+    let isGenerating = false;
+
+    // DOM Elements
+    const chatMessagesEl = document.getElementById('chat-messages');
+    const chatInputEl = document.getElementById('chat-input');
+    const sendBtnEl = document.getElementById('send-btn');
+    const sendIconEl = document.getElementById('send-icon');
+    const sendSpinnerEl = document.getElementById('send-spinner');
+    const draftTitleEl = document.getElementById('draft-title');
+    const draftBodyEl = document.getElementById('draft-body');
+    const draftTagsEl = document.getElementById('draft-tags');
+    const previewTextEl = document.getElementById('preview-text');
+    const previewTagsEl = document.getElementById('preview-tags');
+    const wordCountEl = document.getElementById('word-count');
+    const charCountEl = document.getElementById('char-count');
+    const xLimitEl = document.getElementById('x-limit');
+    const blocksListEl = document.getElementById('blocks-list');
+    const blocksCountPillEl = document.getElementById('blocks-count-pill');
+
+    function setMode(mode) {
+      currentMode = mode;
+      const postBtn = document.getElementById('mode-post-btn');
+      const articleBtn = document.getElementById('mode-article-btn');
+      const draftModePill = document.getElementById('draft-mode-pill');
+      const postFields = document.getElementById('post-fields');
+      const articleFields = document.getElementById('article-fields');
+      const postPreview = document.getElementById('post-card-preview');
+      const articleBlocks = document.getElementById('article-blocks-container');
+
+      const articleEditBtn = document.getElementById('article-edit-btn');
+      const articleDraftBtn = document.getElementById('article-draft-btn');
+      const postEditBtn = document.getElementById('post-edit-btn');
+      const postPublishBtn = document.getElementById('post-publish-btn');
+
+      if (mode === 'article') {
+        articleBtn.className = 'px-4 py-1.5 rounded-lg transition shadow-sm bg-white dark:bg-slate-700 text-slate-900 dark:text-white';
+        postBtn.className = 'px-4 py-1.5 rounded-lg transition text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white';
+        draftModePill.textContent = 'ARTICLE';
+        postFields.classList.add('hidden');
+        postPreview.classList.add('hidden');
+        articleFields.classList.remove('hidden');
+        articleBlocks.classList.remove('hidden');
+
+        articleEditBtn.classList.remove('hidden');
+        articleDraftBtn.classList.remove('hidden');
+        postEditBtn.classList.add('hidden');
+        postPublishBtn.classList.add('hidden');
+      } else {
+        postBtn.className = 'px-4 py-1.5 rounded-lg transition shadow-sm bg-white dark:bg-slate-700 text-slate-900 dark:text-white';
+        articleBtn.className = 'px-4 py-1.5 rounded-lg transition text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white';
+        draftModePill.textContent = 'POST';
+        postFields.classList.remove('hidden');
+        postPreview.classList.remove('hidden');
+        articleFields.classList.add('hidden');
+        articleBlocks.classList.add('hidden');
+
+        articleEditBtn.classList.add('hidden');
+        articleDraftBtn.classList.add('hidden');
+        postEditBtn.classList.remove('hidden');
+        postPublishBtn.classList.remove('hidden');
+      }
+      syncStats();
+    }
+
+    function syncStats() {
+      if (currentMode === 'post') {
+        const text = draftBodyEl.value;
+        const words = text.trim() ? text.trim().split(/\s+/).length : 0;
+        const chars = text.length;
+        wordCountEl.textContent = `${words} words`;
+        charCountEl.textContent = `${chars} chars`;
+        xLimitEl.textContent = `${chars} / 280 (X)`;
+        xLimitEl.className = chars > 280 ? 'text-xs text-amber-500 font-semibold' : 'text-xs text-slate-400';
+        previewTextEl.textContent = text || 'Your generated draft will be previewed here.';
+
+        const tags = draftTagsEl.value.split(',').map(t => t.trim()).filter(Boolean);
+        previewTagsEl.innerHTML = tags.map(t => `<span class="bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 text-xs px-2 py-0.5 rounded-md font-medium">#${t}</span>`).join('');
+      } else {
+        const title = draftTitleEl.value;
+        let totalWords = title.trim() ? title.trim().split(/\s+/).length : 0;
+        let totalChars = title.length;
+        if (currentDraft.blocks) {
+          currentDraft.blocks.forEach(b => {
+            const c = b.content || '';
+            totalChars += c.length;
+            if (c.trim()) totalWords += c.trim().split(/\s+/).length;
+          });
+        }
+        wordCountEl.textContent = `${totalWords} words`;
+        charCountEl.textContent = `${totalChars} chars`;
+      }
+    }
+
+    function renderBlocks() {
+      const blocks = currentDraft.blocks || [];
+      blocksCountPillEl.textContent = `${blocks.length} block${blocks.length === 1 ? '' : 's'}`;
+      if (blocks.length === 0) {
+        blocksListEl.innerHTML = `
+          <div class="text-center py-8 text-sm text-slate-400 border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-xl">
+            No blocks yet. Share your initial idea in the chat to begin drafting!
+          </div>`;
+        return;
+      }
+
+      blocksListEl.innerHTML = blocks.map((block, idx) => {
+        const isHeading = block.content.trim().startsWith('#');
+        return `
+          <div class="border border-slate-200 dark:border-slate-800 rounded-xl p-3.5 bg-slate-50/50 dark:bg-slate-800/40 relative group">
+            <div class="flex items-center justify-between mb-1.5 text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
+              <span>${isHeading ? 'Heading Block' : 'Text Block'} #${idx + 1}</span>
+              <button type="button" onclick="deleteBlock(${idx})" class="opacity-0 group-hover:opacity-100 hover:text-red-500 transition">Remove</button>
+            </div>
+            <textarea
+              class="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg p-2.5 text-xs text-slate-800 dark:text-slate-200 font-mono focus:outline-none focus:ring-1 focus:ring-indigo-500 resize-y"
+              rows="${Math.max(2, Math.min(8, block.content.split('\n').length + 1))}"
+              onchange="updateBlockContent(${idx}, this.value)"
+            >${escapeHtml(block.content)}</textarea>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function escapeHtml(str) {
+      if (!str) return '';
+      return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+    }
+
+    function updateBlockContent(idx, value) {
+      if (currentDraft.blocks && currentDraft.blocks[idx]) {
+        currentDraft.blocks[idx].content = value;
+        syncStats();
+      }
+    }
+
+    function deleteBlock(idx) {
+      if (currentDraft.blocks) {
+        currentDraft.blocks.splice(idx, 1);
+        renderBlocks();
+        syncStats();
+      }
+    }
+
+    function appendMessage(role, text) {
+      const isUser = role === 'user';
+      const msgDiv = document.createElement('div');
+      msgDiv.className = 'flex items-start gap-3 ' + (isUser ? 'flex-row-reverse' : '');
+
+      const avatar = document.createElement('div');
+      avatar.className = `w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 text-white font-bold text-xs shadow-sm ${isUser ? 'bg-gradient-to-br from-slate-600 to-slate-800' : 'bg-gradient-to-br from-indigo-500 to-purple-600'}`;
+      avatar.textContent = isUser ? 'You' : 'AI';
+
+      const bubble = document.createElement('div');
+      bubble.className = `flex-1 rounded-2xl px-4 py-3 text-sm leading-relaxed shadow-sm ${isUser ? 'bg-indigo-600 text-white rounded-tr-sm ml-12' : 'bg-slate-100 dark:bg-slate-800/80 text-slate-700 dark:text-slate-300 rounded-tl-sm mr-12'}`;
+      bubble.innerHTML = text.replace(/\n/g, '<br/>');
+
+      msgDiv.appendChild(avatar);
+      msgDiv.appendChild(bubble);
+      chatMessagesEl.appendChild(msgDiv);
+      chatMessagesEl.scrollTop = chatMessagesEl.scrollHeight;
+    }
+
+    function sendQuickPrompt(promptText) {
+      chatInputEl.value = promptText;
+      handleSend();
+    }
+
+    async function handleSend(e) {
+      if (e) e.preventDefault();
+      const text = chatInputEl.value.trim();
+      if (!text || isGenerating) return;
+
+      chatInputEl.value = '';
+      appendMessage('user', text);
+      conversation.push({ role: 'user', content: text });
+
+      // Gather current draft state to inform the AI
+      if (currentMode === 'post') {
+        currentDraft.body = draftBodyEl.value;
+      } else {
+        currentDraft.title = draftTitleEl.value;
+      }
+      currentDraft.tags = draftTagsEl.value.split(',').map(t => t.trim()).filter(Boolean);
+
+      // Loading state
+      isGenerating = true;
+      sendBtnEl.disabled = true;
+      sendIconEl.classList.add('hidden');
+      sendSpinnerEl.classList.remove('hidden');
+
+      try {
+        const resp = await fetch('{{ url_for("api_ai_studio_chat") }}', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': document.getElementById('csrf-token').value
+          },
+          body: JSON.stringify({
+            mode: currentMode,
+            messages: conversation,
+            current_draft: currentDraft
+          })
+        });
+
+        const data = await resp.json();
+        if (data.status === 'error') {
+          appendMessage('model', `⚠️ Error: ${data.message || 'Something went wrong.'}`);
+        } else {
+          appendMessage('model', data.reply || 'Here is the updated draft.');
+          conversation.push({ role: 'assistant', content: data.reply });
+
+          // Apply returned draft
+          if (data.draft) {
+            if (data.draft.title) {
+              draftTitleEl.value = data.draft.title;
+              currentDraft.title = data.draft.title;
+            }
+            if (data.draft.body) {
+              draftBodyEl.value = data.draft.body;
+              currentDraft.body = data.draft.body;
+            }
+            if (data.draft.tags && data.draft.tags.length) {
+              draftTagsEl.value = data.draft.tags.join(', ');
+              currentDraft.tags = data.draft.tags;
+            }
+            if (data.draft.blocks && data.draft.blocks.length) {
+              currentDraft.blocks = data.draft.blocks;
+              renderBlocks();
+            }
+            syncStats();
+          }
+        }
+      } catch (err) {
+        appendMessage('model', `⚠️ Network error: ${err.message}`);
+      } finally {
+        isGenerating = false;
+        sendBtnEl.disabled = false;
+        sendIconEl.classList.remove('hidden');
+        sendSpinnerEl.classList.add('hidden');
+        chatInputEl.focus();
+      }
+    }
+
+    function clearConversation() {
+      if (confirm('Reset conversation and start fresh?')) {
+        conversation = [];
+        chatMessagesEl.innerHTML = `
+          <div class="flex items-start gap-3">
+            <div class="w-8 h-8 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center flex-shrink-0 text-white font-bold text-xs shadow-sm">
+              AI
+            </div>
+            <div class="flex-1 bg-slate-100 dark:bg-slate-800/80 rounded-2xl rounded-tl-sm px-4 py-3 text-sm text-slate-700 dark:text-slate-300 leading-relaxed shadow-sm">
+              <p class="font-medium text-slate-900 dark:text-white mb-1">New conversation started.</p>
+              <p>Share your idea, thesis, or notes to get started!</p>
+            </div>
+          </div>
+        `;
+      }
+    }
+
+    function clearDraft() {
+      if (confirm('Clear working draft content?')) {
+        currentDraft = { title: '', body: '', tags: [], blocks: [] };
+        draftTitleEl.value = '';
+        draftBodyEl.value = '';
+        draftTagsEl.value = '';
+        renderBlocks();
+        syncStats();
+      }
+    }
+
+    function copyDraft() {
+      let contentToCopy = '';
+      if (currentMode === 'post') {
+        contentToCopy = draftBodyEl.value;
+        const tags = draftTagsEl.value.trim();
+        if (tags) contentToCopy += '\n\n' + tags.split(',').map(t => '#' + t.trim()).join(' ');
+      } else {
+        contentToCopy = `# ${draftTitleEl.value}\n\n`;
+        if (currentDraft.blocks) {
+          contentToCopy += currentDraft.blocks.map(b => b.content).join('\n\n');
+        }
+      }
+      navigator.clipboard.writeText(contentToCopy).then(() => {
+        alert('Draft copied to clipboard!');
+      });
+    }
+
+    // Navigation & Finalization actions
+    function openInArticleEditor() {
+      const payload = {
+        title: draftTitleEl.value.trim() || 'Untitled Article',
+        tags: draftTagsEl.value.split(',').map(t => t.trim()).filter(Boolean),
+        blocks: currentDraft.blocks || []
+      };
+      if (payload.blocks.length === 0 && draftBodyEl.value.trim()) {
+        payload.blocks = [{ type: 'text', content: draftBodyEl.value.trim() }];
+      }
+      sessionStorage.setItem('ai_article_draft', JSON.stringify(payload));
+      window.location.href = '{{ url_for("create_article") }}';
+    }
+
+    function openInPostComposer() {
+      const payload = {
+        content: draftBodyEl.value.trim(),
+        tags: draftTagsEl.value.split(',').map(t => t.trim()).filter(Boolean)
+      };
+      sessionStorage.setItem('ai_post_draft', JSON.stringify(payload));
+      window.location.href = '{{ url_for("create_post") }}';
+    }
+
+    async function finalizeDraft(action) {
+      const isArticle = currentMode === 'article';
+      const draftPayload = {
+        title: draftTitleEl.value.trim(),
+        body: draftBodyEl.value.trim(),
+        tags: draftTagsEl.value.split(',').map(t => t.trim()).filter(Boolean),
+        blocks: currentDraft.blocks || []
+      };
+
+      if (isArticle && !draftPayload.title) {
+        alert('Please give your article a title before saving.');
+        draftTitleEl.focus();
+        return;
+      }
+      if (!isArticle && !draftPayload.body) {
+        alert('Please provide post body text before posting.');
+        draftBodyEl.focus();
+        return;
+      }
+
+      const confirmMsg = action === 'publish'
+        ? (isArticle ? 'Publish this article to your blog?' : 'Publish this post to your blog feed?')
+        : 'Save this article as a draft?';
+
+      if (!confirm(confirmMsg)) return;
+
+      try {
+        const formData = new FormData();
+        formData.append('mode', currentMode);
+        formData.append('action', action);
+        formData.append('draft', JSON.stringify(draftPayload));
+
+        const resp = await fetch('{{ url_for("api_ai_studio_finalize") }}', {
+          method: 'POST',
+          headers: {
+            'X-CSRFToken': document.getElementById('csrf-token').value
+          },
+          body: formData
+        });
+
+        const data = await resp.json();
+        if (data.status === 'success' && data.redirect_url) {
+          window.location.href = data.redirect_url;
+        } else {
+          alert('Error saving: ' + (data.message || 'Unknown error'));
+        }
+      } catch (err) {
+        alert('Failed to save draft: ' + err.message);
+      }
+    }
+
+    // Initialize on load
+    document.addEventListener('DOMContentLoaded', () => {
+      setMode('{{ initial_mode or "post" }}');
+    });
+  </script>
+</body>
+</html>

@@ -66,6 +66,10 @@ src="https://www.facebook.com/tr?id=2092273818327635&ev=PageView&noscript=1"
           </div>
         </div>
         <div class="flex items-center gap-3">
+          <a href="{{ url_for('ai_studio', mode='article') }}" class="text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/60 font-medium px-3.5 py-1.5 rounded-full text-xs transition flex items-center gap-1.5 shadow-sm" title="Draft & Brainstorm with AI">
+            <svg class="w-3.5 h-3.5 text-indigo-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z"></path></svg>
+            <span>AI Draft</span>
+          </a>
           <button type="button" data-theme-toggle onclick="toggleTheme()" class="p-2 rounded-full text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition" title="Toggle theme" aria-label="Toggle theme">
             <svg data-icon-moon class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>
             <svg data-icon-sun class="w-5 h-5 hidden" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path stroke-linecap="round" d="M12 2v2m0 16v2M4.93 4.93l1.41 1.41m11.32 11.32l1.41 1.41M2 12h2m16 0h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
@@ -436,6 +440,7 @@ src="https://www.facebook.com/tr?id=2092273818327635&ev=PageView&noscript=1"
       }
     
       // --- Execute Hydration on Load ---
+      const pendingAiDraft = sessionStorage.getItem('ai_article_draft');
       if (existingBlocks && existingBlocks.length > 0) {
         existingBlocks.forEach(block => {
           if (block.type === 'text') {
@@ -448,6 +453,30 @@ src="https://www.facebook.com/tr?id=2092273818327635&ev=PageView&noscript=1"
         saveStatus.innerText = 'All changes saved locally';
         saveStatus.classList.remove('text-orange-400');
         saveStatus.classList.add('text-gray-400');
+      } else if (pendingAiDraft) {
+        try {
+          const parsed = JSON.parse(pendingAiDraft);
+          sessionStorage.removeItem('ai_article_draft');
+          if (parsed.title) {
+            const titleEl = document.querySelector('input[name="title"]');
+            if (titleEl) titleEl.value = parsed.title;
+          }
+          if (parsed.tags && parsed.tags.length) {
+            const tagsEl = document.querySelector('input[name="tags"]');
+            if (tagsEl) tagsEl.value = parsed.tags.join(', ');
+          }
+          if (parsed.blocks && parsed.blocks.length > 0) {
+            parsed.blocks.forEach(b => {
+              if (b.type === 'text') insertTextBlock(null, b.content);
+            });
+          } else {
+            insertTextBlock(null);
+          }
+          markDirty();
+        } catch(e) {
+          insertTextBlock(null);
+          isDirty = false;
+        }
       } else {
         insertTextBlock(null);
         isDirty = false;
