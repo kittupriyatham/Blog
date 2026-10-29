@@ -199,6 +199,13 @@ src="https://www.facebook.com/tr?id=2092273818327635&ev=PageView&noscript=1"
                     class="text-xs px-3 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition">
               Medium Importer Fallback
             </button>
+            <button type="button"
+                    onclick="promptLinkPlatform('{{ post.post_id }}', 'medium')"
+                    class="inline-flex items-center gap-1.5 text-xs px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 font-medium transition cursor-pointer"
+                    title="Confirm and attach the published Medium story URL">
+              <svg class="w-3.5 h-3.5 text-slate-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/></svg>
+              <span>Link Published Story</span>
+            </button>
           </div>
           {% for s in post.syndications if s.status != 'posted' %}
             <div class="mt-2 px-3 py-2 rounded-lg text-xs bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300">

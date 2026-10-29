@@ -1447,6 +1447,60 @@ def api_disconnect_syndication():
     })
 
 
+@app.route("/api/syndication/link_external", methods=["POST"])
+def api_link_external_syndication():
+    """Manually link or confirm a published syndication URL (e.g. Medium, LinkedIn, Dev.to).
+
+    Adds or updates `post.syndications` with status='posted' and the provided URL,
+    lighting up the platform icon on the blog and enabling click tracking and analytics.
+    """
+    if not session.get("logged_in"):
+        return jsonify({"status": "error", "message": "Unauthorized"}), 401
+
+    post_id = (request.form.get("post_id") or (request.get_json(silent=True) or {}).get("post_id") or "").strip()
+    platform = (request.form.get("platform") or (request.get_json(silent=True) or {}).get("platform") or "medium").strip().lower()
+    url = (request.form.get("url") or (request.get_json(silent=True) or {}).get("url") or "").strip()
+
+    if not post_id or not url:
+        return jsonify({"status": "error", "message": "Missing post_id or url"}), 400
+
+    if not (url.startswith("http://") or url.startswith("https://")):
+        return jsonify({"status": "error", "message": "Please enter a valid URL starting with http:// or https://"}), 400
+
+    doc = posts_collection.find_one({"post_id": post_id})
+    if not doc:
+        return jsonify({"status": "error", "message": "Post not found"}), 404
+
+    label = syndication.label_for(platform) or platform.capitalize()
+    new_entry = {
+        "platform": platform,
+        "label": label,
+        "url": url,
+        "status": "posted",
+        "posted_at": content.now_str(),
+        "error": None,
+    }
+
+    # Remove existing syndication for this platform if present, then push the new entry
+    posts_collection.update_one(
+        {"post_id": post_id},
+        {"$pull": {"syndications": {"platform": platform}}}
+    )
+    posts_collection.update_one(
+        {"post_id": post_id},
+        {
+            "$push": {"syndications": new_entry},
+            "$unset": {f"platform_metrics.{platform}": ""}
+        }
+    )
+
+    return jsonify({
+        "status": "success",
+        "message": f"Successfully linked {label} URL to this post.",
+        "syndication": new_entry
+    })
+
+
 @app.route("/delete/<post_id>", methods=["POST"])
 def delete_post(post_id):
     if not session.get("logged_in"): abort(401)

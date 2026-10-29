@@ -90,9 +90,9 @@ else 'text-xs text-slate-500 dark:text-slate-400' %}
   </div>
   {% if session.get('logged_in') and not _compact %}
     {% set _syndicated = (post.syndications or []) | selectattr('url') | list %}
-    {% if _syndicated %}
-      <div class="mt-2.5 flex items-center gap-2 flex-wrap text-xs text-slate-500">
-        <span class="font-medium text-slate-400 dark:text-slate-500 text-[11px]">Syndicated links:</span>
+    <div class="mt-2.5 flex items-center gap-2 flex-wrap text-xs text-slate-500">
+      {% if _syndicated %}
+        <span class="font-medium text-slate-400 dark:text-slate-500 text-[11px]">Syndicated:</span>
         {% for s in _syndicated %}
           {% set _is_broken = s.get('is_broken') or ('404' in (s.get('error') or '')|lower) or ('not found' in (s.get('error') or '')|lower) or ('revoked' in (s.get('error') or '')|lower) %}
           <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/60 text-[11px]">
@@ -105,9 +105,41 @@ else 'text-xs text-slate-500 dark:text-slate-400' %}
             {% endif %}
           </span>
         {% endfor %}
-      </div>
-      <script>
-      if (!window.disconnectSocial) {
+      {% endif %}
+      <button type="button" onclick="promptLinkPlatform('{{ post.post_id }}', 'medium')" class="text-brand-600 dark:text-brand-400 hover:underline text-[11px] font-semibold inline-flex items-center gap-1 cursor-pointer" title="Link or confirm a published story/post URL">
+        <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/></svg>
+        <span>+ Link Story URL</span>
+      </button>
+    </div>
+    <script>
+    if (!window.promptLinkPlatform) {
+      window.promptLinkPlatform = async function(postId, defaultPlatform = 'medium') {
+        const platform = prompt('Platform to link (medium, linkedin, twitter, facebook, etc.):', defaultPlatform);
+        if (!platform) return;
+        const url = prompt(`Paste the live, published URL for ${platform.toUpperCase()}:`);
+        if (!url) return;
+
+        try {
+          const res = await fetch('/api/syndication/link_external', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'X-CSRFToken': '{{ csrf_token() }}'
+            },
+            body: JSON.stringify({ post_id: postId, platform: platform.trim().toLowerCase(), url: url.trim(), csrf_token: '{{ csrf_token() }}' })
+          });
+          const data = await res.json();
+          if (!res.ok || data.status !== 'success') {
+            alert('Error: ' + (data.message || 'Failed to link URL'));
+            return;
+          }
+          location.reload();
+        } catch (err) {
+          alert('Network error: ' + err.message);
+        }
+      };
+    }
+    if (!window.disconnectSocial) {
         window.disconnectSocial = async function(postId, platform, isBroken, force = false) {
           if (!isBroken && !force) {
             const ok = confirm(`Are you sure you want to disconnect ${platform.toUpperCase()} from this post?\n\nThis will remove the syndication link from your blog, grey out the icon, and delete tracking and analytics for this link.`);
