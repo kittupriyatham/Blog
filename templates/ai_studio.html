@@ -266,6 +266,7 @@
       <div class="p-4 bg-slate-50/80 dark:bg-slate-900/80 border-t border-slate-100 dark:border-slate-800 flex flex-wrap items-center justify-between gap-3">
         <div class="flex items-center gap-2">
           <input type="hidden" id="csrf-token" value="{{ csrf_token() }}">
+          <input type="hidden" id="existing-id" value="{{ existing_id or "" }}">
           <button
             type="button"
             onclick="clearDraft()"
@@ -324,6 +325,8 @@
 
   <script>
     // State
+    const serverDraft = {{ (initial_draft if initial_draft else None) | tojson }};
+    const existingDocId = {{ (existing_id if existing_id else None) | tojson }};
     let currentMode = '{{ initial_mode or "post" }}';
     let conversation = [];
     let currentDraft = {
@@ -621,6 +624,7 @@
 
     // Navigation & Finalization actions
     function openInArticleEditor() {
+      const existingIdVal = document.getElementById('existing-id').value;
       const payload = {
         title: draftTitleEl.value.trim() || 'Untitled Article',
         tags: draftTagsEl.value.split(',').map(t => t.trim()).filter(Boolean),
@@ -630,16 +634,25 @@
         payload.blocks = [{ type: 'text', content: draftBodyEl.value.trim() }];
       }
       sessionStorage.setItem('ai_article_draft', JSON.stringify(payload));
-      window.location.href = '{{ url_for("create_article") }}';
+      if (existingIdVal && (existingIdVal.startsWith('article_') || existingIdVal.startsWith('draft_'))) {
+        window.location.href = '/edit_article/' + existingIdVal;
+      } else {
+        window.location.href = '{{ url_for("create_article") }}';
+      }
     }
 
     function openInPostComposer() {
+      const existingIdVal = document.getElementById('existing-id').value;
       const payload = {
         content: draftBodyEl.value.trim(),
         tags: draftTagsEl.value.split(',').map(t => t.trim()).filter(Boolean)
       };
       sessionStorage.setItem('ai_post_draft', JSON.stringify(payload));
-      window.location.href = '{{ url_for("create_post") }}';
+      if (existingIdVal) {
+        window.location.href = '/edit_post/' + existingIdVal;
+      } else {
+        window.location.href = '{{ url_for("create_post") }}';
+      }
     }
 
     async function finalizeDraft(action) {
@@ -673,6 +686,10 @@
         formData.append('mode', currentMode);
         formData.append('action', action);
         formData.append('draft', JSON.stringify(draftPayload));
+        const existingIdVal = document.getElementById('existing-id').value;
+        if (existingIdVal) {
+          formData.append('existing_id', existingIdVal);
+        }
 
         const resp = await fetch('{{ url_for("api_ai_studio_finalize") }}', {
           method: 'POST',
@@ -696,6 +713,77 @@
     // Initialize on load
     document.addEventListener('DOMContentLoaded', () => {
       setMode('{{ initial_mode or "post" }}');
+
+      if (serverDraft) {
+        currentDraft = serverDraft;
+        if (currentDraft.title) draftTitleEl.value = currentDraft.title;
+        if (currentDraft.body) draftBodyEl.value = currentDraft.body;
+        if (currentDraft.tags && currentDraft.tags.length) draftTagsEl.value = currentDraft.tags.join(', ');
+        if (currentDraft.blocks && currentDraft.blocks.length) renderBlocks();
+        syncStats();
+
+        const previewName = currentDraft.title || (currentDraft.body ? currentDraft.body.slice(0, 50) + '...' : 'Loaded Draft');
+        const countInfo = currentMode === 'article'
+          ? (currentDraft.blocks ? currentDraft.blocks.length : 0) + ' text blocks'
+          : (currentDraft.body ? currentDraft.body.length : 0) + ' characters';
+
+        chatMessagesEl.innerHTML = `
+          <div class="flex items-start gap-3">
+            <div class="w-8 h-8 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center flex-shrink-0 text-white font-bold text-xs shadow-sm">
+              AI
+            </div>
+            <div class="flex-1 bg-slate-100 dark:bg-slate-800/80 rounded-2xl rounded-tl-sm px-4 py-3 text-sm text-slate-700 dark:text-slate-300 leading-relaxed shadow-sm">
+              <p class="font-medium text-slate-900 dark:text-white mb-1">Loaded draft for editing:</p>
+              <p class="font-semibold text-indigo-600 dark:text-indigo-400">"${escapeHtml(previewName)}"</p>
+              <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">(${countInfo} loaded into the workspace)</p>
+              <p class="mt-2 text-xs">What would you like to refine, expand, or discuss? Share your instructions below or click any suggestion chip.</p>
+            </div>
+          </div>
+        `;
+      } else {
+        const incomingRaw = sessionStorage.getItem('ai_incoming_draft');
+        if (incomingRaw) {
+          try {
+            const incoming = JSON.parse(incomingRaw);
+            sessionStorage.removeItem('ai_incoming_draft');
+            if (incoming.mode) setMode(incoming.mode);
+            if (incoming.title) {
+              draftTitleEl.value = incoming.title;
+              currentDraft.title = incoming.title;
+            }
+            if (incoming.body) {
+              draftBodyEl.value = incoming.body;
+              currentDraft.body = incoming.body;
+            }
+            if (incoming.tags && incoming.tags.length) {
+              draftTagsEl.value = incoming.tags.join(', ');
+              currentDraft.tags = incoming.tags;
+            }
+            if (incoming.blocks && incoming.blocks.length) {
+              currentDraft.blocks = incoming.blocks;
+              renderBlocks();
+            }
+            if (incoming.existing_id) {
+              document.getElementById('existing-id').value = incoming.existing_id;
+            }
+            syncStats();
+
+            const previewName = currentDraft.title || (currentDraft.body ? currentDraft.body.slice(0, 50) + '...' : 'Editor Draft');
+            chatMessagesEl.innerHTML = `
+              <div class="flex items-start gap-3">
+                <div class="w-8 h-8 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center flex-shrink-0 text-white font-bold text-xs shadow-sm">
+                  AI
+                </div>
+                <div class="flex-1 bg-slate-100 dark:bg-slate-800/80 rounded-2xl rounded-tl-sm px-4 py-3 text-sm text-slate-700 dark:text-slate-300 leading-relaxed shadow-sm">
+                  <p class="font-medium text-slate-900 dark:text-white mb-1">Draft loaded from editor:</p>
+                  <p class="font-semibold text-indigo-600 dark:text-indigo-400">"${escapeHtml(previewName)}"</p>
+                  <p class="mt-2 text-xs text-slate-600 dark:text-slate-300">Your in-progress editor draft is ready. What would you like to improve or rewrite?</p>
+                </div>
+              </div>
+            `;
+          } catch(e) {}
+        }
+      }
     });
   </script>
 </body>

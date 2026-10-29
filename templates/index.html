@@ -143,7 +143,7 @@ src="https://www.facebook.com/tr?id=2092273818327635&ev=PageView&noscript=1"
                 <span>Write article</span>
               </a>
               <div class="w-px h-4 bg-slate-200 dark:bg-slate-700"></div>
-              <a href="{{ url_for('ai_studio', mode='post') }}" class="text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 text-sm font-medium flex items-center gap-1.5 transition" title="Draft post with AI">
+              <a href="{{ url_for('ai_studio', mode='post') }}" onclick="passFeedComposerToAi(event)" class="text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 text-sm font-medium flex items-center gap-1.5 transition" title="Draft post with AI">
                 <svg class="w-4 h-4 text-indigo-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z"></path>
                 </svg>
@@ -493,6 +493,18 @@ src="https://www.facebook.com/tr?id=2092273818327635&ev=PageView&noscript=1"
     // A post needs text only when it carries no video and YouTube is not
     // selected: a video-only post — typically for YouTube — is valid. The server
     // enforces the same rule in create_post().
+    window.passFeedComposerToAi = function(e) {
+      const content = document.getElementById('post-content')?.value || '';
+      const tags = (document.querySelector('input[name="tags"]')?.value || '').split(',').map(t => t.trim()).filter(Boolean);
+      if (content) {
+        sessionStorage.setItem('ai_incoming_draft', JSON.stringify({
+          mode: 'post',
+          body: content,
+          tags: tags
+        }));
+      }
+    };
+
     // Hydrate AI drafted post if coming from AI Studio
     const pendingPostDraft = sessionStorage.getItem('ai_post_draft');
     if (pendingPostDraft) {

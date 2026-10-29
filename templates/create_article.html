@@ -66,7 +66,7 @@ src="https://www.facebook.com/tr?id=2092273818327635&ev=PageView&noscript=1"
           </div>
         </div>
         <div class="flex items-center gap-3">
-          <a href="{{ url_for('ai_studio', mode='article') }}" class="text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/60 font-medium px-3.5 py-1.5 rounded-full text-xs transition flex items-center gap-1.5 shadow-sm" title="Draft & Brainstorm with AI">
+          <a href="{{ url_for('ai_studio', mode='article', article_id=(article.post_id if article else '')) }}" onclick="passCurrentArticleToAi(event, '{{ article.post_id if article else '' }}')" class="text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/60 font-medium px-3.5 py-1.5 rounded-full text-xs transition flex items-center gap-1.5 shadow-sm" title="Draft & Brainstorm with AI">
             <svg class="w-3.5 h-3.5 text-indigo-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z"></path></svg>
             <span>AI Draft</span>
           </a>
@@ -168,7 +168,26 @@ src="https://www.facebook.com/tr?id=2092273818327635&ev=PageView&noscript=1"
       // Setup Elements
       const container = document.getElementById('blocks-container');
       const inlineMediaInput = document.getElementById('inline-media-input');
-      const form = document.getElementById('article-form');
+      window.passCurrentArticleToAi = function(e, existingArticleId) {
+      const title = document.querySelector('input[name="title"]')?.value || '';
+      const tags = (document.querySelector('input[name="tags"]')?.value || '').split(',').map(t => t.trim()).filter(Boolean);
+      const textareas = document.querySelectorAll('#blocks-container textarea');
+      const blocks = [];
+      textareas.forEach(ta => {
+        if (ta.value.trim()) blocks.push({ type: 'text', content: ta.value.trim() });
+      });
+      if (title || blocks.length > 0) {
+        sessionStorage.setItem('ai_incoming_draft', JSON.stringify({
+          mode: 'article',
+          title: title,
+          tags: tags,
+          blocks: blocks,
+          existing_id: existingArticleId
+        }));
+      }
+    };
+
+    const form = document.getElementById('article-form');
       const coverInput = document.getElementById('cover-image-input');
       const coverPreview = document.getElementById('cover-preview');
       const coverPlaceholder = document.getElementById('cover-placeholder');

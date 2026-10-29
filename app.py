@@ -1063,12 +1063,50 @@ def api_syndication_check():
 def ai_studio():
     if not session.get("logged_in"):
         return redirect(url_for("login"))
-    mode = request.args.get("mode", "post").strip().lower()
-    if mode not in ("post", "article"):
+    
+    post_id = (request.args.get("post_id") or request.args.get("article_id") or request.args.get("id") or "").strip()
+    mode = request.args.get("mode", "").strip().lower()
+    
+    initial_draft = None
+    existing_id = None
+    
+    if post_id:
+        existing_doc = posts_collection.find_one({"post_id": post_id})
+        if existing_doc:
+            existing_id = existing_doc.get("post_id")
+            doc_type = existing_doc.get("type", "post")
+            mode = mode or doc_type
+            
+            if doc_type == "article":
+                raw_blocks = existing_doc.get("blocks", [])
+                text_blocks = []
+                for b in raw_blocks:
+                    if b.get("type") == "text" and b.get("content"):
+                        text_blocks.append({"type": "text", "content": b.get("content")})
+                
+                initial_draft = {
+                    "title": existing_doc.get("title", ""),
+                    "tags": existing_doc.get("tags", []),
+                    "blocks": text_blocks,
+                    "body": ""
+                }
+            else:
+                text, _ = content.post_text_and_media(existing_doc)
+                initial_draft = {
+                    "title": "",
+                    "tags": existing_doc.get("tags", []),
+                    "blocks": [],
+                    "body": text
+                }
+
+    if not mode or mode not in ("post", "article"):
         mode = "post"
+
     return render_template(
         "ai_studio.html",
         initial_mode=mode,
+        initial_draft=initial_draft,
+        existing_id=existing_id,
         syndication_platforms=syndication.available_platforms(kind=mode),
         ai_available=ai.is_available()
     )
@@ -1101,6 +1139,7 @@ def api_ai_studio_finalize():
     
     mode = request.form.get("mode", "post").strip().lower()
     action = request.form.get("action", "draft").strip().lower()
+    existing_id = request.form.get("existing_id", "").strip()
     try:
         draft = json.loads(request.form.get("draft", "{}"))
     except (TypeError, ValueError):
@@ -1108,6 +1147,7 @@ def api_ai_studio_finalize():
 
     platforms = request.form.getlist("platforms")
     current_time = content.now_str()
+    existing_doc = posts_collection.find_one({"post_id": existing_id}) if existing_id else None
 
     if mode == "article":
         title = (draft.get("title") or "Untitled Article").strip()
@@ -1126,21 +1166,41 @@ def api_ai_studio_finalize():
         if not blocks and draft.get("body"):
             blocks.append({"type": "text", "content": draft.get("body").strip()})
 
-        article_id = ("article_" if action == "publish" else "draft_") + media.generate_post_id()
-        doc = {
-            "post_id": article_id,
-            "type": "article",
-            "title": title,
-            "cover_image": None,
-            "blocks": blocks,
-            "tags": tags,
-            "status": "published" if action == "publish" else "draft",
-            "timestamp": current_time,
-            "likes": 0,
-            "views": 0,
-            "shares": 0
-        }
-        posts_collection.insert_one(doc)
+        if existing_doc and existing_doc.get("blocks"):
+            existing_media_blocks = [b for b in existing_doc["blocks"] if b.get("type") == "media"]
+            if existing_media_blocks and not any(b.get("type") == "media" for b in blocks):
+                blocks.extend(existing_media_blocks)
+
+        if existing_doc:
+            article_id = existing_id
+            if action == "publish" and article_id.startswith("draft_"):
+                article_id = "article_" + media.generate_post_id()
+            update_data = {
+                "post_id": article_id,
+                "type": "article",
+                "title": title,
+                "blocks": blocks,
+                "tags": tags,
+                "status": "published" if action == "publish" else "draft",
+                "timestamp": current_time if (action == "publish" and existing_doc.get("status") != "published") else existing_doc.get("timestamp", current_time)
+            }
+            posts_collection.update_one({"post_id": existing_id}, {"$set": update_data})
+        else:
+            article_id = ("article_" if action == "publish" else "draft_") + media.generate_post_id()
+            doc = {
+                "post_id": article_id,
+                "type": "article",
+                "title": title,
+                "cover_image": None,
+                "blocks": blocks,
+                "tags": tags,
+                "status": "published" if action == "publish" else "draft",
+                "timestamp": current_time,
+                "likes": 0,
+                "views": 0,
+                "shares": 0
+            }
+            posts_collection.insert_one(doc)
 
         if action == "publish":
             runner.enqueue_syndication(
@@ -1165,18 +1225,32 @@ def api_ai_studio_finalize():
             tags = [t.strip() for t in tags.split(",") if t.strip()]
 
         blocks = [{"type": "text", "content": body}] if body else []
-        post_id = ("draft_" if action == "draft" else "") + media.generate_post_id()
-        doc = {
-            "post_id": post_id,
-            "type": "post",
-            "blocks": blocks,
-            "tags": tags,
-            "status": "published" if action == "publish" else "draft",
-            "timestamp": current_time,
-            "likes": 0,
-            "views": 0
-        }
-        posts_collection.insert_one(doc)
+        if existing_doc:
+            post_id = existing_id
+            if action == "publish" and post_id.startswith("draft_"):
+                post_id = media.generate_post_id()
+            update_data = {
+                "post_id": post_id,
+                "type": "post",
+                "blocks": blocks,
+                "tags": tags,
+                "status": "published" if action == "publish" else "draft",
+                "timestamp": current_time if (action == "publish" and existing_doc.get("status") != "published") else existing_doc.get("timestamp", current_time)
+            }
+            posts_collection.update_one({"post_id": existing_id}, {"$set": update_data})
+        else:
+            post_id = ("draft_" if action == "draft" else "") + media.generate_post_id()
+            doc = {
+                "post_id": post_id,
+                "type": "post",
+                "blocks": blocks,
+                "tags": tags,
+                "status": "published" if action == "publish" else "draft",
+                "timestamp": current_time,
+                "likes": 0,
+                "views": 0
+            }
+            posts_collection.insert_one(doc)
 
         if action == "publish":
             runner.enqueue_syndication(
