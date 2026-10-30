@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>My Blog – Feed</title>
   <meta name="csrf-token" content="{{ csrf_token() }}">
+  <meta name="p:domain_verify" content="7e38de935c193f08f4efce4d1ce9a7df">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>✍️</text></svg>">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -77,8 +78,11 @@ src="https://www.facebook.com/tr?id=2092273818327635&ev=PageView&noscript=1"
               <button type="submit" class="text-red-500 hover:text-red-600 font-medium transition">Sign Out</button>
             </form>
           </div>
-        {% elif is_cert_authorized %}
-          <a href="{{ url_for('login') }}" class="px-2.5 py-1.5 rounded-full text-brand-600 dark:text-brand-400 hover:text-brand-700 font-medium transition">Admin</a>
+        {% else %}
+          <a href="{{ url_for('login') }}" class="px-3 py-1.5 rounded-full text-xs sm:text-sm font-semibold bg-brand-50 dark:bg-brand-950/60 text-brand-700 dark:text-brand-300 hover:bg-brand-100 dark:hover:bg-brand-900/60 border border-brand-200 dark:border-brand-800 transition flex items-center gap-1">
+            <span>🚀 Try Demo</span>
+          </a>
+
         {% endif %}
         <button type="button" data-theme-toggle onclick="toggleTheme()" class="p-2 rounded-full text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition" title="Toggle theme" aria-label="Toggle theme">
           <svg data-icon-moon class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>
@@ -87,6 +91,12 @@ src="https://www.facebook.com/tr?id=2092273818327635&ev=PageView&noscript=1"
       </div>
     </div>
   </nav>
+
+  {% if is_demo %}
+    <div class="bg-gradient-to-r from-amber-500/10 via-brand-500/10 to-blue-500/10 border-b border-amber-200/60 dark:border-amber-800/40 text-amber-900 dark:text-amber-200 text-xs py-2 px-4 text-center font-medium">
+      🚀 <strong>Publisher Demo Mode:</strong> You have full hands-on access to drafting, rich blocks, AI Studio, and per-platform syndication previews. External social broadcasts are simulated.
+    </div>
+  {% endif %}
 
   <div class="max-w-5xl mx-auto px-4 mt-4">
     {% with messages = get_flashed_messages(with_categories=true) %}
@@ -166,8 +176,8 @@ src="https://www.facebook.com/tr?id=2092273818327635&ev=PageView&noscript=1"
         <p class="text-lg font-semibold text-slate-700 dark:text-slate-200">No posts yet</p>
         {% if session.get('logged_in') %}
           <p class="text-sm mt-1 text-slate-400">Use the box above to create your first post.</p>
-        {% elif is_cert_authorized %}
-          <p class="text-sm mt-1 text-slate-400">Check back later or <a href="{{ url_for('login') }}" class="text-brand-600 dark:text-brand-400 hover:underline">sign in</a> to create one.</p>
+        {% else %}
+          <p class="text-sm mt-1 text-slate-400">Check back later or <a href="{{ url_for('login') }}" class="text-brand-600 dark:text-brand-400 hover:underline">try publisher demo</a>.</p>
         {% else %}
           <p class="text-sm mt-1 text-slate-400">Check back later for new updates.</p>
         {% endif %}
@@ -209,6 +219,9 @@ src="https://www.facebook.com/tr?id=2092273818327635&ev=PageView&noscript=1"
              {{ post.title }}
            </h2>
         {% endif %}
+        {% set _emb_id = post.embedded_article.post_id if post.embedded_article else '' %}
+        {% set _is_bare_route = post.embedded_article and post.content and (post.content.strip() == '/article/' ~ _emb_id or post.content.strip() == '/post/' ~ _emb_id) %}
+        {% if not _is_bare_route and post.content %}
         <p class="text-slate-700 dark:text-slate-300 text-sm leading-relaxed whitespace-pre-wrap">
           {%- if post.content | length > 300 -%}
             {#- "see more" expands in place. preventDefault cancels the surrounding
@@ -221,6 +234,7 @@ src="https://www.facebook.com/tr?id=2092273818327635&ev=PageView&noscript=1"
             {{ post.content }}
           {%- endif -%}
         </p>
+        {% endif %}
       </a>
 
       {% if post.embedded_article %}

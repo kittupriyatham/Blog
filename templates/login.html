@@ -89,6 +89,22 @@ src="https://www.facebook.com/tr?id=2092273818327635&ev=PageView&noscript=1"
           Sign In
         </button>
       </form>
+
+      <div class="relative my-5 flex items-center justify-center">
+        <div class="border-t border-slate-200 dark:border-slate-800 w-full"></div>
+        <span class="bg-white dark:bg-slate-900 px-3 text-xs text-slate-400 dark:text-slate-500 font-medium uppercase tracking-wider">or</span>
+      </div>
+
+      <form method="POST" action="{{ url_for('demo_login') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button type="submit"
+          class="w-full bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/40 dark:hover:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/60 font-semibold py-2.5 rounded-xl text-sm transition flex items-center justify-center gap-2 shadow-sm">
+          <span>🚀 Explore as Demo Publisher</span>
+        </button>
+      </form>
+      <p class="text-[11px] text-center text-slate-400 dark:text-slate-500 mt-2.5 leading-relaxed">
+        Try the publisher experience: drafting posts, rich blocks, AI Studio, and per-platform POSSE syndication previews. (Credentials: <code class="bg-slate-100 dark:bg-slate-800 px-1 py-0.5 rounded text-slate-600 dark:text-slate-300">demo / demo</code>)
+      </p>
     </div>
 
     <p class="mt-6 text-center text-sm text-slate-400 dark:text-slate-500">

@@ -167,6 +167,95 @@ def video_for(doc):
     return video_path_for(post_id) or attached_video_for(doc)
 
 
+def _find_attached_docs(doc):
+    """Find any documents linked via /article/<id> or /post/<id> or embedded_article."""
+    attached = []
+    if not doc or not isinstance(doc, dict):
+        return attached
+    if doc.get("embedded_article"):
+        attached.append(doc["embedded_article"])
+
+    text_parts = [b.get("content", "") for b in doc.get("blocks", []) if b.get("type") == "text"]
+    if "content" in doc and isinstance(doc["content"], str):
+        text_parts.append(doc["content"])
+    all_text = " ".join(text_parts)
+
+    pattern = re.compile(r"/(?:article|post)/([a-zA-Z0-9_.-]+)")
+    target_ids = pattern.findall(all_text)
+
+    existing_ids = {a.get("post_id") for a in attached if a.get("post_id")}
+    for tid in target_ids:
+        if tid in existing_ids:
+            continue
+        try:
+            from core.db import Post
+            found = Post._get_collection().find_one({"post_id": tid})
+            if found:
+                attached.append(found)
+                existing_ids.add(tid)
+        except Exception:
+            pass
+    return attached
+
+
+def _get_base_url(url=None):
+    from core.config import SITE_URL
+    if SITE_URL:
+        return SITE_URL.rstrip("/")
+    if url:
+        try:
+            parsed = urlparse(url)
+            if parsed.scheme and parsed.netloc:
+                return f"{parsed.scheme}://{parsed.netloc}"
+        except Exception:
+            pass
+    return "https://blog.potluri-krishna-priyatham.tech"
+
+
+def _expand_attachments(doc, body, url=None):
+    """Expand relative routes like /article/<id> or /post/<id> into rich text + canonical URLs.
+    
+    Returns (expanded_body, has_primary_attached_url).
+    """
+    pattern = re.compile(r"/(article|post)/([a-zA-Z0-9_.-]+)")
+    matches = list(pattern.finditer(body))
+    if not matches:
+        return body, False
+
+    base = _get_base_url(url)
+    attached_docs = {a.get("post_id"): a for a in _find_attached_docs(doc)}
+
+    # Check if the entire body is just a single attached link (e.g. "/article/article_3z1FgkNU")
+    if len(matches) == 1 and body.strip() == matches[0].group(0):
+        m = matches[0]
+        kind, tid = m.group(1), m.group(2)
+        canonical_target_url = f"{base}/{kind}/{tid}"
+        target = attached_docs.get(tid)
+        title = (target.get("title") or "").strip() if target else ""
+        if not title and target and kind == "post":
+            title = (target.get("content") or "").strip().split("\n")[0][:100]
+        if title:
+            return f"{title}\n\n{canonical_target_url}", True
+        return canonical_target_url, True
+
+    # Otherwise, replace every relative route in the body
+    has_attached_url = False
+    new_body = body
+    for m in reversed(matches):
+        kind, tid = m.group(1), m.group(2)
+        canonical_target_url = f"{base}/{kind}/{tid}"
+        target = attached_docs.get(tid)
+        title = (target.get("title") or "").strip() if target else ""
+        if title and title.lower() not in body.lower():
+            replacement = f'"{title}" ({canonical_target_url})'
+        else:
+            replacement = canonical_target_url
+        new_body = new_body[:m.start()] + replacement + new_body[m.end():]
+        has_attached_url = True
+
+    return new_body, has_attached_url
+
+
 def media_for(doc):
     """Media attached to a doc - local or remote.
 
@@ -200,8 +289,18 @@ def media_for(doc):
     cover = doc.get("cover_image")
     if isinstance(cover, str) and cover and cover not in out:
         out.append(cover)
-    # No dedicated video: an attached video (from the media blocks above) is the
-    # YouTube source and is already in `out`, so nothing extra is added here.
+
+    # If this post has no media of its own, inherit cover/media from attached article or post
+    if not out:
+        for att in _find_attached_docs(doc):
+            att_cover = att.get("cover_image")
+            if isinstance(att_cover, str) and att_cover and att_cover not in out:
+                out.append(att_cover)
+            for block in att.get("blocks", []) or []:
+                if block.get("type") == "media":
+                    for path in block.get("media_paths", []) or []:
+                        if path and path not in out:
+                            out.append(path)
     return out
 
 
@@ -284,16 +383,22 @@ def compose_text(doc, url, platforms=None):
     several platforms deliberately clamps to the smallest of them, and passing
     none keeps the 3000-character default.
     """
+    has_attached_url = False
     if doc.get("type") == "article":
         body = (doc.get("title") or "New article").strip()
     else:
         parts = [b.get("content", "").strip() for b in doc.get("blocks", []) if b.get("type") == "text"]
         body = "\n\n".join(p for p in parts if p) or "New post"
 
-    # Textareas submit CRLF, which platforms render as a stray control character.
-    body = body.replace("\r\n", "\n").replace("\r", "\n")
+        # Textareas submit CRLF, which platforms render as a stray control character.
+        body = body.replace("\r\n", "\n").replace("\r", "\n")
 
-    suffix = ("\n\n" + url) if (url and is_public_url(url)) else ""
+        # Expand relative routes (like /article/<id> or /post/<id>) into rich text + canonical URL
+        body, has_attached_url = _expand_attachments(doc, body, url)
+
+    # When the body already carries the attached article's canonical URL, avoid appending
+    # a duplicate link to the wrapper post so social platforms unfurl the target article preview.
+    suffix = ("\n\n" + url) if (url and is_public_url(url) and not has_attached_url) else ""
     limit = text_limit_for(platforms) if platforms else 3000
     if limit is None:
         return body + suffix

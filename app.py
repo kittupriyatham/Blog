@@ -83,6 +83,12 @@ threading.Thread(target=auto_register_webhook, daemon=True).start()
 # Routes — Public
 # ---------------------------------------------------------------------------
 
+@app.route("/pinterest-7e38d.html")
+def pinterest_verify():
+    repo_root = os.path.dirname(os.path.abspath(__file__))
+    return send_from_directory(repo_root, "pinterest-7e38d.html")
+
+
 @app.route("/media/<path:filename>")
 def serve_media(filename):
     # Tolerate callers that pass a full "/media/..." path into url_for.
@@ -317,7 +323,11 @@ def is_cert_authorized() -> bool:
 
 @app.context_processor
 def inject_cert_auth():
-    return {"is_cert_authorized": is_cert_authorized()}
+    return {
+        "is_cert_authorized": is_cert_authorized(),
+        "is_demo": bool(session.get("is_demo")),
+        "current_user": session.get("username", "Admin" if session.get("logged_in") else "")
+    }
 
 
 # ---------------------------------------------------------------------------
@@ -550,12 +560,34 @@ def admin_unlock():
     abort(404)
 
 
+@app.route("/demo_login", methods=["POST"])
+def demo_login():
+    """One-click sign-in as Demo Publisher."""
+    session.clear()
+    session["logged_in"] = True
+    session["is_demo"] = True
+    session["username"] = "Demo Publisher"
+    flash("Welcome to the Publisher Demo! You have full access to drafting, rich blocks, AI studio, and per-platform syndication previews (external syndications are simulated).", "success")
+    return redirect(url_for("index"))
+
+
 @app.route("/login", methods=["GET", "POST"])
 def login():
     if session.get("logged_in"):
         return redirect(url_for("index"))
     if request.method == "POST":
-        if request.form.get("username") == ADMIN_USERNAME and request.form.get("password") == ADMIN_PASSWORD:
+        u = (request.form.get("username") or "").strip()
+        p = (request.form.get("password") or "").strip()
+        if u.lower() == "demo" and p.lower() == "demo":
+            session.clear()
+            session["logged_in"] = True
+            session["is_demo"] = True
+            session["username"] = "Demo Publisher"
+            flash("Welcome to the Publisher Demo! You have full access to drafting, rich blocks, AI studio, and per-platform syndication previews (external syndications are simulated).", "success")
+            return redirect(url_for("index"))
+        if u == ADMIN_USERNAME and p == ADMIN_PASSWORD:
+            session["is_demo"] = False
+            session["username"] = ADMIN_USERNAME
             session["logged_in"] = True
             resp = make_response(redirect(url_for("index")))
             # Permanently mark this specific browser as the Admin's device (10 years)
@@ -612,7 +644,9 @@ def create_post():
         "post_id": post_id, "type": "post",
         "blocks": blocks, "tags": tags,
         "timestamp": content.now_str(),
-        "status": "published", "likes": 0, "views": 0
+        "status": "published", "likes": 0, "views": 0,
+        "is_demo": bool(session.get("is_demo")),
+        "author": "Demo Publisher" if session.get("is_demo") else "Kittu Priyatham"
     }
     # Metadata collected in the composer's YouTube panel, stored as doc["youtube"]
     # so the hand-off page arrives prefilled (no re-entry).
@@ -621,6 +655,24 @@ def create_post():
     if custom_syndications:
         new_post["custom_syndications"] = custom_syndications
     posts_collection.insert_one(new_post)
+    if session.get("is_demo"):
+        demo_syndications = []
+        for p in platforms:
+            if p == "youtube":
+                continue
+            demo_syndications.append({
+                "platform": p,
+                "label": syndication.label_for(p),
+                "url": f"https://example.com/demo/{p}/post/{post_id}",
+                "remote_id": f"demo_{p}_{post_id}",
+                "status": "posted",
+                "posted_at": content.now_str(),
+                "error": None
+            })
+        if demo_syndications:
+            posts_collection.update_one({"post_id": post_id}, {"$set": {"syndications": demo_syndications}})
+        flash("Post published in Demo Mode! Simulated syndications applied so you can experience POSSE.", "success")
+        return redirect(url_for("index"))
     # YouTube is published from its own page (/youtube/<post_id>), where the video
     # and all the metadata live. Publishing it in this batch would send a
     # metadata-less post, so it is deferred and the author is taken straight to
@@ -639,6 +691,9 @@ def edit_post(post_id):
     if not session.get("logged_in"): return redirect(url_for("login"))
     post = posts_collection.find_one({"post_id": post_id})
     if not post: abort(404)
+    if session.get("is_demo") and not post.get("is_demo"):
+        flash("Demo account cannot edit the author's original posts. You can create your own posts!", "error")
+        return redirect(url_for("index"))
     text, media_paths = content.post_text_and_media(post)
     published_articles = list(posts_collection.find({"type": "article", "status": "published"}).sort("timestamp", -1))
     published_posts = list(posts_collection.find({"type": "post", "status": "published"}).sort("timestamp", -1).limit(20))
@@ -656,6 +711,9 @@ def api_save_post():
     tags = [t.strip() for t in request.form.get("tags", "").split(",") if t.strip()]
     platforms = request.form.getlist("platforms")
     youtube_meta = _parse_youtube_meta(request.form.get("youtube_meta"))
+    existing = posts_collection.find_one({"post_id": post_id}) if post_id else None
+    if session.get("is_demo") and existing and not existing.get("is_demo"):
+        return jsonify({"status": "error", "message": "Demo mode cannot edit author's original posts. You can create your own!"}), 403
     # Gather the pending uploads up front: they decide both whether text is
     # required and what gets stored.
     try:
@@ -695,6 +753,8 @@ def api_save_post():
         "timestamp": current_time if status == "published" else (existing.get("timestamp", current_time) if existing else current_time),
         "likes": existing.get("likes", 0) if existing else 0,
         "views": existing.get("views", 0) if existing else 0,
+        "is_demo": bool(session.get("is_demo")),
+        "author": "Demo Publisher" if session.get("is_demo") else "Kittu Priyatham"
     }
     # Metadata collected in the editor's YouTube panel -> doc["youtube"] (merged so
     # a dedicated upload's `video` key survives an edit).
@@ -705,14 +765,31 @@ def api_save_post():
     posts_collection.update_one({"post_id": post_id}, {"$set": update_data}, upsert=True)
     response = {"status": "success", "post_id": post_id, "skipped": skipped}
     if status == "published":
-        # Same deferral as create_post: YouTube's video + metadata are completed on
-        # /youtube/<post_id>, so publishing it here would send a metadata-less
-        # post. Tell the editor to navigate to that page instead (its panel values
-        # are already stored, so nothing is re-entered there).
-        runner.enqueue_syndication(post_id, content.canonical("post_detail", post_id=post_id),
-                                   [p for p in platforms if p != "youtube"])
-        if "youtube" in platforms:
-            response["redirect"] = url_for("youtube_editor", post_id=post_id)
+        if session.get("is_demo"):
+            demo_syndications = []
+            for p in platforms:
+                if p == "youtube":
+                    continue
+                demo_syndications.append({
+                    "platform": p,
+                    "label": syndication.label_for(p),
+                    "url": f"https://example.com/demo/{p}/post/{post_id}",
+                    "remote_id": f"demo_{p}_{post_id}",
+                    "status": "posted",
+                    "posted_at": content.now_str(),
+                    "error": None
+                })
+            if demo_syndications:
+                posts_collection.update_one({"post_id": post_id}, {"$set": {"syndications": demo_syndications}})
+        else:
+            # Same deferral as create_post: YouTube's video + metadata are completed on
+            # /youtube/<post_id>, so publishing it here would send a metadata-less
+            # post. Tell the editor to navigate to that page instead (its panel values
+            # are already stored, so nothing is re-entered there).
+            runner.enqueue_syndication(post_id, content.canonical("post_detail", post_id=post_id),
+                                       [p for p in platforms if p != "youtube"])
+            if "youtube" in platforms:
+                response["redirect"] = url_for("youtube_editor", post_id=post_id)
     return jsonify(response)
 
 @app.route("/articles")
@@ -1004,7 +1081,9 @@ def api_save_article():
     title, action, article_id = request.form.get("title", "").strip(), request.form.get("action", "draft"), request.form.get("article_id", "").strip()
     tags = [t.strip() for t in request.form.get("tags", "").split(",") if t.strip()]
     youtube_meta = _parse_youtube_meta(request.form.get("youtube_meta"))
-    existing_article = posts_collection.find_one({"post_id": article_id})
+    existing_article = posts_collection.find_one({"post_id": article_id}) if article_id else None
+    if session.get("is_demo") and existing_article and not existing_article.get("is_demo"):
+        return jsonify({"status": "error", "message": "Demo mode cannot edit author's original articles. You can create your own articles!"}), 403
     # Resolve the final id before uploads, so media is named after it.
     original_id = article_id
     if not article_id:
@@ -1052,7 +1131,9 @@ def api_save_article():
     update_data = {
         "post_id": article_id, "type": "article", "title": title, "cover_image": cover_image_url, "blocks": final_blocks, "tags": tags,
         "status": "published" if action == "publish" else "draft",
-        "timestamp": current_time if (action == "publish" and (not existing_article or existing_article.get("status") != "published")) else (existing_article.get("timestamp", current_time) if existing_article else current_time)
+        "timestamp": current_time if (action == "publish" and (not existing_article or existing_article.get("status") != "published")) else (existing_article.get("timestamp", current_time) if existing_article else current_time),
+        "is_demo": bool(session.get("is_demo")),
+        "author": "Demo Publisher" if session.get("is_demo") else "Kittu Priyatham"
     }
     custom_syndications = _parse_custom_syndications(request.form.get("custom_syndications"))
     # Metadata collected in the article editor's YouTube panel -> doc["youtube"].
@@ -1064,12 +1145,29 @@ def api_save_article():
     response = {"status": "success", "article_id": article_id, "skipped": skipped}
     if action == "publish":
         platforms = request.form.getlist("platforms")
-        # See create_post: YouTube is completed on its own page, so it is deferred
-        # and the author is handed off there (the editor JS navigates to this URL).
-        runner.enqueue_syndication(article_id, content.canonical("article_detail", article_id=article_id),
-                                   [p for p in platforms if p != "youtube"])
-        if "youtube" in platforms:
-            response["redirect"] = url_for("youtube_editor", post_id=article_id)
+        if session.get("is_demo"):
+            demo_syndications = []
+            for p in platforms:
+                if p == "youtube":
+                    continue
+                demo_syndications.append({
+                    "platform": p,
+                    "label": syndication.label_for(p),
+                    "url": f"https://example.com/demo/{p}/{article_id}",
+                    "remote_id": f"demo_{p}_{article_id}",
+                    "status": "posted",
+                    "posted_at": content.now_str(),
+                    "error": None
+                })
+            if demo_syndications:
+                posts_collection.update_one({"post_id": article_id}, {"$set": {"syndications": demo_syndications}})
+        else:
+            # See create_post: YouTube is completed on its own page, so it is deferred
+            # and the author is handed off there (the editor JS navigates to this URL).
+            runner.enqueue_syndication(article_id, content.canonical("article_detail", article_id=article_id),
+                                       [p for p in platforms if p != "youtube"])
+            if "youtube" in platforms:
+                response["redirect"] = url_for("youtube_editor", post_id=article_id)
     return jsonify(response)
 
 @app.route("/api/syndication/check", methods=["POST"])
@@ -1174,6 +1272,8 @@ def api_ai_studio_finalize():
     custom_syndications = _parse_custom_syndications(request.form.get("custom_syndications"))
     current_time = content.now_str()
     existing_doc = posts_collection.find_one({"post_id": existing_id}) if existing_id else None
+    if session.get("is_demo") and existing_doc and not existing_doc.get("is_demo"):
+        return jsonify({"status": "error", "message": "Demo mode cannot edit author's original content. You can draft new posts/articles!"}), 403
 
     if mode == "article":
         title = (draft.get("title") or "Untitled Article").strip()
@@ -1231,11 +1331,28 @@ def api_ai_studio_finalize():
             posts_collection.insert_one(doc)
 
         if action == "publish":
-            runner.enqueue_syndication(
-                article_id,
-                content.canonical("article_detail", article_id=article_id),
-                [p for p in platforms if p != "youtube"]
-            )
+            if session.get("is_demo"):
+                demo_syndications = []
+                for p in platforms:
+                    if p == "youtube":
+                        continue
+                    demo_syndications.append({
+                        "platform": p,
+                        "label": syndication.label_for(p),
+                        "url": f"https://example.com/demo/{p}/{article_id}",
+                        "remote_id": f"demo_{p}_{article_id}",
+                        "status": "posted",
+                        "posted_at": content.now_str(),
+                        "error": None
+                    })
+                if demo_syndications:
+                    posts_collection.update_one({"post_id": article_id}, {"$set": {"syndications": demo_syndications}})
+            else:
+                runner.enqueue_syndication(
+                    article_id,
+                    content.canonical("article_detail", article_id=article_id),
+                    [p for p in platforms if p != "youtube"]
+                )
             redirect_url = url_for("article_detail", article_id=article_id)
         else:
             redirect_url = url_for("edit_article", article_id=article_id)
@@ -1283,13 +1400,32 @@ def api_ai_studio_finalize():
             posts_collection.insert_one(doc)
 
         if action == "publish":
-            runner.enqueue_syndication(
-                post_id,
-                content.canonical("post_detail", post_id=post_id),
-                [p for p in platforms if p != "youtube"]
-            )
-            flash("Post published to blog and enqueued for syndication!", "success")
-            redirect_url = url_for("index")
+            if session.get("is_demo"):
+                demo_syndications = []
+                for p in platforms:
+                    if p == "youtube":
+                        continue
+                    demo_syndications.append({
+                        "platform": p,
+                        "label": syndication.label_for(p),
+                        "url": f"https://example.com/demo/{p}/post/{post_id}",
+                        "remote_id": f"demo_{p}_{post_id}",
+                        "status": "posted",
+                        "posted_at": content.now_str(),
+                        "error": None
+                    })
+                if demo_syndications:
+                    posts_collection.update_one({"post_id": post_id}, {"$set": {"syndications": demo_syndications}})
+                flash("Post published in Demo Mode! Simulated syndications applied so you can experience POSSE.", "success")
+                redirect_url = url_for("index")
+            else:
+                runner.enqueue_syndication(
+                    post_id,
+                    content.canonical("post_detail", post_id=post_id),
+                    [p for p in platforms if p != "youtube"]
+                )
+                flash("Post published to blog and enqueued for syndication!", "success")
+                redirect_url = url_for("index")
         else:
             redirect_url = url_for("edit_post", post_id=post_id)
 
@@ -1750,6 +1886,9 @@ def api_link_external_syndication():
 def delete_post(post_id):
     if not session.get("logged_in"): abort(401)
     doc = posts_collection.find_one({"post_id": post_id})
+    if session.get("is_demo") and doc and not doc.get("is_demo"):
+        flash("Demo account cannot delete the author's original posts. You can create and delete your own demo posts!", "error")
+        return redirect(url_for("articles_dashboard") if doc and doc.get("type") == "article" else url_for("index"))
     posts_collection.delete_one({"post_id": post_id})
     if doc and doc.get("type") == "article":
         flash("Article removed.", "success")

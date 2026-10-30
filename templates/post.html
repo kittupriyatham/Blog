@@ -105,7 +105,11 @@ src="https://www.facebook.com/tr?id=2092273818327635&ev=PageView&noscript=1"
       </div>
 
       <div class="px-5 py-3">
+        {% set _emb_id = post.embedded_article.post_id if post.embedded_article else '' %}
+        {% set _is_bare_route = post.embedded_article and post.content and (post.content.strip() == '/article/' ~ _emb_id or post.content.strip() == '/post/' ~ _emb_id) %}
+        {% if not _is_bare_route and post.content %}
         <div class="text-slate-700 dark:text-slate-300 leading-relaxed whitespace-pre-wrap text-[15px] mb-6">{{ post.content | rich_text }}</div>
+        {% endif %}
 
         {% if post.embedded_article %}
           {% set emb = post.embedded_article %}
