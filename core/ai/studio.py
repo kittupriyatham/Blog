@@ -18,7 +18,7 @@ from typing import Any, Dict, List, Optional
 
 GEMINI_ENDPOINT = "https://generativelanguage.googleapis.com/v1beta/models/%s:generateContent?key=%s"
 DEFAULT_MODEL = "gemini-3.5-flash-lite"
-TIMEOUT_S = 45
+TIMEOUT_S = 90
 
 
 def _api_key() -> str:
@@ -42,16 +42,16 @@ _SYSTEM_INSTRUCTION = (
     "Every turn consists of two interconnected parts:\n"
     "1. `reply` (Conversational Message): Discuss the idea with the author. Offer constructive perspectives, suggest structure, ask clarifying questions to uncover details, highlight edge cases, and explain what changes were made in the working draft.\n"
     "2. `draft` (Structured Working Draft): Maintain the active, up-to-date draft reflecting the current state of discussion.\n\n"
-    "Modes & Content Rules:\n"
-    "- Mode: 'post' (Short-form / Micro-post for social feed and POSSE syndication):\n"
-    "  * `draft.body`: Punchy, engaging, well-formatted text with clear takeaways or questions.\n"
-    "  * `draft.tags`: 2-5 relevant tags (e.g. ['WebDev', 'Python', 'Architecture']).\n"
-    "- Mode: 'article' (Long-form Technical Blog Article):\n"
-    "  * `draft.title`: A compelling, clear, descriptive article title.\n"
-    "  * `draft.tags`: 3-6 relevant topic tags.\n"
-    "  * `draft.blocks`: An array of structured text blocks: [{'type': 'text', 'content': '...'}]\n"
-    "  * CRITICAL ARTICLE RULE: Generate ONLY text and heading blocks. Use rich Markdown format with '# ', '## ', bullet points, blockquotes, and fenced code blocks.\n"
-    "  * NEVER invent fake image URLs, media blocks, or image placeholders. The author uploads all screenshots and media files manually.\n\n"
+    "CRITICAL RULES FOR DRAFT:\n"
+    "- If Mode is 'article':\n"
+    "  * You MUST ALWAYS provide `title`, `tags`, and `blocks` in `draft`.\n"
+    "  * `draft.blocks` MUST contain the complete, structured content of the article split into text blocks: `[{'type': 'text', 'content': '...'}]`.\n"
+    "  * Structure blocks using rich Markdown with headings ('# ', '## ', '### '), lists, quotes, and code blocks.\n"
+    "  * When the author provides notes or requests additions, integrate them directly into `draft.blocks` so the draft is always ready to publish.\n"
+    "  * NEVER omit `blocks` or leave it empty in article mode.\n"
+    "  * Generate ONLY text and heading blocks. Do NOT invent fake image URLs, media blocks, or image placeholders. Media is added manually by the author.\n"
+    "- If Mode is 'post':\n"
+    "  * You MUST provide `body` (punchy, engaging text) and `tags` (2-5 tags) in `draft`.\n\n"
     "Always return valid JSON adhering strictly to the schema."
 )
 
@@ -63,6 +63,58 @@ def _clean_json_text(raw_text: str) -> str:
         text = re.sub(r"^```(?:json)?\s*", "", text, flags=re.IGNORECASE)
         text = re.sub(r"\s*```$", "", text)
     return text.strip()
+
+
+def _format_draft_context(draft: Optional[Dict[str, Any]], mode: str) -> str:
+    """Format existing draft into a clean, compact prompt context string."""
+    if not draft:
+        return ""
+    lines = [f"[Current Working Draft - Mode: {mode.upper()}]"]
+    if draft.get("title"):
+        lines.append(f"Title: {draft['title']}")
+    if draft.get("tags"):
+        tags = draft["tags"]
+        if isinstance(tags, list):
+            lines.append(f"Tags: {', '.join(str(t) for t in tags)}")
+        elif isinstance(tags, str):
+            lines.append(f"Tags: {tags}")
+    if mode == "post" and draft.get("body"):
+        lines.append(f"Body:\n{draft['body']}")
+    elif mode == "article" and draft.get("blocks"):
+        block_lines = []
+        for idx, b in enumerate(draft["blocks"]):
+            if isinstance(b, dict):
+                c = b.get("content", "")
+            else:
+                c = str(b)
+            if c and c.strip():
+                block_lines.append(f"--- Block {idx+1} ---\n{c.strip()}")
+        if block_lines:
+            lines.append("Current Blocks:\n" + "\n\n".join(block_lines))
+    return "\n".join(lines) + "\n\n"
+
+
+def _split_markdown_into_blocks(text: str) -> List[Dict[str, str]]:
+    """Split markdown text into structured article blocks by headings."""
+    lines = text.strip().split("\n")
+    blocks: List[Dict[str, str]] = []
+    current_content: List[str] = []
+
+    for line in lines:
+        if re.match(r"^#{1,3}\s+", line) and current_content:
+            joined = "\n".join(current_content).strip()
+            if joined:
+                blocks.append({"type": "text", "content": joined})
+            current_content = [line]
+        else:
+            current_content.append(line)
+
+    if current_content:
+        joined = "\n".join(current_content).strip()
+        if joined:
+            blocks.append({"type": "text", "content": joined})
+
+    return blocks
 
 
 def chat_turn(
@@ -89,15 +141,13 @@ def chat_turn(
 
     gemini_contents = []
 
-    # Inject system instruction context and current draft status into the conversation
-    context_prefix = f"[Active Mode: {mode.upper()}]\n"
-    if current_draft:
-        context_prefix += f"[Current Working Draft: {json.dumps(current_draft, ensure_ascii=False)}]\n\n"
+    # Inject compact draft context into the first message
+    context_prefix = _format_draft_context(current_draft, mode)
 
     for i, msg in enumerate(messages):
         role = "user" if msg.get("role") in ("user", "author") else "model"
         text = msg.get("content", "").strip()
-        if i == 0 and role == "user":
+        if i == 0 and role == "user" and context_prefix:
             text = f"{context_prefix}{text}"
         gemini_contents.append({
             "role": role,
@@ -107,41 +157,63 @@ def chat_turn(
     if not gemini_contents:
         gemini_contents.append({"role": "user", "parts": [{"text": f"Let's write a new {mode}."}]})
 
+    if mode == "article":
+        schema: Dict[str, Any] = {
+            "type": "OBJECT",
+            "properties": {
+                "reply": {"type": "STRING"},
+                "draft": {
+                    "type": "OBJECT",
+                    "properties": {
+                        "title": {"type": "STRING"},
+                        "tags": {
+                            "type": "ARRAY",
+                            "items": {"type": "STRING"}
+                        },
+                        "blocks": {
+                            "type": "ARRAY",
+                            "items": {
+                                "type": "OBJECT",
+                                "properties": {
+                                    "type": {"type": "STRING"},
+                                    "content": {"type": "STRING"}
+                                },
+                                "required": ["type", "content"]
+                            }
+                        }
+                    },
+                    "required": ["title", "tags", "blocks"]
+                }
+            },
+            "required": ["reply", "draft"]
+        }
+    else:
+        schema = {
+            "type": "OBJECT",
+            "properties": {
+                "reply": {"type": "STRING"},
+                "draft": {
+                    "type": "OBJECT",
+                    "properties": {
+                        "body": {"type": "STRING"},
+                        "tags": {
+                            "type": "ARRAY",
+                            "items": {"type": "STRING"}
+                        }
+                    },
+                    "required": ["body", "tags"]
+                }
+            },
+            "required": ["reply", "draft"]
+        }
+
     payload: Dict[str, Any] = {
         "contents": gemini_contents,
         "systemInstruction": {"parts": [{"text": _SYSTEM_INSTRUCTION}]},
         "generationConfig": {
             "temperature": 0.7,
             "responseMimeType": "application/json",
-            "responseSchema": {
-                "type": "OBJECT",
-                "properties": {
-                    "reply": {"type": "STRING"},
-                    "draft": {
-                        "type": "OBJECT",
-                        "properties": {
-                            "title": {"type": "STRING"},
-                            "body": {"type": "STRING"},
-                            "tags": {
-                                "type": "ARRAY",
-                                "items": {"type": "STRING"}
-                            },
-                            "blocks": {
-                                "type": "ARRAY",
-                                "items": {
-                                    "type": "OBJECT",
-                                    "properties": {
-                                        "type": {"type": "STRING"},
-                                        "content": {"type": "STRING"}
-                                    },
-                                    "required": ["type", "content"]
-                                }
-                            }
-                        }
-                    }
-                },
-                "required": ["reply", "draft"]
-            }
+            "responseSchema": schema
         }
     }
 
@@ -198,12 +270,12 @@ def chat_turn(
         clean_title = re.sub(r"</?[a-zA-Z0-9_ -]+>", "", str(draft["title"])).strip()
         first_line = clean_title.split("\n")[0].strip()
         if len(first_line) > 130 and ":" in first_line:
-            parts = first_line.split(":")
-            if len(parts) > 2:
-                first_line = f"{parts[0].strip()}: {parts[1].strip()}"
+            p = first_line.split(":")
+            if len(p) > 2:
+                first_line = f"{p[0].strip()}: {p[1].strip()}"
         draft["title"] = first_line[:140]
 
-    # Enforce article blocks format sanity
+    # Enforce article blocks format sanity and fallback extraction
     if mode == "article":
         raw_blocks = draft.get("blocks") or []
         sanitized_blocks = []
@@ -215,6 +287,16 @@ def chat_turn(
                 })
             elif isinstance(b, str) and b.strip():
                 sanitized_blocks.append({"type": "text", "content": b.strip()})
+
+        # Fallback: if blocks was omitted or empty, extract from draft body or reply
+        if not sanitized_blocks:
+            if draft.get("body"):
+                sanitized_blocks = _split_markdown_into_blocks(draft["body"])
+            elif "# " in reply or "## " in reply:
+                sanitized_blocks = _split_markdown_into_blocks(reply)
+            elif current_draft and current_draft.get("blocks"):
+                sanitized_blocks = current_draft["blocks"]
+
         draft["blocks"] = sanitized_blocks
 
     return {

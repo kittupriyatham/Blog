@@ -524,6 +524,24 @@
       sendIconEl.classList.add('hidden');
       sendSpinnerEl.classList.remove('hidden');
 
+      const typingIndicator = document.createElement('div');
+      typingIndicator.id = 'typing-indicator';
+      typingIndicator.className = 'flex items-start gap-3';
+      typingIndicator.innerHTML = `
+        <div class="w-8 h-8 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center flex-shrink-0 text-white font-bold text-xs shadow-sm">
+          AI
+        </div>
+        <div class="bg-slate-100 dark:bg-slate-800/80 rounded-2xl rounded-tl-sm px-4 py-3 text-sm text-slate-500 dark:text-slate-400 flex items-center gap-2 shadow-sm">
+          <svg class="animate-spin h-4 w-4 text-indigo-500" viewBox="0 0 24 24" fill="none">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+          </svg>
+          <span>Crafting & refining draft...</span>
+        </div>
+      `;
+      chatMessagesEl.appendChild(typingIndicator);
+      chatMessagesEl.scrollTop = chatMessagesEl.scrollHeight;
+
       try {
         const resp = await fetch('{{ url_for("api_ai_studio_chat") }}', {
           method: 'POST',
@@ -537,6 +555,9 @@
             current_draft: currentDraft
           })
         });
+
+        const ti = document.getElementById('typing-indicator');
+        if (ti) ti.remove();
 
         const data = await resp.json();
         if (data.status === 'error') {
@@ -562,13 +583,20 @@
             if (data.draft.blocks && data.draft.blocks.length) {
               currentDraft.blocks = data.draft.blocks;
               renderBlocks();
+            } else if (currentMode === 'article' && data.draft.body) {
+              currentDraft.blocks = [{ type: 'text', content: data.draft.body }];
+              renderBlocks();
             }
             syncStats();
           }
         }
       } catch (err) {
+        const ti = document.getElementById('typing-indicator');
+        if (ti) ti.remove();
         appendMessage('model', `⚠️ Network error: ${err.message}`);
       } finally {
+        const ti = document.getElementById('typing-indicator');
+        if (ti) ti.remove();
         isGenerating = false;
         sendBtnEl.disabled = false;
         sendIconEl.classList.remove('hidden');
