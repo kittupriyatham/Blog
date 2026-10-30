@@ -36,6 +36,9 @@ class Post(Document):
     # filename). Declared so the schema is explicit; strict=False means a
     # raw-collection $set also works without tripping MongoEngine.
     youtube = DictField()
+    # Optional author-edited custom text per platform from the preview modal,
+    # mapping platform_id -> custom_text string.
+    custom_syndications = DictField()
     # Each social platform's own engagement counts, cached by the analytics
     # refresh route (POST /admin/analytics/refresh) so the dashboard never has to
     # call SocialAPI to render. Keyed by platform slug -> {likes, comments,

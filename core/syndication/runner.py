@@ -31,10 +31,13 @@ def run_syndication(doc_id, url, platforms):
     for pid in platforms:
         if pid in already:
             continue
-        # Composed per platform. A single shared string had to satisfy the
-        # smallest limit in the batch, so Bluesky's 300 characters truncated a
-        # post that Facebook would happily have taken in full.
-        text = syndication.compose_text(doc, url, [pid])
+        # Composed per platform, or uses an author's custom override if supplied.
+        custom_map = doc.get("custom_syndications") or {}
+        custom_text = (custom_map.get(pid) or "").strip()
+        if custom_text:
+            text = custom_text
+        else:
+            text = syndication.compose_text(doc, url, [pid])
         # Instagram and Pinterest cannot publish text at all. Render a text card
         # for them instead of failing. YouTube is excluded on purpose: it needs
         # a real video, which cannot be derived from text.

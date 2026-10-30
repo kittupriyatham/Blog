@@ -304,18 +304,38 @@
   // Native-form composers (the feed composer posts a plain <form>): drop the
   // panel's values into a hidden `youtube_meta` field on the way out. The fetch
   // editors append the same field themselves in their own save() path.
+  // Map of per-platform custom text overrides edited by the author in previews.
+  window._customSyndicationTexts = {};
+  window.customSyndicationJSON = function () {
+    var keys = Object.keys(window._customSyndicationTexts || {});
+    if (!keys.length) return '';
+    return JSON.stringify(window._customSyndicationTexts);
+  };
+
   document.addEventListener('submit', function (e) {
     var form = e.target;
     if (!form || form.tagName !== 'FORM') return;
-    if (!form.querySelector('#youtube-panel')) return;
-    var hidden = form.querySelector('input[name="youtube_meta"]');
-    if (!hidden) {
-      hidden = document.createElement('input');
-      hidden.type = 'hidden';
-      hidden.name = 'youtube_meta';
-      form.appendChild(hidden);
+    if (form.querySelector('#youtube-panel')) {
+      var hidden = form.querySelector('input[name="youtube_meta"]');
+      if (!hidden) {
+        hidden = document.createElement('input');
+        hidden.type = 'hidden';
+        hidden.name = 'youtube_meta';
+        form.appendChild(hidden);
+      }
+      hidden.value = window.youtubeMetaJSON();
     }
-    hidden.value = window.youtubeMetaJSON();
+    var customJson = window.customSyndicationJSON();
+    if (customJson) {
+      var customHidden = form.querySelector('input[name="custom_syndications"]');
+      if (!customHidden) {
+        customHidden = document.createElement('input');
+        customHidden.type = 'hidden';
+        customHidden.name = 'custom_syndications';
+        form.appendChild(customHidden);
+      }
+      customHidden.value = customJson;
+    }
   });
 
   // --- Per-platform preview -------------------------------------------------
@@ -365,50 +385,113 @@
       return;
     }
     rows.forEach(function (r) {
+      var pid = r.platform;
       var card = document.createElement('div');
-      // Full-width, stacked block: never a wide flex row that could push the panel
-      // sideways. min-w-0 lets the text body wrap instead of setting the width.
-      card.className = 'w-full max-w-full min-w-0 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/60 p-3 mb-2';
+      card.className = 'w-full max-w-full min-w-0 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/60 p-3 mb-2.5 transition';
 
       var head = document.createElement('div');
-      head.className = 'flex items-center justify-between gap-2 mb-1.5 flex-wrap w-full min-w-0';
+      head.className = 'flex items-center justify-between gap-2 mb-2 flex-wrap w-full min-w-0';
 
       var name = document.createElement('span');
       name.className = 'text-xs font-semibold text-slate-700 dark:text-slate-200 min-w-0 break-words';
-      name.textContent = (r.label || r.platform) +
-        (r.limit ? ' \u00b7 limit ' + r.limit : ' \u00b7 no limit');
+      name.textContent = (r.label || r.platform) + (r.limit ? ' \u00b7 limit ' + r.limit : ' \u00b7 no limit');
       head.appendChild(name);
 
       var right = document.createElement('span');
       right.className = 'flex items-center gap-2 shrink-0';
+
       var count = document.createElement('span');
-      count.className = 'text-[11px] text-slate-400 dark:text-slate-500';
-      count.textContent = (r.length || 0) + ' char' + (r.length === 1 ? '' : 's');
+      count.className = 'text-[11px] text-slate-400 dark:text-slate-500 font-mono';
+
+      var defaultText = r.text || '';
+      var activeText = (window._customSyndicationTexts && window._customSyndicationTexts[pid] !== undefined)
+        ? window._customSyndicationTexts[pid]
+        : defaultText;
+      var curLen = activeText.length;
+      count.textContent = curLen + ' char' + (curLen === 1 ? '' : 's');
       right.appendChild(count);
-      if (r.error) {
-        right.appendChild(previewTag('error', 'bg-red-100 text-red-700 dark:bg-red-950/50 dark:text-red-400'));
-      } else if (r.rewritten) {
-        right.appendChild(previewTag('rewritten', 'bg-amber-100 text-amber-700 dark:bg-amber-950/50 dark:text-amber-400'));
-      } else {
-        right.appendChild(previewTag('fits', 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-400'));
+
+      var tagSpan = document.createElement('span');
+      function updateCardStatus(textVal) {
+        var len = textVal.length;
+        count.textContent = len + ' char' + (len === 1 ? '' : 's');
+        if (r.limit && len > r.limit) {
+          count.className = 'text-[11px] font-bold text-red-500 font-mono';
+        } else {
+          count.className = 'text-[11px] text-slate-400 dark:text-slate-500 font-mono';
+        }
+        tagSpan.innerHTML = '';
+        if (r.error) {
+          tagSpan.appendChild(previewTag('error', 'bg-red-100 text-red-700 dark:bg-red-950/50 dark:text-red-400'));
+        } else if (window._customSyndicationTexts && window._customSyndicationTexts[pid] !== undefined) {
+          tagSpan.appendChild(previewTag('customized', 'bg-indigo-100 text-indigo-700 dark:bg-indigo-950/50 dark:text-indigo-400'));
+        } else if (r.rewritten) {
+          tagSpan.appendChild(previewTag('rewritten', 'bg-amber-100 text-amber-700 dark:bg-amber-950/50 dark:text-amber-400'));
+        } else {
+          tagSpan.appendChild(previewTag('fits', 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-400'));
+        }
       }
+      updateCardStatus(activeText);
+      right.appendChild(tagSpan);
+
+      var editBtn = null;
+      if (!r.error) {
+        editBtn = document.createElement('button');
+        editBtn.type = 'button';
+        editBtn.className = 'text-[11px] font-medium text-brand-600 dark:text-brand-400 hover:underline transition ml-1';
+        editBtn.textContent = (window._customSyndicationTexts && window._customSyndicationTexts[pid] !== undefined) ? 'Reset to auto' : 'Edit for ' + (r.label || pid);
+        right.appendChild(editBtn);
+      }
+
       head.appendChild(right);
       card.appendChild(head);
 
-      var body = document.createElement('p');
-      body.className = 'text-sm text-slate-700 dark:text-slate-300 whitespace-pre-wrap break-words min-w-0 max-w-full';
-      // overflow-wrap:anywhere keeps a very long unbroken run (a URL, a word with
-      // no spaces) wrapping inside the card instead of widening the page.
-      body.style.overflowWrap = 'anywhere';
-      body.style.wordBreak = 'break-word';
-      body.textContent = r.error ? ('Could not preview: ' + r.error) : (r.text || '');
-      if (r.error) body.className += ' text-red-600 dark:text-red-400';
-      card.appendChild(body);
+      if (r.error) {
+        var errBody = document.createElement('p');
+        errBody.className = 'text-sm text-red-600 dark:text-red-400 whitespace-pre-wrap break-words min-w-0 max-w-full';
+        errBody.textContent = 'Could not preview: ' + r.error;
+        card.appendChild(errBody);
+      } else {
+        var textContainer = document.createElement('div');
+        textContainer.className = 'relative mt-1';
+
+        var editArea = document.createElement('textarea');
+        editArea.className = 'w-full text-xs font-sans text-slate-800 dark:text-slate-200 bg-white dark:bg-slate-900/90 border border-slate-200 dark:border-slate-700 rounded-lg p-2.5 focus:outline-none focus:ring-1 focus:ring-brand-500 resize-y leading-relaxed transition shadow-inner';
+        editArea.rows = Math.max(2, Math.min(6, activeText.split('\n').length + 1));
+        editArea.value = activeText;
+
+        editArea.addEventListener('input', function () {
+          var val = editArea.value;
+          if (val === defaultText) {
+            delete window._customSyndicationTexts[pid];
+            if (editBtn) editBtn.textContent = 'Edit for ' + (r.label || pid);
+          } else {
+            window._customSyndicationTexts[pid] = val;
+            if (editBtn) editBtn.textContent = 'Reset to auto';
+          }
+          updateCardStatus(val);
+        });
+
+        if (editBtn) {
+          editBtn.addEventListener('click', function () {
+            if (window._customSyndicationTexts && window._customSyndicationTexts[pid] !== undefined) {
+              delete window._customSyndicationTexts[pid];
+              editArea.value = defaultText;
+              editBtn.textContent = 'Edit for ' + (r.label || pid);
+              updateCardStatus(defaultText);
+            } else {
+              editArea.focus();
+            }
+          });
+        }
+
+        textContainer.appendChild(editArea);
+        card.appendChild(textContainer);
+      }
 
       previewBox.appendChild(card);
     });
-  }
-
+  }\n
   // Show/hide the preview panel. The "Hide preview" button only appears while
   // the panel is visible; the preview button also toggles it off when already
   // shown, so the section can be hidden again after it is rendered.

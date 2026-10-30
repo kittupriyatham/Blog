@@ -589,6 +589,7 @@ def create_post():
     media_files = request.files.getlist("media")
     platforms = request.form.getlist("platforms")
     youtube_meta = _parse_youtube_meta(request.form.get("youtube_meta"))
+    custom_syndications = _parse_custom_syndications(request.form.get("custom_syndications"))
     # Text is required only when the post carries no video and YouTube is not
     # selected: a video-only post (the typical YouTube case) is valid, and its
     # details come from the inline panel.
@@ -617,6 +618,8 @@ def create_post():
     # so the hand-off page arrives prefilled (no re-entry).
     if youtube_meta:
         new_post["youtube"] = youtube_meta
+    if custom_syndications:
+        new_post["custom_syndications"] = custom_syndications
     posts_collection.insert_one(new_post)
     # YouTube is published from its own page (/youtube/<post_id>), where the video
     # and all the metadata live. Publishing it in this batch would send a
@@ -697,6 +700,8 @@ def api_save_post():
     # a dedicated upload's `video` key survives an edit).
     if youtube_meta:
         update_data["youtube"] = _merge_youtube_meta(existing, youtube_meta)
+    if custom_syndications:
+        update_data["custom_syndications"] = custom_syndications
     posts_collection.update_one({"post_id": post_id}, {"$set": update_data}, upsert=True)
     response = {"status": "success", "post_id": post_id, "skipped": skipped}
     if status == "published":
@@ -828,6 +833,23 @@ def _parse_youtube_meta(raw):
     if not isinstance(data, dict):
         return {}
     return _youtube_meta_from(data)
+
+
+def _parse_custom_syndications(raw):
+    """Parse custom per-platform syndication text overrides JSON."""
+    if not raw:
+        return {}
+    try:
+        data = json.loads(raw)
+    except (TypeError, ValueError):
+        return {}
+    if not isinstance(data, dict):
+        return {}
+    cleaned = {}
+    for k, v in data.items():
+        if isinstance(k, str) and isinstance(v, str) and v.strip():
+            cleaned[k.strip().lower()] = v.strip()
+    return cleaned
 
 
 def _has_video_upload(files):
@@ -1032,9 +1054,12 @@ def api_save_article():
         "status": "published" if action == "publish" else "draft",
         "timestamp": current_time if (action == "publish" and (not existing_article or existing_article.get("status") != "published")) else (existing_article.get("timestamp", current_time) if existing_article else current_time)
     }
+    custom_syndications = _parse_custom_syndications(request.form.get("custom_syndications"))
     # Metadata collected in the article editor's YouTube panel -> doc["youtube"].
     if youtube_meta:
         update_data["youtube"] = _merge_youtube_meta(existing_article, youtube_meta)
+    if custom_syndications:
+        update_data["custom_syndications"] = custom_syndications
     posts_collection.update_one({"post_id": original_id or article_id}, {"$set": update_data}, upsert=True)
     response = {"status": "success", "article_id": article_id, "skipped": skipped}
     if action == "publish":
@@ -1146,6 +1171,7 @@ def api_ai_studio_finalize():
         return jsonify({"status": "error", "message": "Invalid draft payload"}), 400
 
     platforms = request.form.getlist("platforms")
+    custom_syndications = _parse_custom_syndications(request.form.get("custom_syndications"))
     current_time = content.now_str()
     existing_doc = posts_collection.find_one({"post_id": existing_id}) if existing_id else None
 
@@ -1184,6 +1210,8 @@ def api_ai_studio_finalize():
                 "status": "published" if action == "publish" else "draft",
                 "timestamp": current_time if (action == "publish" and existing_doc.get("status") != "published") else existing_doc.get("timestamp", current_time)
             }
+            if custom_syndications:
+                update_data["custom_syndications"] = custom_syndications
             posts_collection.update_one({"post_id": existing_id}, {"$set": update_data})
         else:
             article_id = ("article_" if action == "publish" else "draft_") + media.generate_post_id()
@@ -1237,6 +1265,8 @@ def api_ai_studio_finalize():
                 "status": "published" if action == "publish" else "draft",
                 "timestamp": current_time if (action == "publish" and existing_doc.get("status") != "published") else existing_doc.get("timestamp", current_time)
             }
+            if custom_syndications:
+                update_data["custom_syndications"] = custom_syndications
             posts_collection.update_one({"post_id": existing_id}, {"$set": update_data})
         else:
             post_id = ("draft_" if action == "draft" else "") + media.generate_post_id()
