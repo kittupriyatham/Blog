@@ -24,6 +24,7 @@ import json
 import os
 import time
 import urllib.error
+import re
 import urllib.request
 
 from . import imageprep
@@ -57,7 +58,7 @@ DEFAULT_PLATFORMS = [
 
 # Conservative per-platform text caps; the provider validates too and returns a
 # per-target error, so these only avoid guaranteed failures.
-TEXT_LIMITS = {"twitter": 280, "instagram": 2200, "facebook": 6000, "bluesky": 300}
+TEXT_LIMITS = {"twitter": 280, "instagram": 2200, "facebook": 6000, "bluesky": 300, "pinterest": 800}
 DEFAULT_TEXT_LIMIT = 3000
 
 TERMINAL = {"published", "failed", "cancelled", "partial"}
@@ -535,6 +536,20 @@ class SocialApiSyndicator(Syndicator):
         payload = self._build_payload(text, url, media, doc, account_id)
 
         status, body = self._request("POST", "/posts", payload)
+        if status == 409:
+            # Duplicate content detected: extract existing post id if reported by SocialAPI
+            err = body.get("error") if isinstance(body, dict) else {}
+            msg = str(err.get("message") or "")
+            match = re.search(r"post\s+([a-zA-Z0-9_-]+)", msg, re.IGNORECASE)
+            if match:
+                post_id = match.group(1)
+                try:
+                    res = self._await_result(post_id, account_id, str(post_id), deadline_s=30, interval=2.0)
+                    if res and res.get("url"):
+                        return res
+                except Exception:
+                    pass
+            raise SyndicationError("SocialAPI duplicate content detected (already published): " + msg)
         if status not in (201, 207, 200):
             raise SyndicationError("SocialAPI create post failed - " + self._error_message(status, body))
 
