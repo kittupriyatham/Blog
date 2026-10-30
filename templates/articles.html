@@ -90,10 +90,10 @@ src="https://www.facebook.com/tr?id=2092273818327635&ev=PageView&noscript=1"
     <div class="mb-8 flex items-end justify-between border-b border-slate-200 dark:border-slate-800 pb-4">
       <div>
         <h2 class="text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">Articles</h2>
-        <p class="text-slate-500 dark:text-slate-400 mt-2 text-sm">{% if is_cert_authorized or session.get('logged_in') %}Manage your published deep-dives and ongoing drafts.{% else %}Browse all published long-form articles.{% endif %}</p>
+        <p class="text-slate-500 dark:text-slate-400 mt-2 text-sm">{% if session.get('logged_in') %}Manage your published deep-dives and ongoing drafts.{% else %}Browse all published long-form articles.{% endif %}</p>
       </div>
 
-      {% if is_cert_authorized or session.get('logged_in') %}
+      {% if session.get('logged_in') %}
       <div class="flex items-center gap-2 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl">
         <button id="tab-published" onclick="switchTab('published')" class="px-5 py-1.5 rounded-lg text-sm font-semibold transition bg-white dark:bg-slate-700 shadow-sm text-slate-900 dark:text-white">
           Published <span class="ml-1 px-1.5 py-0.5 bg-slate-100 dark:bg-slate-600 text-slate-500 dark:text-slate-300 rounded-md text-xs">{{ published | length }}</span>
@@ -111,7 +111,7 @@ src="https://www.facebook.com/tr?id=2092273818327635&ev=PageView&noscript=1"
           {% for article in published %}
             <div class="group relative bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm hover:shadow-xl hover:border-brand-200 dark:hover:border-brand-800 hover:-translate-y-0.5 transition duration-300 overflow-hidden flex flex-col cursor-pointer" data-url="{{ url_for('article_detail', article_id=article.post_id) }}" onclick="window.location.href=this.dataset.url">
 
-              {% if session.get('logged_in') or is_cert_authorized %}
+              {% if session.get('logged_in') %}
               <div class="absolute top-3 right-3 z-20">
                 {% with item=article, item_type='article', is_draft=false %}
                   {% include '_post_action_menu.html' %}
@@ -161,7 +161,7 @@ src="https://www.facebook.com/tr?id=2092273818327635&ev=PageView&noscript=1"
       {% endif %}
     </div>
 
-    {% if is_cert_authorized or session.get('logged_in') %}
+    {% if session.get('logged_in') %}
     <div id="content-drafts" class="tab-content hidden-tab">
       {% if drafts %}
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">

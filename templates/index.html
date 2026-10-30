@@ -200,7 +200,7 @@ src="https://www.facebook.com/tr?id=2092273818327635&ev=PageView&noscript=1"
             <span class="text-xs text-slate-400 dark:text-slate-500 ml-1">&bull; {{ post.views }} views</span>
           {% endif %}
         </div>
-        {% if session.get('logged_in') or is_cert_authorized %}
+        {% if session.get('logged_in') %}
         <div class="relative z-20">
           {% with item=post, item_type=post.type or 'post', is_draft=(post.status == 'draft') %}
             {% include '_post_action_menu.html' %}

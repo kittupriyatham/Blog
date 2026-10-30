@@ -314,11 +314,14 @@ def _admin_device_signature() -> str:
     return hmac.new(key, msg, hashlib.sha256).hexdigest()
 
 def is_cert_authorized() -> bool:
-    """Device / cert authorization check.
-    Returns True so administrative routes and login are directly accessible.
-    Authentication is still securely enforced by username & password at /login.
-    """
-    return True
+    """Device / cert authorization check against HMAC-signed device cookie."""
+    try:
+        cookie_token = request.cookies.get(ADMIN_DEVICE_COOKIE)
+        if cookie_token and hmac.compare_digest(cookie_token, _admin_device_signature()):
+            return True
+    except Exception:
+        pass
+    return False
 
 
 @app.context_processor
@@ -815,7 +818,7 @@ def api_save_post():
 def articles_dashboard():
     published = list(posts_collection.find({"type": "article", "status": "published"}).sort("timestamp", -1))
     drafts = []
-    if is_cert_authorized() or session.get("logged_in"):
+    if session.get("logged_in"):
         drafts = list(posts_collection.find({"type": "article", "status": "draft"}).sort("timestamp", -1))
     return render_template("articles.html", published=published, drafts=drafts)
 
@@ -844,7 +847,7 @@ def posts_dashboard():
 
     published = [p for p in posts_list if p.get("status", "published") != "draft"]
     drafts = []
-    if is_cert_authorized() or session.get("logged_in"):
+    if session.get("logged_in"):
         drafts = [p for p in posts_list if p.get("status") == "draft"]
     return render_template("posts.html", published=published, drafts=drafts)
 
