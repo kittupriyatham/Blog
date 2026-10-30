@@ -1,4 +1,5 @@
-{% if is_cert_authorized or session.get('logged_in') %}
+{% set _can_manage = (session.get('logged_in') and not is_demo) or (is_demo and item.is_demo) or (is_cert_authorized and not is_demo) %}
+{% if _can_manage %}
 {#- Reusable horizontal '...' menu with Edit & Delete options for published posts/articles, and Delete for drafts.
     Parameters expected:
       - item: the post or article document

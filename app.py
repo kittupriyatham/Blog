@@ -609,6 +609,25 @@ def logout():
     session.clear()
     return redirect(url_for("index"))
 
+
+def _demo_syndication_url(platform, kind, doc_id):
+    """Generate canonical simulated preview link for demo mode syndications.
+    Format: %blog-site%/example/<platform>/<post/article>_<id>
+    """
+    base = (SITE_URL or "").rstrip("/")
+    if not base:
+        try:
+            base = request.host_url.rstrip("/")
+        except Exception:
+            base = "https://blog.potluri-krishna-priyatham.tech"
+    doc_id_str = str(doc_id).strip()
+    if doc_id_str.startswith(f"{kind}_"):
+        target = doc_id_str
+    else:
+        target = f"{kind}_{doc_id_str}"
+    return f"{base}/example/{platform}/{target}"
+
+
 @app.route("/create_post", methods=["GET", "POST"])
 def create_post():
     if not session.get("logged_in"): return redirect(url_for("login"))
@@ -663,7 +682,7 @@ def create_post():
             demo_syndications.append({
                 "platform": p,
                 "label": syndication.label_for(p),
-                "url": f"https://example.com/demo/{p}/post/{post_id}",
+                "url": _demo_syndication_url(p, "post", post_id),
                 "remote_id": f"demo_{p}_{post_id}",
                 "status": "posted",
                 "posted_at": content.now_str(),
@@ -773,7 +792,7 @@ def api_save_post():
                 demo_syndications.append({
                     "platform": p,
                     "label": syndication.label_for(p),
-                    "url": f"https://example.com/demo/{p}/post/{post_id}",
+                    "url": _demo_syndication_url(p, "post", post_id),
                     "remote_id": f"demo_{p}_{post_id}",
                     "status": "posted",
                     "posted_at": content.now_str(),
@@ -1071,6 +1090,9 @@ def edit_article(article_id):
     if not session.get("logged_in"): return redirect(url_for("login"))
     article = posts_collection.find_one({"post_id": article_id, "type": "article"})
     if not article: abort(404)
+    if session.get("is_demo") and not article.get("is_demo"):
+        flash("Demo users cannot edit original author articles. You can edit your own demo articles!", "error")
+        return redirect(url_for("articles_dashboard"))
     return render_template("create_article.html", article=article,
                            syndication_platforms=syndication.available_platforms(kind="article"),
                            youtube_meta=(article.get("youtube") or {}))
@@ -1153,7 +1175,7 @@ def api_save_article():
                 demo_syndications.append({
                     "platform": p,
                     "label": syndication.label_for(p),
-                    "url": f"https://example.com/demo/{p}/{article_id}",
+                    "url": _demo_syndication_url(p, "article", article_id),
                     "remote_id": f"demo_{p}_{article_id}",
                     "status": "posted",
                     "posted_at": content.now_str(),
@@ -1326,7 +1348,9 @@ def api_ai_studio_finalize():
                 "timestamp": current_time,
                 "likes": 0,
                 "views": 0,
-                "shares": 0
+                "shares": 0,
+                "is_demo": bool(session.get("is_demo")),
+                "author": "Demo Publisher" if session.get("is_demo") else "Kittu Priyatham"
             }
             posts_collection.insert_one(doc)
 
@@ -1339,7 +1363,7 @@ def api_ai_studio_finalize():
                     demo_syndications.append({
                         "platform": p,
                         "label": syndication.label_for(p),
-                        "url": f"https://example.com/demo/{p}/{article_id}",
+                        "url": _demo_syndication_url(p, "article", article_id),
                         "remote_id": f"demo_{p}_{article_id}",
                         "status": "posted",
                         "posted_at": content.now_str(),
@@ -1395,7 +1419,9 @@ def api_ai_studio_finalize():
                 "status": "published" if action == "publish" else "draft",
                 "timestamp": current_time,
                 "likes": 0,
-                "views": 0
+                "views": 0,
+                "is_demo": bool(session.get("is_demo")),
+                "author": "Demo Publisher" if session.get("is_demo") else "Kittu Priyatham"
             }
             posts_collection.insert_one(doc)
 
@@ -1408,7 +1434,7 @@ def api_ai_studio_finalize():
                     demo_syndications.append({
                         "platform": p,
                         "label": syndication.label_for(p),
-                        "url": f"https://example.com/demo/{p}/post/{post_id}",
+                        "url": _demo_syndication_url(p, "post", post_id),
                         "remote_id": f"demo_{p}_{post_id}",
                         "status": "posted",
                         "posted_at": content.now_str(),
@@ -1880,6 +1906,77 @@ def api_link_external_syndication():
         "message": f"Successfully linked {label} URL to this post.",
         "syndication": new_entry
     })
+
+
+@app.route("/example/<platform>/<target>")
+def example_syndication_view(platform, target):
+    """Interactive preview of how a post or article looks when syndicated to a platform.
+
+    URL format: /example/<platform>/<post/article>_<id>
+    """
+    clean_target = (target or "").strip()
+    kind = "post"
+    raw_id = clean_target
+    if clean_target.startswith("post_"):
+        kind = "post"
+        raw_id = clean_target[5:]
+    elif clean_target.startswith("article_"):
+        kind = "article"
+        raw_id = clean_target[8:]
+        if raw_id.startswith("article_"):
+            raw_id = raw_id[8:]
+
+    doc = posts_collection.find_one({
+        "$or": [
+            {"post_id": clean_target},
+            {"post_id": raw_id},
+            {"post_id": f"article_{raw_id}"},
+            {"post_id": f"post_{raw_id}"}
+        ]
+    })
+
+    platform_key = (platform or "").lower().strip()
+    platform_label = syndication.label_for(platform_key) if platform_key else (platform or "").title()
+
+    if doc:
+        is_article = doc.get("type") == "article"
+        if is_article:
+            blog_url = content.canonical("article_detail", article_id=doc.get("post_id"))
+        else:
+            blog_url = content.canonical("post_detail", post_id=doc.get("post_id"))
+
+        custom_syn = doc.get("custom_syndications") or {}
+        if custom_syn.get(platform_key):
+            post_text = custom_syn[platform_key]
+        else:
+            post_text = syndication.compose_text(doc, blog_url, platforms=[platform_key] if platform_key else None)
+
+        media_items = syndication.media_for(doc)
+        author_name = doc.get("author") or ("Demo Publisher" if doc.get("is_demo") else "Kittu Priyatham")
+        timestamp = doc.get("timestamp") or content.now_str()
+        post_title = doc.get("title") if is_article else None
+    else:
+        doc = None
+        blog_url = url_for("index", _external=True)
+        post_text = f"Exploring automated POSSE syndication to {platform_label}! Publish on your own blog first, then syndicate effortlessly across social channels."
+        media_items = []
+        author_name = "Demo Publisher"
+        timestamp = content.now_str()
+        post_title = f"Simulated {kind.title()} Demo"
+
+    return render_template(
+        "example_syndication.html",
+        platform=platform_key,
+        platform_label=platform_label,
+        doc=doc,
+        kind=kind,
+        post_text=post_text,
+        media_items=media_items,
+        blog_url=blog_url,
+        author_name=author_name,
+        timestamp=timestamp,
+        post_title=post_title
+    )
 
 
 @app.route("/delete/<post_id>", methods=["POST"])

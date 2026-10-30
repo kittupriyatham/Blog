@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{{ platform_label }} Preview – {{ doc.title if doc and doc.title else 'POSSE Syndication' }}</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⚡</text></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="{{ url_for('static', filename='js/theme.js') }}"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: { sans: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'] },
+          colors: { brand: { 50:'#eef2ff',100:'#e0e7ff',400:'#818cf8',500:'#6366f1',600:'#4f46e5',700:'#4338ca' } },
+          boxShadow: { soft: '0 2px 10px -2px rgb(0 0 0 / 0.06), 0 12px 32px -12px rgb(0 0 0 / 0.12)' },
+        },
+      },
+    };
+  </script>
+  <style>
+    body { font-family: 'Inter', ui-sans-serif, system-ui, sans-serif; }
+    .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
+    .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 9999px; }
+  </style>
+</head>
+<body class="bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 min-h-screen flex flex-col transition-colors duration-200">
+
+  <!-- Top Navigation Bar -->
+  <header class="sticky top-0 z-40 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border-b border-slate-200 dark:border-slate-800">
+    <div class="max-w-4xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <a href="{{ url_for('index') }}" class="font-bold text-base sm:text-lg tracking-tight hover:text-brand-600 dark:hover:text-brand-400 transition">
+          ✍️ My Blog
+        </a>
+        <span class="text-xs px-2.5 py-0.5 rounded-full bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 font-medium border border-indigo-200 dark:border-indigo-800">
+          Demo Syndication View
+        </span>
+      </div>
+      <div class="flex items-center gap-2 sm:gap-3">
+        <button id="theme-toggle" type="button" aria-label="Toggle dark mode"
+                class="p-2 rounded-lg text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition">
+          <svg id="theme-toggle-dark-icon" class="hidden w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z"></path></svg>
+          <svg id="theme-toggle-light-icon" class="hidden w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.465 5.05l-.708-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 000 2h1z" fill-rule="evenodd" clip-rule="evenodd"></path></svg>
+        </button>
+        <a href="{{ blog_url }}" class="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg bg-slate-900 text-white dark:bg-white dark:text-slate-900 hover:opacity-90 transition">
+          ← Back to Blog Post
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <!-- Banner -->
+  <div class="bg-indigo-600 text-white px-4 py-2.5 text-center text-xs sm:text-sm font-medium shadow-inner">
+    <div class="max-w-4xl mx-auto flex items-center justify-center gap-2 flex-wrap">
+      <span>⚡ <strong>POSSE Simulation:</strong> This page shows how your content renders when automatically syndicated to <strong>{{ platform_label }}</strong>.</span>
+      <a href="{{ blog_url }}" class="underline underline-offset-2 hover:opacity-80">View original post on blog &rarr;</a>
+    </div>
+  </div>
+
+  <!-- Content Container -->
+  <main class="flex-1 max-w-2xl w-full mx-auto px-4 py-8">
+
+    <!-- Platform Header Pill -->
+    <div class="mb-4 flex items-center justify-between">
+      <div class="flex items-center gap-2">
+        {% if platform == 'linkedin' %}
+          <span class="w-7 h-7 rounded-lg bg-[#0A66C2] text-white flex items-center justify-center font-bold text-xs shadow-sm">in</span>
+        {% elif platform == 'pinterest' %}
+          <span class="w-7 h-7 rounded-lg bg-[#BD081C] text-white flex items-center justify-center font-bold text-xs shadow-sm">P</span>
+        {% elif platform == 'instagram' %}
+          <span class="w-7 h-7 rounded-lg bg-gradient-to-tr from-amber-500 via-rose-500 to-purple-600 text-white flex items-center justify-center font-bold text-xs shadow-sm">IG</span>
+        {% elif platform == 'bluesky' %}
+          <span class="w-7 h-7 rounded-lg bg-[#0085FF] text-white flex items-center justify-center font-bold text-xs shadow-sm">🦋</span>
+        {% elif platform == 'twitter' %}
+          <span class="w-7 h-7 rounded-lg bg-black text-white flex items-center justify-center font-bold text-xs shadow-sm">𝕏</span>
+        {% elif platform == 'facebook' %}
+          <span class="w-7 h-7 rounded-lg bg-[#1877F2] text-white flex items-center justify-center font-bold text-xs shadow-sm">f</span>
+        {% elif platform == 'threads' %}
+          <span class="w-7 h-7 rounded-lg bg-black text-white flex items-center justify-center font-bold text-xs shadow-sm">@</span>
+        {% else %}
+          <span class="w-7 h-7 rounded-lg bg-brand-600 text-white flex items-center justify-center font-bold text-xs shadow-sm">📢</span>
+        {% endif %}
+        <div>
+          <h1 class="text-sm font-bold text-slate-800 dark:text-slate-100 leading-tight">{{ platform_label }} Preview</h1>
+          <p class="text-[11px] text-slate-500 dark:text-slate-400">Simulated syndication output</p>
+        </div>
+      </div>
+
+      <a href="{{ blog_url }}" class="text-xs text-brand-600 dark:text-brand-400 hover:underline flex items-center gap-1 font-medium">
+        <span>Blog Source</span> &rarr;
+      </a>
+    </div>
+
+    <!-- Simulated Platform Card -->
+    <div class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-soft overflow-hidden">
+
+      <!-- Card Top: Platform-specific header styling -->
+      <div class="px-5 py-4 border-b border-slate-100 dark:border-slate-800/80 flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-full bg-gradient-to-tr from-brand-500 to-indigo-600 text-white flex items-center justify-center font-bold text-sm shadow-sm ring-2 ring-white dark:ring-slate-800">
+            {{ author_name[0] | upper }}
+          </div>
+          <div>
+            <div class="flex items-center gap-1.5">
+              <span class="font-semibold text-sm text-slate-900 dark:text-slate-100">{{ author_name }}</span>
+              <svg class="w-3.5 h-3.5 text-blue-500" viewBox="0 0 20 20" fill="currentColor">
+                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+              </svg>
+            </div>
+            <p class="text-xs text-slate-500 dark:text-slate-400">
+              @{{ author_name | lower | replace(' ', '') }} · {{ timestamp[:10] if timestamp else 'Today' }} · <span class="capitalize">{{ platform_label }}</span>
+            </p>
+          </div>
+        </div>
+
+        <div class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 cursor-pointer p-1">
+          <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M6 10a2 2 0 11-4 0 2 2 0 014 0zM12 10a2 2 0 11-4 0 2 2 0 014 0zM16 12a2 2 0 100-4 2 2 0 000 4z"/></svg>
+        </div>
+      </div>
+
+      <!-- Card Body: Text Content -->
+      <div class="px-5 py-4">
+        {% if post_title %}
+          <h2 class="text-base font-bold text-slate-900 dark:text-slate-100 mb-2 leading-snug">
+            {{ post_title }}
+          </h2>
+        {% endif %}
+        <div class="text-sm leading-relaxed whitespace-pre-line text-slate-800 dark:text-slate-200 select-text">
+          {{ post_text }}
+        </div>
+      </div>
+
+      <!-- Attached Media / Image Preview -->
+      {% if media_items %}
+        <div class="border-t border-slate-100 dark:border-slate-800 bg-slate-100 dark:bg-slate-950/60 overflow-hidden">
+          {% for m in media_items[:4] %}
+            <div class="relative max-h-96 w-full flex items-center justify-center bg-black/5 dark:bg-black/30">
+              <img src="{{ m if m.startswith('http') else m }}" alt="Attached post image"
+                   class="max-h-96 w-auto max-w-full object-contain mx-auto"
+                   loading="lazy"
+                   onerror="this.parentElement.style.display='none'">
+            </div>
+          {% endfor %}
+        </div>
+      {% endif %}
+
+      <!-- Link Preview Card (Unfurl representation) -->
+      <a href="{{ blog_url }}" class="block border-t border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/40 p-4 hover:bg-slate-100 dark:hover:bg-slate-800/70 transition group">
+        <div class="flex items-center gap-3">
+          <div class="w-12 h-12 rounded-lg bg-indigo-100 dark:bg-indigo-950/80 text-indigo-600 dark:text-indigo-400 flex items-center justify-center text-xl shrink-0">
+            ✍️
+          </div>
+          <div class="flex-1 min-w-0">
+            <p class="text-[11px] font-semibold text-brand-600 dark:text-brand-400 uppercase tracking-wider">blog.potluri-krishna-priyatham.tech</p>
+            <p class="text-sm font-semibold text-slate-900 dark:text-slate-100 truncate group-hover:text-brand-600 dark:group-hover:text-brand-400 transition">
+              {{ post_title or 'Read the complete article on My Blog' }}
+            </p>
+            <p class="text-xs text-slate-500 dark:text-slate-400 truncate">
+              Original published source via POSSE syndication
+            </p>
+          </div>
+          <svg class="w-4 h-4 text-slate-400 group-hover:translate-x-0.5 transition" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+          </svg>
+        </div>
+      </a>
+
+      <!-- Card Footer: Simulated Engagement Controls -->
+      <div class="px-5 py-3 border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
+        <div class="flex items-center gap-4 sm:gap-6">
+          <button type="button" class="flex items-center gap-1.5 hover:text-red-500 transition">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/></svg>
+            <span>24</span>
+          </button>
+          <button type="button" class="flex items-center gap-1.5 hover:text-brand-500 transition">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
+            <span>4</span>
+          </button>
+          <button type="button" class="flex items-center gap-1.5 hover:text-green-500 transition">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/></svg>
+            <span>8</span>
+          </button>
+        </div>
+        <div class="flex items-center gap-1 text-[11px] text-slate-400">
+          <span>✓ Simulated POSSE Copy</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Return Actions -->
+    <div class="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
+      <a href="{{ blog_url }}" class="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-semibold text-xs text-center shadow-sm transition">
+        ← Open Original Blog Post
+      </a>
+      <a href="{{ url_for('index') }}" class="w-full sm:w-auto px-5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 font-semibold text-xs text-center transition">
+        Go to Feed
+      </a>
+    </div>
+
+  </main>
+
+  <footer class="mt-auto py-6 border-t border-slate-200 dark:border-slate-800 text-center text-xs text-slate-500">
+    <p>POSSE Syndication Preview Engine &bull; Publish Own Site, Syndicate Elsewhere</p>
+  </footer>
+</body>
+</html>
