@@ -287,6 +287,18 @@
             <p class="text-[11px] text-slate-400 truncate font-mono">@{{ author_info.scholarly.arxiv_username }}</p>
           </div>
         </a>
+
+        <!-- Vidwan (INFLIBNET) -->
+        <a href="{{ author_info.scholarly.vidwan_url }}" target="_blank" rel="noopener"
+           class="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 hover:border-emerald-400 dark:hover:border-emerald-500 transition shadow-sm hover:shadow flex items-center gap-3 group">
+          <div class="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-bold text-xs flex-shrink-0 group-hover:scale-105 transition-transform">
+            VID
+          </div>
+          <div class="min-w-0">
+            <h4 class="font-bold text-xs text-slate-900 dark:text-white truncate group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition">Vidwan Database</h4>
+            <p class="text-[11px] text-slate-400 truncate font-mono">ID: {{ author_info.scholarly.vidwan_id }}</p>
+          </div>
+        </a>
       </div>
     </section>
 

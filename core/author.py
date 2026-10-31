@@ -53,6 +53,8 @@ AUTHOR_INFO = {
         "openreview": "https://openreview.net/profile?id=%7EPOTLURI_KRISHNA_PRIYATHAM1",
         "arxiv_username": "kittupriyatham",
         "arxiv_url": "https://arxiv.org/search/?searchtype=author&query=Priyatham%2C+P+K",
+        "vidwan_id": "747100",
+        "vidwan_url": "https://vidwan.inflibnet.ac.in/profile/747100",
     },
 }
 
