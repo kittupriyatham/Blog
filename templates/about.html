@@ -173,7 +173,7 @@
           </div>
 
           <!-- Secondary Social Networks -->
-          <div class="mt-4 flex items-center justify-center lg:justify-start gap-4 text-xs text-slate-500 dark:text-slate-400">
+          <div class="mt-4 flex items-center justify-center lg:justify-start gap-3 sm:gap-4 text-xs text-slate-500 dark:text-slate-400 flex-wrap">
             <a href="https://www.facebook.com/people/KrishnaPriyatham/61552106248522/" target="_blank" rel="noopener" class="hover:text-blue-600 transition flex items-center gap-1">
               <span>Facebook Page</span>
             </a>
@@ -182,14 +182,111 @@
               <span>Facebook Profile</span>
             </a>
             <span>&bull;</span>
-            <a href="https://twitter.com/kittupriyatham" target="_blank" rel="noopener" class="hover:text-sky-500 transition">Twitter/X</a>
+            <a href="https://x.com/kittupriyatham" target="_blank" rel="noopener" class="hover:text-slate-900 dark:hover:text-white transition font-medium">X (@kittupriyatham)</a>
             <span>&bull;</span>
-            <a href="https://bsky.app/profile/kittupriyatham.bsky.social" target="_blank" rel="noopener" class="hover:text-sky-600 transition">Bluesky</a>
+            <a href="https://bsky.app/profile/kittupriyatham.bsky.social" target="_blank" rel="noopener" class="hover:text-sky-500 transition">Bluesky</a>
             <span>&bull;</span>
             <a href="https://www.instagram.com/kittupriyatham/" target="_blank" rel="noopener" class="hover:text-pink-600 transition">Instagram</a>
+            <span>&bull;</span>
+            <a href="https://in.pinterest.com/kittupriyatham/" target="_blank" rel="noopener" class="hover:text-red-600 transition">Pinterest</a>
           </div>
 
         </div>
+      </div>
+    </section>
+
+    
+    <!-- Scholarly & Academic Profiles -->
+    <section class="mb-10">
+      <h2 class="text-xl font-bold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
+        <span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
+        <span>Scholarly &amp; Academic Profiles</span>
+      </h2>
+
+      <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+        <!-- Google Scholar -->
+        <a href="{{ author_info.scholarly.google_scholar }}" target="_blank" rel="noopener"
+           class="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 hover:border-blue-400 dark:hover:border-blue-500 transition shadow-sm hover:shadow flex items-center gap-3 group">
+          <div class="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 flex items-center justify-center font-black text-sm flex-shrink-0 group-hover:scale-105 transition-transform">
+            GS
+          </div>
+          <div class="min-w-0">
+            <h4 class="font-bold text-xs text-slate-900 dark:text-white truncate group-hover:text-blue-600 dark:group-hover:text-blue-400 transition">Google Scholar</h4>
+            <p class="text-[11px] text-slate-400 truncate">Citations &amp; Papers</p>
+          </div>
+        </a>
+
+        <!-- ORCID -->
+        <a href="{{ author_info.scholarly.orcid_url }}" target="_blank" rel="noopener"
+           class="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 hover:border-emerald-400 dark:hover:border-emerald-500 transition shadow-sm hover:shadow flex items-center gap-3 group">
+          <div class="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-bold text-sm flex-shrink-0 group-hover:scale-105 transition-transform">
+            iD
+          </div>
+          <div class="min-w-0">
+            <h4 class="font-bold text-xs text-slate-900 dark:text-white truncate group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition">ORCID</h4>
+            <p class="text-[11px] text-slate-400 truncate font-mono">{{ author_info.scholarly.orcid }}</p>
+          </div>
+        </a>
+
+        <!-- IEEE Xplore -->
+        <a href="{{ author_info.scholarly.ieee_url }}" target="_blank" rel="noopener"
+           class="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 hover:border-sky-400 dark:hover:border-sky-500 transition shadow-sm hover:shadow flex items-center gap-3 group">
+          <div class="w-10 h-10 rounded-xl bg-sky-50 dark:bg-sky-950/60 text-sky-600 dark:text-sky-400 flex items-center justify-center font-black text-xs flex-shrink-0 group-hover:scale-105 transition-transform">
+            IEEE
+          </div>
+          <div class="min-w-0">
+            <h4 class="font-bold text-xs text-slate-900 dark:text-white truncate group-hover:text-sky-600 dark:group-hover:text-sky-400 transition">IEEE Xplore</h4>
+            <p class="text-[11px] text-slate-400 truncate font-mono">ID: {{ author_info.scholarly.ieee_id }}</p>
+          </div>
+        </a>
+
+        <!-- ResearchGate -->
+        <a href="{{ author_info.scholarly.researchgate }}" target="_blank" rel="noopener"
+           class="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 hover:border-teal-400 dark:hover:border-teal-500 transition shadow-sm hover:shadow flex items-center gap-3 group">
+          <div class="w-10 h-10 rounded-xl bg-teal-50 dark:bg-teal-950/60 text-teal-600 dark:text-teal-400 flex items-center justify-center font-black text-xs flex-shrink-0 group-hover:scale-105 transition-transform">
+            RG
+          </div>
+          <div class="min-w-0">
+            <h4 class="font-bold text-xs text-slate-900 dark:text-white truncate group-hover:text-teal-600 dark:group-hover:text-teal-400 transition">ResearchGate</h4>
+            <p class="text-[11px] text-slate-400 truncate">Publications &amp; Stats</p>
+          </div>
+        </a>
+
+        <!-- Clarivate Web of Science -->
+        <a href="{{ author_info.scholarly.wos_url }}" target="_blank" rel="noopener"
+           class="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 hover:border-purple-400 dark:hover:border-purple-500 transition shadow-sm hover:shadow flex items-center gap-3 group">
+          <div class="w-10 h-10 rounded-xl bg-purple-50 dark:bg-purple-950/60 text-purple-600 dark:text-purple-400 flex items-center justify-center font-bold text-xs flex-shrink-0 group-hover:scale-105 transition-transform">
+            WoS
+          </div>
+          <div class="min-w-0">
+            <h4 class="font-bold text-xs text-slate-900 dark:text-white truncate group-hover:text-purple-600 dark:group-hover:text-purple-400 transition">Web of Science</h4>
+            <p class="text-[11px] text-slate-400 truncate font-mono">{{ author_info.scholarly.researcherid }}</p>
+          </div>
+        </a>
+
+        <!-- OpenReview -->
+        <a href="{{ author_info.scholarly.openreview }}" target="_blank" rel="noopener"
+           class="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 hover:border-red-400 dark:hover:border-red-500 transition shadow-sm hover:shadow flex items-center gap-3 group">
+          <div class="w-10 h-10 rounded-xl bg-red-50 dark:bg-red-950/60 text-red-600 dark:text-red-400 flex items-center justify-center font-bold text-xs flex-shrink-0 group-hover:scale-105 transition-transform">
+            OR
+          </div>
+          <div class="min-w-0">
+            <h4 class="font-bold text-xs text-slate-900 dark:text-white truncate group-hover:text-red-600 dark:group-hover:text-red-400 transition">OpenReview</h4>
+            <p class="text-[11px] text-slate-400 truncate">Peer Reviews</p>
+          </div>
+        </a>
+
+        <!-- arXiv -->
+        <a href="{{ author_info.scholarly.arxiv_url }}" target="_blank" rel="noopener"
+           class="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 hover:border-amber-400 dark:hover:border-amber-500 transition shadow-sm hover:shadow flex items-center gap-3 group">
+          <div class="w-10 h-10 rounded-xl bg-amber-50 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 flex items-center justify-center font-bold text-xs flex-shrink-0 group-hover:scale-105 transition-transform">
+            arXiv
+          </div>
+          <div class="min-w-0">
+            <h4 class="font-bold text-xs text-slate-900 dark:text-white truncate group-hover:text-amber-600 dark:group-hover:text-amber-400 transition">arXiv Preprints</h4>
+            <p class="text-[11px] text-slate-400 truncate font-mono">@{{ author_info.scholarly.arxiv_username }}</p>
+          </div>
+        </a>
       </div>
     </section>
 

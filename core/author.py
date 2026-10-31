@@ -34,10 +34,25 @@ AUTHOR_INFO = {
         "facebook_profile": "https://www.facebook.com/kittupriyatham",
         "github": "https://github.com/kittupriyatham",
         "linkedin": "https://www.linkedin.com/in/potluri-krishna-priyatham/",
+        "x": "https://x.com/kittupriyatham",
         "twitter": "https://twitter.com/kittupriyatham",
         "instagram": "https://www.instagram.com/kittupriyatham/",
         "bluesky": "https://bsky.app/profile/kittupriyatham.bsky.social",
-        "pinterest": "https://www.pinterest.com/potluri_krishna_priyatham/",
+        "pinterest": "https://in.pinterest.com/kittupriyatham/",
+        "pinterest_old": "https://www.pinterest.com/potluri_krishna_priyatham/",
+    },
+    "scholarly": {
+        "orcid": "0000-0001-8770-0058",
+        "orcid_url": "https://orcid.org/0000-0001-8770-0058",
+        "google_scholar": "https://scholar.google.com/citations?user=LVCDDBYAAAAJ&hl=en",
+        "researchgate": "https://www.researchgate.net/profile/Potluri-Krishna-Priyatham",
+        "ieee_id": "97665626",
+        "ieee_url": "https://ieeexplore.ieee.org/author/97665626",
+        "researcherid": "RJU-6786-2026",
+        "wos_url": "https://www.webofscience.com/wos/author/record/RJU-6786-2026",
+        "openreview": "https://openreview.net/profile?id=%7EPOTLURI_KRISHNA_PRIYATHAM1",
+        "arxiv_username": "kittupriyatham",
+        "arxiv_url": "https://arxiv.org/search/?searchtype=author&query=Priyatham%2C+P+K",
     },
 }
 
@@ -119,6 +134,7 @@ ALTERNATE_NAMES = _generate_alternate_names()
 
 
 def get_author_schema() -> dict:
+    scholarly = AUTHOR_INFO.get("scholarly", {})
     return {
         "@context": "https://schema.org",
         "@type": "Person",
@@ -128,6 +144,12 @@ def get_author_schema() -> dict:
         "sameAs": [
             AUTHOR_INFO["urls"]["blog"],
             AUTHOR_INFO["urls"]["portfolio"],
+            scholarly.get("orcid_url", "https://orcid.org/0000-0001-8770-0058"),
+            scholarly.get("google_scholar", ""),
+            scholarly.get("researchgate", ""),
+            scholarly.get("openreview", ""),
+            scholarly.get("ieee_url", ""),
+            scholarly.get("wos_url", ""),
             AUTHOR_INFO["urls"]["youtube"],
             AUTHOR_INFO["urls"]["facebook_page"],
             AUTHOR_INFO["urls"]["facebook_profile"],
@@ -137,6 +159,23 @@ def get_author_schema() -> dict:
             AUTHOR_INFO["urls"]["instagram"],
             AUTHOR_INFO["urls"]["bluesky"],
             AUTHOR_INFO["urls"]["pinterest"],
+        ],
+        "identifier": [
+            {
+                "@type": "PropertyValue",
+                "propertyID": "ORCID",
+                "value": scholarly.get("orcid", "0000-0001-8770-0058"),
+            },
+            {
+                "@type": "PropertyValue",
+                "propertyID": "Web of Science ResearcherID",
+                "value": scholarly.get("researcherid", "RJU-6786-2026"),
+            },
+            {
+                "@type": "PropertyValue",
+                "propertyID": "IEEE Author ID",
+                "value": scholarly.get("ieee_id", "97665626"),
+            },
         ],
         "jobTitle": f"{AUTHOR_INFO['role']} in {AUTHOR_INFO['research_field']}",
         "worksFor": {
