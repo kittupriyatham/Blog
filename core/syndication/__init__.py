@@ -384,17 +384,29 @@ def compose_text(doc, url, platforms=None):
     none keeps the 3000-character default.
     """
     has_attached_url = False
-    if doc.get("type") == "article":
-        body = (doc.get("title") or "New article").strip()
+    title = (doc.get("title") or "").strip() if hasattr(doc, "get") else ""
+    parts = [b.get("content", "").strip() for b in (doc.get("blocks", []) if hasattr(doc, "get") else []) if b.get("type") == "text"]
+    if not parts and hasattr(doc, "get") and doc.get("content") and isinstance(doc.get("content"), str):
+        parts = [doc.get("content").strip()]
+    content_text = "\n\n".join(p for p in parts if p).strip()
+
+    if hasattr(doc, "get") and doc.get("type") == "article":
+        if title and content_text:
+            body = f"{title}\n\n{content_text}"
+        elif title:
+            body = title
+        elif content_text:
+            body = content_text
+        else:
+            body = "New article"
     else:
-        parts = [b.get("content", "").strip() for b in doc.get("blocks", []) if b.get("type") == "text"]
-        body = "\n\n".join(p for p in parts if p) or "New post"
+        body = content_text or title or "New post"
 
-        # Textareas submit CRLF, which platforms render as a stray control character.
-        body = body.replace("\r\n", "\n").replace("\r", "\n")
+    # Textareas submit CRLF, which platforms render as a stray control character.
+    body = body.replace("\r\n", "\n").replace("\r", "\n")
 
-        # Expand relative routes (like /article/<id> or /post/<id>) into rich text + canonical URL
-        body, has_attached_url = _expand_attachments(doc, body, url)
+    # Expand relative routes (like /article/<id> or /post/<id>) into rich text + canonical URL
+    body, has_attached_url = _expand_attachments(doc, body, url)
 
     # When the body already carries the attached article's canonical URL, avoid appending
     # a duplicate link to the wrapper post so social platforms unfurl the target article preview.

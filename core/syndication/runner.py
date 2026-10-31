@@ -140,10 +140,11 @@ def enqueue_syndication(doc_id, url, platforms):
         posts_collection.update_one({"post_id": doc_id}, {"$push": {"syndications": {
             "platform": pid, "label": syndication.label_for(pid), "url": None, "status": "queued", "posted_at": now_str(), "error": None}}})
     print(f"[syndication] Enqueued {doc_id} for platforms: {platforms}")
-    # Put into the queue and also launch an immediate worker thread so execution is instantaneous
-    # and not vulnerable to thread stalling or dropped queue states
+    # Put into the single worker queue and ensure worker is running.
+    # Avoid spawning a concurrent unqueued thread which races against _syndication_worker
+    # and causes duplicate HTTP 409 collisions.
+    start_worker()
     _syn_queue.put((doc_id, url, platforms))
-    threading.Thread(target=_run_job, args=(doc_id, url, platforms), daemon=True).start()
 
 
 _syn_queue: "queue.Queue[tuple[str, str, list[str]]]" = queue.Queue()

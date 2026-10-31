@@ -1738,11 +1738,12 @@ def api_syndication_validate():
 
 def _preview_doc(kind, body_text, title, doc_id):
     """A transient, unsaved doc shaped like the one compose_text() reads."""
+    blocks = [{"type": "text", "content": body_text or ""}] if body_text else []
     if kind == "article":
         return {"post_id": doc_id or None, "type": "article",
-                "title": (title or "").strip(), "blocks": []}
+                "title": (title or "").strip(), "blocks": blocks, "content": body_text or ""}
     return {"post_id": doc_id or None, "type": "post",
-            "blocks": [{"type": "text", "content": body_text or ""}]}
+            "blocks": blocks, "content": body_text or ""}
 
 
 def _preview_body(doc):
@@ -1751,11 +1752,23 @@ def _preview_body(doc):
     Only used to decide whether composition had to shorten the text - the text
     itself always comes from compose_text(), so a change there is still honoured.
     """
-    if doc.get("type") == "article":
-        body = (doc.get("title") or "New article").strip()
+    title = (doc.get("title") or "").strip() if hasattr(doc, "get") else ""
+    parts = [b.get("content", "").strip() for b in (doc.get("blocks", []) if hasattr(doc, "get") else []) if b.get("type") == "text"]
+    if not parts and hasattr(doc, "get") and doc.get("content") and isinstance(doc.get("content"), str):
+        parts = [doc.get("content").strip()]
+    content_text = "\n\n".join(p for p in parts if p).strip()
+
+    if hasattr(doc, "get") and doc.get("type") == "article":
+        if title and content_text:
+            body = f"{title}\n\n{content_text}"
+        elif title:
+            body = title
+        elif content_text:
+            body = content_text
+        else:
+            body = "New article"
     else:
-        parts = [b.get("content", "").strip() for b in doc.get("blocks", []) if b.get("type") == "text"]
-        body = "\n\n".join(p for p in parts if p) or "New post"
+        body = content_text or title or "New post"
     return body.replace("\r\n", "\n").replace("\r", "\n")
 
 

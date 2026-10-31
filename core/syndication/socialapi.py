@@ -541,14 +541,30 @@ class SocialApiSyndicator(Syndicator):
             err = body.get("error") if isinstance(body, dict) else {}
             msg = str(err.get("message") or "")
             match = re.search(r"post\s+([a-zA-Z0-9_-]+)", msg, re.IGNORECASE)
+            acct_match = re.search(r"account\s+([a-zA-Z0-9_-]+)", msg, re.IGNORECASE)
+            if acct_match:
+                account_id = acct_match.group(1)
             if match:
-                post_id = match.group(1)
+                existing_post_id = match.group(1)
+                # First check immediately if the existing post is already published with a permalink
                 try:
-                    res = self._await_result(post_id, account_id, str(post_id), deadline_s=30, interval=2.0)
+                    st, existing_data = self._request("GET", "/posts/%s" % existing_post_id)
+                    if st == 200 and isinstance(existing_data, dict):
+                        pl = self._target_permalink(existing_data, account_id)
+                        if pl:
+                            return {"url": pl, "remote_id": str(existing_post_id)}
+                        for t in existing_data.get("targets") or []:
+                            if t.get("platform") == self.id or (account_id and t.get("account_id") == account_id):
+                                if t.get("status") == "published":
+                                    fallback = self._fallback_permalink(t, account_id)
+                                    if fallback:
+                                        return {"url": fallback, "remote_id": str(existing_post_id)}
+                    # If not immediately published, await it
+                    res = self._await_result(existing_post_id, account_id, str(existing_post_id), deadline_s=30, interval=2.0)
                     if res and res.get("url"):
                         return res
-                except Exception:
-                    pass
+                except Exception as ex:
+                    print(f"[{self.id}] Could not recover duplicate post {existing_post_id}: {ex}")
             raise SyndicationError("SocialAPI duplicate content detected (already published): " + msg)
         if status not in (201, 207, 200):
             raise SyndicationError("SocialAPI create post failed - " + self._error_message(status, body))
@@ -567,7 +583,10 @@ class SocialApiSyndicator(Syndicator):
         """Fallback URL when SocialAPI successfully publishes a post but provides an empty permalink (e.g. on Instagram)."""
         try:
             accounts = self._accounts(fresh=False)
-            acct = next((a for a in accounts if a.get("id") == account_id), None)
+            target_acct_id = target.get("account_id") or account_id
+            acct = next((a for a in accounts if a.get("id") == target_acct_id), None)
+            if not acct:
+                acct = next((a for a in accounts if a.get("platform") == self.id), None)
             if acct:
                 username = (acct.get("username") or "").lstrip("@")
                 if self.id == "instagram" and username:
@@ -587,20 +606,18 @@ class SocialApiSyndicator(Syndicator):
     def _target_permalink(self, body: dict, account_id: str) -> str | None:
         """Read a permalink out of a create/get response for our target, if terminal."""
         for t in body.get("targets") or []:
-            if t.get("account_id") != account_id:
+            if t.get("account_id") != account_id and t.get("platform") != self.id:
                 continue
             if t.get("status") == "failed":
                 err = t.get("error") or {}
                 raise SyndicationError("%s delivery failed: %s" % (self.label, err.get("message") or "unknown error"))
-            if t.get("status") == "published":
-                if t.get("permalink"):
-                    return t["permalink"]
-                return self._fallback_permalink(t, account_id)
+            if t.get("status") == "published" and t.get("permalink"):
+                return t["permalink"]
         return None
 
     def _await_result(self, post_id: str, account_id: str, remote_id: str,
                       deadline_s: int = 120, interval: float = 3.0) -> SyndicationResult:
-        """Delivery is async - poll until our target reaches a terminal status."""
+        """Delivery is async - poll until our target reaches a terminal status with its permalink."""
         end = time.time() + deadline_s
         last: dict = {}
         while time.time() < end:
@@ -612,10 +629,30 @@ class SocialApiSyndicator(Syndicator):
             permalink = self._target_permalink(body, account_id)
             if permalink:
                 return {"url": permalink, "remote_id": remote_id}
-            if body.get("status") in TERMINAL:
-                if body.get("status") == "published":
-                    return {"url": self._fallback_permalink({}, account_id), "remote_id": remote_id}
-                break
+
+            # Check if our target explicitly failed
+            for t in body.get("targets") or []:
+                if t.get("platform") == self.id or (account_id and t.get("account_id") == account_id):
+                    if t.get("status") == "failed":
+                        err = t.get("error") or {}
+                        raise SyndicationError("%s delivery failed: %s" % (self.label, err.get("message") or "unknown error"))
+
+            if body.get("status") in ("failed", "cancelled"):
+                raise SyndicationError("%s post reached terminal failed status: %s" % (self.label, body.get("status")))
+
+        # Deadline reached: if target or post reached published status,
+        # return the fallback profile URL rather than raising a false error.
+        for t in last.get("targets") or []:
+            if t.get("platform") == self.id or (account_id and t.get("account_id") == account_id):
+                if t.get("status") == "published":
+                    fallback = self._fallback_permalink(t, account_id)
+                    if fallback:
+                        return {"url": fallback, "remote_id": remote_id}
+        if last.get("status") in ("published", "partial"):
+            fallback = self._fallback_permalink({}, account_id)
+            if fallback:
+                return {"url": fallback, "remote_id": remote_id}
+
         raise SyndicationError(
             "%s post did not reach a terminal state within %ss (post %s, status %s)."
             % (self.label, deadline_s, post_id, last.get("status", "unknown")))
