@@ -193,13 +193,6 @@ src="https://www.facebook.com/tr?id=2092273818327635&ev=PageView&noscript=1"
               Syndicate to Medium
             </button>
             <button type="button"
-                    data-share="medium_import"
-                    data-url="{{ article_url }}"
-                    onclick="openMediumImporter(this.dataset.url)"
-                    class="text-xs px-3 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition">
-              Medium Importer Fallback
-            </button>
-            <button type="button"
                     onclick="promptLinkPlatform('{{ post.post_id }}', 'medium')"
                     class="inline-flex items-center gap-1.5 text-xs px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 font-medium transition cursor-pointer"
                     title="Confirm and attach the published Medium story URL">
@@ -212,16 +205,6 @@ src="https://www.facebook.com/tr?id=2092273818327635&ev=PageView&noscript=1"
               Syndication → {{ s.label or s.platform }}: <strong>{{ s.status }}</strong>{% if s.error %} — {{ s.error }}{% endif %}
             </div>
           {% endfor %}
-        {% else %}
-          <div class="mt-4 pt-4 border-t border-slate-100 dark:border-slate-800">
-            <button type="button"
-                    data-share="medium_import"
-                    data-url="{{ article_url }}"
-                    onclick="openMediumImporter(this.dataset.url)"
-                    class="text-xs px-3 py-1.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-brand-50 dark:hover:bg-slate-700 transition">
-              Publish to Medium — opens Medium's importer, blog URL copied to clipboard
-            </button>
-          </div>
         {% endif %}
       </div>
     </article>
@@ -299,21 +282,6 @@ src="https://www.facebook.com/tr?id=2092273818327635&ev=PageView&noscript=1"
       }
     }
 
-    function openMediumImporter(url) {
-      if (!url) return;
-      navigator.clipboard.writeText(url).catch(function(){});
-      var payload = {
-        posseMedium: true,
-        canonicalUrl: url
-      };
-      var win = window.open('about:blank', '_blank', 'noopener');
-      if (win) {
-        win.name = JSON.stringify(payload);
-        win.location.href = 'https://medium.com/p/import';
-      } else {
-        window.open('https://medium.com/p/import', '_blank', 'noopener');
-      }
-    }
 
     const EMOJI_MAP = {
       'like': '👍',
