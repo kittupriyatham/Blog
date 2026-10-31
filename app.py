@@ -17,6 +17,8 @@ The route bodies are unchanged: they call those packages through their module
 namespaces (media.upload_to_server(...), content.canonical(...), ...).
 """
 import datetime
+from datetime import timezone
+import email.utils
 import json
 import os
 import re
@@ -484,6 +486,93 @@ def sitemap_xml():
 
     xml_lines.append('</urlset>')
     return Response("\n".join(xml_lines), status=200, mimetype="application/xml; charset=utf-8")
+
+
+def _to_rfc822(ts_str):
+    if not ts_str:
+        return email.utils.formatdate(usegmt=True)
+    try:
+        dt = datetime.datetime.strptime(ts_str[:19], "%Y-%m-%d %H:%M:%S").replace(tzinfo=timezone.utc)
+        return email.utils.format_datetime(dt)
+    except Exception:
+        try:
+            dt = datetime.datetime.fromisoformat(ts_str.replace("Z", "+00:00"))
+            return email.utils.format_datetime(dt)
+        except Exception:
+            return email.utils.formatdate(usegmt=True)
+
+
+@app.route("/rss.xml")
+@app.route("/feed.xml")
+@app.route("/feed")
+@app.route("/rss")
+def rss_feed():
+    """Generate a standard RSS 2.0 XML feed of published posts and articles."""
+    base_url = (SITE_URL or request.host_url.rstrip("/")).rstrip("/")
+
+    xml_lines = [
+        '<?xml version="1.0" encoding="UTF-8"?>',
+        '<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">',
+        '  <channel>',
+        '    <title>Kittu Priyatham</title>',
+        f'    <link>{base_url}/</link>',
+        '    <description>Personal blog, thoughts on engineering, distributed systems, and POSSE syndication.</description>',
+        '    <language>en-us</language>',
+        f'    <atom:link href="{base_url}/rss.xml" rel="self" type="application/rss+xml"/>',
+    ]
+
+    try:
+        query = {"status": "published", "is_demo": {"$ne": True}}
+        docs = list(posts_collection.find(query).sort("timestamp", -1).limit(50))
+
+        for doc in docs:
+            pid = doc.get("post_id")
+            if not pid:
+                continue
+            item_type = doc.get("type", "post")
+            is_article = item_type == "article"
+            loc = f"{base_url}/article/{pid}" if is_article else f"{base_url}/post/{pid}"
+
+            text_parts = [b.get("content", "").strip() for b in doc.get("blocks", []) if b.get("type") == "text"]
+            body_text = "\n\n".join(p for p in text_parts if p) or (doc.get("content") or "").strip()
+
+            if is_article:
+                title = (doc.get("title") or "Article").strip()
+            else:
+                first_line = body_text.split("\n")[0].strip() if body_text else ""
+                title = first_line[:100] if first_line else "Post"
+
+            clean_title = title.replace("]]>", "]]&gt;")
+            clean_body = body_text.replace("]]>", "]]&gt;")
+            pub_date = _to_rfc822(doc.get("timestamp"))
+            author = doc.get("author") or "Kittu Priyatham"
+
+            xml_lines.append('    <item>')
+            xml_lines.append(f'      <title><![CDATA[{clean_title}]]></title>')
+            xml_lines.append(f'      <link>{loc}</link>')
+            xml_lines.append(f'      <guid isPermaLink="true">{loc}</guid>')
+            xml_lines.append(f'      <pubDate>{pub_date}</pubDate>')
+            xml_lines.append(f'      <author><![CDATA[{author}]]></author>')
+
+            for t in doc.get("tags") or []:
+                if t and isinstance(t, str):
+                    xml_lines.append(f'      <category><![CDATA[{t.strip()}]]></category>')
+
+            cover = doc.get("cover_image")
+            if cover and isinstance(cover, str):
+                cover_url = f"{base_url}{cover}" if cover.startswith("/") else cover
+                xml_lines.append(f'      <enclosure url="{cover_url}" length="0" type="image/jpeg"/>')
+
+            xml_lines.append(f'      <description><![CDATA[{clean_body}]]></description>')
+            xml_lines.append('    </item>')
+
+    except Exception as e:
+        print("[rss] Error generating feed:", e)
+
+    xml_lines.append('  </channel>')
+    xml_lines.append('</rss>')
+
+    return Response("\n".join(xml_lines), status=200, mimetype="application/rss+xml; charset=utf-8")
 
 
 @app.route("/llms.txt")
