@@ -129,6 +129,7 @@ def upload_media():
                     "url": url, "name": url.rsplit("/", 1)[-1]})
 
 @app.route("/")
+@app.route("/home")
 def index():
     q = request.args.get("q", "").strip()
     tag = request.args.get("tag", "").strip()
@@ -185,6 +186,14 @@ def index():
 @app.route("/tag/<tag>")
 def tag_view(tag):
     return redirect(url_for("index", tag=tag))
+
+@app.route("/about")
+@app.route("/author")
+def about():
+    query = {"status": "published", "is_demo": {"$ne": True}}
+    recent = list(posts_collection.find(query).sort("timestamp", -1).limit(6))
+    return render_template("about.html", recent_posts=recent)
+
 
 @app.route("/post/<post_id>")
 def post_detail(post_id):
@@ -514,9 +523,9 @@ def rss_feed():
         '<?xml version="1.0" encoding="UTF-8"?>',
         '<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">',
         '  <channel>',
-        '    <title>Kittu Priyatham</title>',
+        '    <title>Potluri Krishna Priyatham (Kittu Priyatham)</title>',
         f'    <link>{base_url}/</link>',
-        '    <description>Personal blog, thoughts on engineering, distributed systems, and POSSE syndication.</description>',
+        '    <description>Research in Quantum Technologies, Quantum Computing, AI/ML, and Software Engineering by Potluri Krishna Priyatham (PhD Scholar, SRM AP University).</description>',
         '    <language>en-us</language>',
         f'    <atom:link href="{base_url}/rss.xml" rel="self" type="application/rss+xml"/>',
     ]
@@ -545,7 +554,7 @@ def rss_feed():
             clean_title = title.replace("]]>", "]]&gt;")
             clean_body = body_text.replace("]]>", "]]&gt;")
             pub_date = _to_rfc822(doc.get("timestamp"))
-            author = doc.get("author") or "Kittu Priyatham"
+            author = doc.get("author") or "Potluri Krishna Priyatham"
 
             xml_lines.append('    <item>')
             xml_lines.append(f'      <title><![CDATA[{clean_title}]]></title>')

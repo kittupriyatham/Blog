@@ -7,6 +7,7 @@ old `_template_urls` context processor (now `template_urls`, installed by
 from flask import url_for
 
 from core import syndication
+from core.author import AUTHOR_INFO, get_author_schema_json
 from core.config import SITE_URL
 
 
@@ -36,4 +37,6 @@ def template_urls():
             "link_reserve": syndication_link_reserve(),
             # A text card is rendered locally and uploaded by the adapter, so
             # Pillow is the only requirement - no public URL is involved.
-            "text_card_available": bool(syndication.textcard.available())}
+            "text_card_available": bool(syndication.textcard.available()),
+            "author_info": AUTHOR_INFO,
+            "author_schema_json": get_author_schema_json()}

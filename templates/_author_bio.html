@@ -1,0 +1,50 @@
+<!-- Author Bio Card — Funnel to Portfolio & About Author -->
+<div class="mt-8 p-6 bg-gradient-to-br from-white via-brand-50/20 to-slate-50 dark:from-slate-900 dark:via-brand-950/20 dark:to-slate-900 rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-sm relative overflow-hidden">
+  <div class="absolute -top-12 -right-12 w-48 h-48 bg-brand-500/10 dark:bg-brand-500/5 rounded-full blur-2xl pointer-events-none"></div>
+
+  <div class="flex flex-col sm:flex-row items-center sm:items-start gap-4 sm:gap-5 relative z-10">
+    <a href="{{ url_for('about') }}" class="group relative flex-shrink-0" title="View Full Author Profile & 3D Avatar">
+      <div class="w-16 h-16 rounded-2xl p-0.5 bg-gradient-to-br from-brand-500 via-indigo-500 to-blue-600 shadow-md group-hover:scale-105 transition-transform duration-300">
+        <img src="{{ url_for('static', filename='images/avatar_thumb.webp') }}" alt="Potluri Krishna Priyatham" class="w-full h-full rounded-[14px] object-cover bg-slate-900">
+      </div>
+      <span class="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-emerald-500 border-2 border-white dark:border-slate-900 flex items-center justify-center text-[9px] text-white font-bold" title="Verified Author">✓</span>
+    </a>
+
+    <div class="flex-1 text-center sm:text-left min-w-0">
+      <div class="flex flex-wrap items-center justify-center sm:justify-start gap-2">
+        <a href="{{ url_for('about') }}" class="font-bold text-slate-900 dark:text-white text-base hover:text-brand-600 dark:hover:text-brand-400 transition">
+          Potluri Krishna Priyatham
+        </a>
+        <span class="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-brand-100 dark:bg-brand-950/80 text-brand-700 dark:text-brand-300 border border-brand-200/60 dark:border-brand-800/60">
+          PhD Scholar &bull; SRM AP
+        </span>
+      </div>
+
+      <p class="text-xs text-brand-600 dark:text-brand-400 font-medium mt-0.5">
+        Quantum Technologies &bull; Software Engineering &bull; AI / ML
+      </p>
+
+      <p class="text-xs sm:text-sm text-slate-600 dark:text-slate-300 mt-2 leading-relaxed">
+        Researching Quantum Technologies and Computing at SRM AP University. Deep background in software engineering, distributed systems, deep learning/AI, and IoT.
+      </p>
+
+      <div class="mt-4 flex flex-wrap items-center justify-center sm:justify-start gap-3">
+        <a href="https://potluri-krishna-priyatham.tech" target="_blank" rel="noopener"
+           class="inline-flex items-center gap-1.5 text-xs font-semibold px-4 py-2 rounded-full bg-gradient-to-r from-brand-600 to-blue-600 hover:from-brand-700 hover:to-blue-700 text-white shadow-sm hover:shadow transition group">
+          <span>Visit Main Portfolio</span>
+          <svg class="w-3.5 h-3.5 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+        </a>
+        <a href="{{ url_for('about') }}"
+           class="inline-flex items-center gap-1.5 text-xs font-medium px-3.5 py-2 rounded-full bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 transition">
+          <span>About Author</span>
+          <span>&rarr;</span>
+        </a>
+        <a href="https://www.youtube.com/@potlurikrishnapriyatham" target="_blank" rel="noopener"
+           class="inline-flex items-center gap-1 text-xs font-medium text-red-600 dark:text-red-400 hover:underline transition ml-1" title="YouTube Channel">
+          <svg class="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
+          <span>YouTube</span>
+        </a>
+      </div>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>About Potluri Krishna Priyatham — Quantum Technologies & Engineering</title>
+  <meta name="description" content="Potluri Krishna Priyatham (Kittu Priyatham) — PhD Scholar in Quantum Technologies at SRM AP University. Researcher in Quantum Computing, AI/ML, and Distributed Software Engineering." />
+  <link rel="canonical" href="{{ canonical('about') if canonical else 'https://blog.potluri-krishna-priyatham.tech/about' }}" />
+  <meta property="og:type" content="profile" />
+  <meta property="og:title" content="About Potluri Krishna Priyatham (Kittu)" />
+  <meta property="og:description" content="PhD Scholar in Quantum Technologies at SRM AP University. Researcher in Quantum Computing, AI/ML, and Software Engineering." />
+  <meta property="og:url" content="https://blog.potluri-krishna-priyatham.tech/about" />
+  <meta property="og:image" content="{{ url_for('static', filename='images/avatar.png', _external=True) }}" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="About Potluri Krishna Priyatham" />
+  <meta name="twitter:description" content="PhD Scholar in Quantum Technologies at SRM AP University. Explore research, software engineering, and interactive portfolio." />
+  <meta name="twitter:image" content="{{ url_for('static', filename='images/avatar.png', _external=True) }}" />
+
+  <link rel="icon" href="{{ url_for('static', filename='images/avatar_thumb.webp') }}">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="{{ url_for('static', filename='js/theme.js') }}"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: { sans: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'] },
+          colors: { brand: { 50:'#eef2ff',100:'#e0e7ff',400:'#818cf8',500:'#6366f1',600:'#4f46e5',700:'#4338ca' } },
+          boxShadow: { soft: '0 2px 10px -2px rgb(0 0 0 / 0.06), 0 12px 32px -12px rgb(0 0 0 / 0.12)' },
+        },
+      },
+    };
+  </script>
+  <style>
+    body { font-family: 'Inter', ui-sans-serif, system-ui, sans-serif; }
+    ::-webkit-scrollbar { width: 10px; height: 10px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 9999px; }
+    .dark ::-webkit-scrollbar-thumb { background: #475569; }
+  </style>
+
+  <script type="application/ld+json">
+  {{ author_schema_json | safe }}
+  </script>
+  <link rel="alternate" type="application/rss+xml" title="Kittu Priyatham &bull; RSS Feed" href="{{ url_for('rss_feed', _external=True) }}">
+</head>
+<body class="bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-200 min-h-screen antialiased flex flex-col justify-between">
+
+  <!-- Main Navigation -->
+  <nav class="bg-white/80 dark:bg-slate-900/80 backdrop-blur-lg border-b border-slate-200/70 dark:border-slate-800/70 sticky top-0 z-40">
+    <div class="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
+      <a href="{{ url_for('index') }}" class="flex items-center gap-2.5 group" title="Return to Home Feed">
+        <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-brand-500 to-blue-600 flex items-center justify-center shadow-soft group-hover:scale-105 transition-transform">
+          <span class="text-white font-extrabold text-sm">B</span>
+        </div>
+        <span class="font-bold text-slate-900 dark:text-white text-lg tracking-tight">My Blog</span>
+      </a>
+      <div class="flex items-center gap-1 sm:gap-2 text-sm font-medium">
+        <a href="{{ url_for('index') }}" class="px-3 py-1.5 rounded-full text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition">Feed</a>
+        <a href="{{ url_for('posts_dashboard') }}" class="px-3 py-1.5 rounded-full text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition">Posts</a>
+        <a href="{{ url_for('articles_dashboard') }}" class="px-3 py-1.5 rounded-full text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition">Articles</a>
+        <a href="{{ url_for('about') }}" class="px-3 py-1.5 rounded-full text-brand-600 dark:text-brand-400 bg-brand-50 dark:bg-brand-950/50 font-semibold transition">About</a>
+        <a href="https://potluri-krishna-priyatham.tech" target="_blank" rel="noopener" class="px-3 py-1.5 rounded-full text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition flex items-center gap-1 group">
+          <span>Portfolio</span>
+          <svg class="w-3.5 h-3.5 opacity-60 group-hover:opacity-100 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+        </a>
+
+        {% if session.get('logged_in') %}
+          <div class="hidden md:flex items-center gap-2 ml-2 pl-2 border-l border-slate-200 dark:border-slate-800">
+            <a href="{{ url_for('ai_studio') }}" class="px-2.5 py-1.5 rounded-full text-indigo-600 dark:text-indigo-400 font-semibold hover:bg-indigo-50 dark:hover:bg-indigo-950/50 transition flex items-center gap-1 text-xs">
+              <svg class="w-3.5 h-3.5 text-indigo-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z"></path></svg>
+              <span>AI Studio</span>
+            </a>
+            <a href="{{ url_for('analytics_dashboard') }}" class="px-2.5 py-1.5 rounded-full text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition text-xs">Analytics</a>
+            <form method="POST" action="{{ url_for('logout') }}">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <button type="submit" class="text-xs text-red-500 hover:text-red-600 font-medium transition">Sign Out</button>
+            </form>
+          </div>
+        {% else %}
+          <a href="{{ url_for('login') }}" class="px-3 py-1.5 rounded-full text-xs font-semibold bg-brand-50 dark:bg-brand-950/60 text-brand-700 dark:text-brand-300 hover:bg-brand-100 dark:hover:bg-brand-900/60 border border-brand-200 dark:border-brand-800 transition flex items-center gap-1">
+            <span>🚀 Demo</span>
+          </a>
+        {% endif %}
+
+        <a href="{{ url_for('about') }}" class="p-1 rounded-full ring-2 ring-brand-500/30 hover:ring-brand-500 transition ml-1" title="About the Author">
+          <img src="{{ url_for('static', filename='images/avatar_thumb.webp') }}" alt="Kittu Priyatham" class="w-7 h-7 rounded-full object-cover">
+        </a>
+        <a href="{{ url_for('rss_feed') }}" target="_blank" rel="noopener" class="p-2 rounded-full text-slate-500 dark:text-slate-400 hover:text-amber-500 dark:hover:text-amber-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition" title="RSS Feed">
+          <svg class="w-4 h-4 fill-current" viewBox="0 0 24 24" aria-hidden="true"><circle cx="6.18" cy="17.82" r="2.18"/><path d="M4 4.44v2.83c7.03 0 12.73 5.7 12.73 12.73h2.83c0-8.59-6.97-15.56-15.56-15.56zm0 5.66v2.83c3.9 0 7.07 3.17 7.07 7.07h2.83c0-5.47-4.43-9.9-9.9-9.9z"/></svg>
+        </a>
+        <button type="button" data-theme-toggle onclick="toggleTheme()" class="p-2 rounded-full text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition" title="Toggle theme">
+          <svg data-icon-moon class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>
+          <svg data-icon-sun class="w-5 h-5 hidden" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path stroke-linecap="round" d="M12 2v2m0 16v2M4.93 4.93l1.41 1.41m11.32 11.32l1.41 1.41M2 12h2m16 0h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
+        </button>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Content Container -->
+  <main class="max-w-5xl mx-auto px-4 py-10 w-full flex-1">
+    
+    <!-- Hero Profile Card with 3D Quantum Hologram -->
+    <section class="bg-white dark:bg-slate-900 rounded-3xl shadow-sm border border-slate-200/80 dark:border-slate-800 p-6 sm:p-10 relative overflow-hidden mb-10">
+      <div class="absolute -top-24 -right-24 w-96 h-96 bg-brand-500/10 dark:bg-brand-500/5 rounded-full blur-3xl pointer-events-none"></div>
+      <div class="absolute -bottom-24 -left-24 w-96 h-96 bg-cyan-500/10 dark:bg-cyan-500/5 rounded-full blur-3xl pointer-events-none"></div>
+
+      <div class="flex flex-col lg:flex-row items-center gap-8 lg:gap-12 relative z-10">
+        
+        <!-- 3D Quantum Avatar Canvas Column -->
+        <div class="flex flex-col items-center">
+          <div class="relative w-64 h-64 sm:w-72 sm:h-72 cursor-grab active:cursor-grabbing select-none" id="quantum-avatar-container" title="Interactive 3D Quantum Hologram — Move mouse to tilt in 3D">
+            <!-- Three.js will inject interactive WebGL canvas here -->
+            <div class="w-full h-full flex items-center justify-center">
+              <img src="{{ url_for('static', filename='images/avatar.webp') }}" alt="Potluri Krishna Priyatham" class="w-48 h-48 rounded-full object-cover shadow-2xl border-4 border-brand-500/30 animate-pulse">
+            </div>
+          </div>
+          <span class="text-[11px] font-medium text-slate-400 dark:text-slate-500 mt-2 flex items-center gap-1.5">
+            <span class="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span>
+            <span>Interactive 3D Quantum Hologram (hover / drag)</span>
+          </span>
+        </div>
+
+        <!-- Bio & Heading Column -->
+        <div class="flex-1 text-center lg:text-left">
+          <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-brand-50 dark:bg-brand-950/60 text-brand-600 dark:text-brand-300 text-xs font-semibold border border-brand-200/70 dark:border-brand-800/60 mb-3">
+            <span>🔬 PhD Scholar</span>
+            <span>&bull;</span>
+            <span>SRM AP University</span>
+          </div>
+
+          <h1 class="text-3xl sm:text-4xl font-extrabold text-slate-900 dark:text-white tracking-tight">
+            Potluri Krishna Priyatham
+          </h1>
+          <p class="text-base sm:text-lg font-medium text-brand-600 dark:text-brand-400 mt-1">
+            (Kittu Priyatham) &bull; Quantum Technologies Researcher &amp; Software Engineer
+          </p>
+
+          <p class="text-slate-600 dark:text-slate-300 mt-4 leading-relaxed text-sm sm:text-base">
+            I am a PhD Scholar at <strong>SRM University-AP</strong> researching <strong>Quantum Technologies &amp; Quantum Computing</strong>. 
+            My work bridges cutting-edge theoretical physics with practical engineering — spanning high-performance distributed systems, 
+            deep learning / machine learning architectures, robotics, and embedded IoT.
+          </p>
+
+          <!-- Primary Traffic Driving CTAs -->
+          <div class="mt-6 flex flex-wrap items-center justify-center lg:justify-start gap-3">
+            <a href="https://potluri-krishna-priyatham.tech" target="_blank" rel="noopener"
+               class="inline-flex items-center gap-2 bg-gradient-to-r from-brand-600 via-indigo-600 to-blue-600 hover:from-brand-700 hover:to-blue-700 text-white font-semibold px-6 py-2.5 rounded-full text-sm shadow-md hover:shadow-lg transition-all duration-200 group">
+              <span>Visit Main Portfolio</span>
+              <svg class="w-4 h-4 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+            </a>
+
+            <a href="https://www.youtube.com/@potlurikrishnapriyatham" target="_blank" rel="noopener"
+               class="inline-flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white font-semibold px-4 py-2.5 rounded-full text-sm shadow-sm hover:shadow transition">
+              <svg class="w-4 h-4 fill-current" viewBox="0 0 24 24"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
+              <span>YouTube Channel</span>
+            </a>
+
+            <a href="https://github.com/kittupriyatham" target="_blank" rel="noopener"
+               class="inline-flex items-center gap-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-100 font-medium px-4 py-2.5 rounded-full text-sm transition">
+              <svg class="w-4 h-4 fill-current" viewBox="0 0 24 24"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
+              <span>GitHub</span>
+            </a>
+
+            <a href="https://www.linkedin.com/in/potluri-krishna-priyatham/" target="_blank" rel="noopener"
+               class="inline-flex items-center gap-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-100 font-medium px-4 py-2.5 rounded-full text-sm transition">
+              <svg class="w-4 h-4 fill-current text-blue-600" viewBox="0 0 24 24"><path d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.764-1.75 1.764zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z"/></svg>
+              <span>LinkedIn</span>
+            </a>
+          </div>
+
+          <!-- Secondary Social Networks -->
+          <div class="mt-4 flex items-center justify-center lg:justify-start gap-4 text-xs text-slate-500 dark:text-slate-400">
+            <a href="https://www.facebook.com/people/KrishnaPriyatham/61552106248522/" target="_blank" rel="noopener" class="hover:text-blue-600 transition flex items-center gap-1">
+              <span>Facebook Page</span>
+            </a>
+            <span>&bull;</span>
+            <a href="https://www.facebook.com/kittupriyatham" target="_blank" rel="noopener" class="hover:text-blue-600 transition flex items-center gap-1">
+              <span>Facebook Profile</span>
+            </a>
+            <span>&bull;</span>
+            <a href="https://twitter.com/kittupriyatham" target="_blank" rel="noopener" class="hover:text-sky-500 transition">Twitter/X</a>
+            <span>&bull;</span>
+            <a href="https://bsky.app/profile/kittupriyatham.bsky.social" target="_blank" rel="noopener" class="hover:text-sky-600 transition">Bluesky</a>
+            <span>&bull;</span>
+            <a href="https://www.instagram.com/kittupriyatham/" target="_blank" rel="noopener" class="hover:text-pink-600 transition">Instagram</a>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- Core Research & Technical Domains Grid -->
+    <section class="mb-12">
+      <h2 class="text-xl font-bold text-slate-900 dark:text-white mb-6 flex items-center gap-2">
+        <span class="w-2.5 h-2.5 rounded-full bg-brand-500"></span>
+        <span>Research Areas &amp; Engineering Focus</span>
+      </h2>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <!-- 1. Quantum Technologies -->
+        <div class="p-6 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-sm hover:border-brand-300 dark:hover:border-brand-800 transition">
+          <div class="w-10 h-10 rounded-xl bg-cyan-50 dark:bg-cyan-950/60 text-cyan-600 dark:text-cyan-400 flex items-center justify-center font-bold text-lg mb-3">
+            ⚛️
+          </div>
+          <h3 class="font-bold text-slate-900 dark:text-white text-base">Quantum Technologies &amp; Computing</h3>
+          <p class="text-xs text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
+            Investigating quantum circuit architectures, qubit manipulation frameworks, quantum algorithms, and hybrid classical-quantum models at SRM AP University.
+          </p>
+        </div>
+
+        <!-- 2. AI & Deep Learning -->
+        <div class="p-6 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-sm hover:border-brand-300 dark:hover:border-brand-800 transition">
+          <div class="w-10 h-10 rounded-xl bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center font-bold text-lg mb-3">
+            🧠
+          </div>
+          <h3 class="font-bold text-slate-900 dark:text-white text-base">AI, Deep Learning &amp; Data Science</h3>
+          <p class="text-xs text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
+            Applied machine learning, deep neural architectures, LLM automation agents, generative pipelines, and end-to-end data processing workflows.
+          </p>
+        </div>
+
+        <!-- 3. Software Engineering & Systems -->
+        <div class="p-6 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-sm hover:border-brand-300 dark:hover:border-brand-800 transition">
+          <div class="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-bold text-lg mb-3">
+            ⚙️
+          </div>
+          <h3 class="font-bold text-slate-900 dark:text-white text-base">Software Engineering &amp; Distributed Systems</h3>
+          <p class="text-xs text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
+            Modern full-stack web applications, resilient POSSE syndication networks, API design, background worker task queues, and cloud platforms.
+          </p>
+        </div>
+
+        <!-- 4. Robotics & IoT -->
+        <div class="p-6 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-sm hover:border-brand-300 dark:hover:border-brand-800 transition">
+          <div class="w-10 h-10 rounded-xl bg-amber-50 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 flex items-center justify-center font-bold text-lg mb-3">
+            🤖
+          </div>
+          <h3 class="font-bold text-slate-900 dark:text-white text-base">Robotics, IoT &amp; Embedded Hardware</h3>
+          <p class="text-xs text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
+            Microcontroller integration, sensor telemetry, autonomous robotics prototypes, 3D modeling/printing, and hardware-software communication protocols.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Recent Writings on This Publication -->
+    {% if recent_posts %}
+    <section class="mb-12">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
+          <span class="w-2.5 h-2.5 rounded-full bg-blue-500"></span>
+          <span>Recent Writing on This Publication</span>
+        </h2>
+        <a href="{{ url_for('index') }}" class="text-xs font-semibold text-brand-600 dark:text-brand-400 hover:underline">
+          View all feed &rarr;
+        </a>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        {% for p in recent_posts %}
+          {% set p_route = 'article_detail' if p.type == 'article' else 'post_detail' %}
+          {% set p_kwarg = {'article_id': p.post_id} if p.type == 'article' else {'post_id': p.post_id} %}
+          <a href="{{ url_for(p_route, **p_kwarg) }}"
+             class="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 hover:border-brand-400 dark:hover:border-brand-600 transition shadow-sm flex flex-col justify-between group">
+            <div>
+              <div class="flex items-center gap-2 mb-2">
+                <span class="text-[10px] uppercase tracking-wider font-semibold px-2 py-0.5 rounded-full bg-brand-50 dark:bg-brand-950/60 text-brand-600 dark:text-brand-400">
+                  {{ p.type | capitalize }}
+                </span>
+                <span class="text-[11px] text-slate-400">{{ p.timestamp[:10] if p.timestamp else '' }}</span>
+              </div>
+              <h4 class="font-semibold text-sm text-slate-900 dark:text-white group-hover:text-brand-600 dark:group-hover:text-brand-400 transition line-clamp-2">
+                {{ p.title or (p.content if p.content is defined and p.content else 'Explore Post')[:90] }}
+              </h4>
+            </div>
+            <div class="mt-4 pt-2 border-t border-slate-100 dark:border-slate-800/80 text-xs text-brand-600 dark:text-brand-400 font-medium flex items-center gap-1">
+              <span>Read {{ p.type }}</span>
+              <span>&rarr;</span>
+            </div>
+          </a>
+        {% endfor %}
+      </div>
+    </section>
+    {% endif %}
+
+    <!-- Bottom Portfolio Banner / Funnel -->
+    <section class="p-8 rounded-3xl bg-gradient-to-r from-brand-600 via-indigo-600 to-blue-700 text-white shadow-xl relative overflow-hidden text-center">
+      <div class="relative z-10 max-w-2xl mx-auto">
+        <h3 class="text-2xl font-black tracking-tight mb-2">Explore My Interactive Portfolio</h3>
+        <p class="text-brand-100 text-sm mb-6 leading-relaxed">
+          Discover hands-on live demos, engineering case studies, research papers, and technical projects at my main portfolio website.
+        </p>
+        <div class="flex items-center justify-center gap-4 flex-wrap">
+          <a href="https://potluri-krishna-priyatham.tech" target="_blank" rel="noopener"
+             class="bg-white text-brand-700 hover:bg-brand-50 font-bold px-6 py-3 rounded-full text-sm shadow transition">
+            Launch potluri-krishna-priyatham.tech ↗
+          </a>
+          <a href="https://potluri-krishna-priyatham.tech/resume" target="_blank" rel="noopener"
+             class="bg-brand-700/60 hover:bg-brand-700 text-white border border-white/20 font-semibold px-5 py-3 rounded-full text-sm transition">
+            View Resume ↗
+          </a>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Global Footer -->
+  <footer class="mt-16 border-t border-slate-200/70 dark:border-slate-800/70 py-8 text-center text-xs text-slate-500 dark:text-slate-400 bg-white/40 dark:bg-slate-900/40">
+    <div class="max-w-5xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-4">
+      <p>&copy; 2026 <strong>Potluri Krishna Priyatham</strong> (Kittu Priyatham) &bull; Personal Publication</p>
+      <div class="flex items-center gap-3 sm:gap-4 flex-wrap justify-center">
+        <a href="https://potluri-krishna-priyatham.tech" target="_blank" rel="noopener" class="hover:text-brand-600 dark:hover:text-brand-400 font-semibold transition">Portfolio ↗</a>
+        <span>&bull;</span>
+        <a href="https://www.youtube.com/@potlurikrishnapriyatham" target="_blank" rel="noopener" class="hover:text-red-500 transition">YouTube</a>
+        <span>&bull;</span>
+        <a href="https://github.com/kittupriyatham" target="_blank" rel="noopener" class="hover:text-slate-900 dark:hover:text-white transition">GitHub</a>
+        <span>&bull;</span>
+        <a href="https://www.linkedin.com/in/potluri-krishna-priyatham/" target="_blank" rel="noopener" class="hover:text-blue-500 transition">LinkedIn</a>
+        <span>&bull;</span>
+        <a href="{{ url_for('rss_feed') }}" target="_blank" rel="noopener" class="hover:text-amber-500 transition">RSS</a>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Load Three.js 3D Quantum Hologram Avatar -->
+  <script src="{{ url_for('static', filename='js/quantum_avatar.js') }}"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      if (window.initQuantumAvatar) {
+        window.initQuantumAvatar('quantum-avatar-container', "{{ url_for('static', filename='images/avatar.webp') }}");
+      }
+    });
+  </script>
+</body>
+</html>
