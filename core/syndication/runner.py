@@ -10,6 +10,7 @@ The posts collection is resolved inside the functions: connect_db() runs in
 app.py, so no import here may touch the database.
 """
 import queue
+import re
 import threading
 
 from core import syndication
@@ -17,6 +18,19 @@ from core.config import MEDIA_FOLDER
 from core.content.helpers import now_str
 from core.db import Post
 from core.notify import notify_telegram
+
+
+def _resolve_preview_placeholder_link(text: str, canonical_url: str) -> str:
+    """Replace preview-only placeholder post/article links with the real canonical URL."""
+    if not text or not canonical_url:
+        return text
+    if "/post/" in canonical_url:
+        pattern = r"(?:https?://[^\s)]+)?/post/(?:post_)?[xX]{8}"
+    elif "/article/" in canonical_url:
+        pattern = r"(?:https?://[^\s)]+)?/article/(?:article_)?[xX]{8}"
+    else:
+        return text
+    return re.sub(pattern, canonical_url, text)
 
 
 def run_syndication(doc_id, url, platforms):
@@ -35,7 +49,7 @@ def run_syndication(doc_id, url, platforms):
         custom_map = doc.get("custom_syndications") or {}
         custom_text = (custom_map.get(pid) or "").strip()
         if custom_text:
-            text = custom_text
+            text = _resolve_preview_placeholder_link(custom_text, url)
         else:
             text = syndication.compose_text(doc, url, [pid])
         # Instagram and Pinterest cannot publish text at all. Render a text card
@@ -224,4 +238,3 @@ def start_worker():
     threading.Thread(target=_syndication_worker, daemon=True).start()
     threading.Thread(target=recover_stuck_syndications, daemon=True).start()
     _worker_started = True
-
