@@ -287,7 +287,9 @@ src="https://www.facebook.com/tr?id=2092273818327635&ev=PageView&noscript=1"
             .then(function (r) { return r.json(); })
             .then(function (d) {
               var rows = (d && d.syndications) || [];
-              var pending = rows.filter(function (s) { return s.state === 'queued'; });
+              var pending = rows.filter(function (s) {
+                return s.state === 'queued' || s.state === 'processing';
+              });
               var failed = rows.filter(function (s) { return s.state === 'failed'; });
               if (pending.length && attempt < 25) {
                 say('Retrying ' + names(pending) + '…', true);
