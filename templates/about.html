@@ -20,6 +20,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.5.0/model-viewer.min.js"></script>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="{{ url_for('static', filename='js/theme.js') }}"></script>
   <script>
@@ -38,6 +39,33 @@
     body { font-family: 'Inter', ui-sans-serif, system-ui, sans-serif; }
     ::-webkit-scrollbar { width: 10px; height: 10px; }
     ::-webkit-scrollbar-track { background: transparent; }
+    .avatar-3d-container {
+      width: 256px;
+      height: 256px;
+      border-radius: 50%;
+      overflow: hidden;
+      position: relative;
+      background: radial-gradient(circle at 50% 35%, #2a334e 0%, #0f172a 100%);
+      border: 3px solid rgba(99, 102, 241, 0.45);
+      box-shadow: 0 12px 32px -4px rgba(0, 0, 0, 0.5), 0 0 24px rgba(99, 102, 241, 0.25);
+      flex-shrink: 0;
+    }
+    @media (min-width: 640px) {
+      .avatar-3d-container {
+        width: 288px;
+        height: 288px;
+      }
+    }
+    .avatar-3d-container model-viewer {
+      width: 100%;
+      height: 100%;
+      cursor: grab;
+      --poster-color: transparent;
+      --progress-bar-height: 0px;
+    }
+    .avatar-3d-container model-viewer:active {
+      cursor: grabbing;
+    }
     ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 9999px; }
     .dark ::-webkit-scrollbar-thumb { background: #475569; }
   </style>
@@ -110,17 +138,37 @@
 
       <div class="flex flex-col lg:flex-row items-center gap-8 lg:gap-12 relative z-10">
         
-        <!-- 3D Quantum Avatar Canvas Column -->
+        <!-- 3D Avatar Column -->
         <div class="flex flex-col items-center">
-          <div class="relative w-64 h-64 sm:w-72 sm:h-72 cursor-grab active:cursor-grabbing select-none" id="quantum-avatar-container" title="Interactive 3D Quantum Hologram — Move mouse to tilt in 3D">
-            <!-- Three.js will inject interactive WebGL canvas here -->
-            <div class="w-full h-full flex items-center justify-center">
-              <img src="{{ url_for('static', filename='images/avatar.webp') }}" alt="Potluri Krishna Priyatham" class="w-48 h-48 rounded-full object-cover shadow-2xl border-4 border-brand-500/30 animate-pulse">
-            </div>
+          <div class="avatar-3d-container relative select-none" title="Interactive 3D Avatar — Click and drag to rotate">
+            <model-viewer
+              src="{{ author_info.avatar_3d.local_model_url if author_info and author_info.avatar_3d else url_for('static', filename='models/avatar.glb') }}"
+              poster="{{ url_for('static', filename='images/avatar.webp') }}"
+              alt="Potluri Krishna Priyatham - 3D Avatar"
+              loading="eager"
+              reveal="auto"
+              auto-rotate
+              auto-rotate-delay="1000"
+              rotation-per-second="15deg"
+              camera-controls
+              disable-zoom
+              disable-pan
+              interaction-prompt="none"
+              camera-orbit="{{ author_info.avatar_3d.camera_orbit if author_info and author_info.avatar_3d else '0deg 80deg 1.15m' }}"
+              camera-target="{{ author_info.avatar_3d.camera_target if author_info and author_info.avatar_3d else '0m 0.70m 0m' }}"
+              field-of-view="{{ author_info.avatar_3d.field_of_view if author_info and author_info.avatar_3d else '28deg' }}"
+              environment-image="neutral"
+              exposure="1.05"
+              shadow-intensity="0.8"
+              shadow-softness="1">
+              <div slot="poster" class="w-full h-full flex items-center justify-center">
+                <img src="{{ url_for('static', filename='images/avatar.webp') }}" alt="Potluri Krishna Priyatham" class="w-full h-full object-cover">
+              </div>
+            </model-viewer>
           </div>
-          <span class="text-[11px] font-medium text-slate-400 dark:text-slate-500 mt-2 flex items-center gap-1.5">
-            <span class="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span>
-            <span>Interactive 3D Quantum Hologram (hover / drag)</span>
+          <span class="text-[11px] font-medium text-slate-400 dark:text-slate-500 mt-2.5 flex items-center gap-1.5">
+            <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+            <span>Interactive 3D Avatar (drag to spin)</span>
           </span>
         </div>
 
@@ -436,14 +484,6 @@
     </div>
   </footer>
 
-  <!-- Load Three.js 3D Quantum Hologram Avatar -->
-  <script src="{{ url_for('static', filename='js/quantum_avatar.js') }}"></script>
-  <script>
-    document.addEventListener('DOMContentLoaded', function() {
-      if (window.initQuantumAvatar) {
-        window.initQuantumAvatar('quantum-avatar-container', "{{ url_for('static', filename='images/avatar.webp') }}");
-      }
-    });
-  </script>
+
 </body>
 </html>

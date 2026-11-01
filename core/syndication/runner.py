@@ -321,10 +321,15 @@ def recover_stuck_syndications():
                 continue
             ptype = doc.get("type") or "post"
             from core import content
-            if ptype == "article":
-                url = content.canonical("article_detail", article_id=pid)
-            else:
-                url = content.canonical("post_detail", post_id=pid)
+            from core.config import SITE_URL
+            base = (SITE_URL or "").rstrip("/") or "https://blog.potluri-krishna-priyatham.tech"
+            try:
+                if ptype == "article":
+                    url = content.canonical("article_detail", article_id=pid)
+                else:
+                    url = content.canonical("post_detail", post_id=pid)
+            except Exception:
+                url = f"{base}/{'article' if ptype == 'article' else 'post'}/{pid}"
             queued_platforms = [
                 s.get("platform") for s in doc.get("syndications", [])
                 if s.get("platform") and (

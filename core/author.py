@@ -41,6 +41,14 @@ AUTHOR_INFO = {
         "pinterest": "https://in.pinterest.com/kittupriyatham/",
         "pinterest_old": "https://www.pinterest.com/potluri_krishna_priyatham/",
     },
+    "avatar_3d": {
+        "model_url": "https://pub-5dd94088ada04ea8b72ad971f9943617.r2.dev/profile/avatar-c.glb",
+        "local_model_url": "/static/models/avatar.glb",
+        "poster_url": "/static/images/avatar.webp",
+        "camera_orbit": "0deg 80deg 1.15m",
+        "camera_target": "0m 0.70m 0m",
+        "field_of_view": "28deg",
+    },
     "scholarly": {
         "orcid": "0000-0001-8770-0058",
         "orcid_url": "https://orcid.org/0000-0001-8770-0058",
