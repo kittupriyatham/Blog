@@ -43,12 +43,12 @@ AUTHOR_INFO = {
     },
     "avatar_3d": {
         "model_url": "https://pub-5dd94088ada04ea8b72ad971f9943617.r2.dev/profile/avatar-c.glb",
-        "local_model_url": "/static/models/avatar.glb",
+        "local_model_url": "/static/models/avatar_holo_opt.glb",
         "poster_url": "/static/images/avatar.webp",
-        "camera_orbit": "-40deg 80deg 1.05m",
+        "camera_orbit": "0deg 80deg 1.15m",
         "min_camera_orbit": "auto 80deg auto",
         "max_camera_orbit": "auto 80deg auto",
-        "camera_target": "0.044m 0.695m 0.048m",
+        "camera_target": "0m 0.60m 0m",
         "field_of_view": "28deg",
     },
     "scholarly": {

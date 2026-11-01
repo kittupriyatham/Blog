@@ -5,13 +5,30 @@
  */
 
 (function () {
-  function initQuantumAvatar(stageId, canvasContainerId) {
+  function initQuantumAvatar(options) {
+    var config = (typeof options === 'string')
+      ? { stageId: arguments[0], canvasContainerId: arguments[1] }
+      : (options || {});
+
+    var stageId = config.stageId || 'quantum-avatar-stage';
+    var canvasContainerId = config.canvasContainerId || 'quantum-avatar-canvas';
+    var avatarContainerId = config.avatarContainerId || 'avatar-3d-container';
+    var posterId = config.posterId || 'avatar-poster';
+    var modelUrl = config.modelUrl || '/static/models/avatar_holo_opt.glb';
+    var toggleBtnId = config.toggleBtnId || 'toggle-hologram-btn';
+    var toggleLabelId = config.toggleLabelId || 'hologram-toggle-label';
+    var toggleDotId = config.toggleDotId || 'hologram-dot';
+
     var stage = document.getElementById(stageId);
     if (!stage) return;
 
     var canvasContainer = (canvasContainerId && document.getElementById(canvasContainerId)) || stage;
+    var avatarContainer = document.getElementById(avatarContainerId);
+    var posterEl = posterId ? document.getElementById(posterId) : null;
+    var toggleBtn = toggleBtnId ? document.getElementById(toggleBtnId) : null;
+    var toggleLabel = toggleLabelId ? document.getElementById(toggleLabelId) : null;
+    var toggleDot = toggleDotId ? document.getElementById(toggleDotId) : null;
 
-    // Check if WebGL is available
     function hasWebGL() {
       try {
         var canvas = document.createElement('canvas');
@@ -20,23 +37,20 @@
         return false;
       }
     }
+    if (!hasWebGL() || typeof THREE === 'undefined') return;
 
-    if (!hasWebGL()) return;
+    // 1. Outer Stage: Bloch sphere quantum orbital rings and particles
+    setupOuterStage(stage, canvasContainer);
 
-    // Ensure Three.js is loaded
-    if (typeof THREE === 'undefined') {
-      var script = document.createElement('script');
-      script.src = 'https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js';
-      script.onload = function () { setupScene(stage, canvasContainer); };
-      document.head.appendChild(script);
-    } else {
-      setupScene(stage, canvasContainer);
+    // 2. Avatar Viewer: Tripo Hologram shader + Photorealistic 3D toggle
+    if (avatarContainer) {
+      setupAvatarViewer(avatarContainer, posterEl, modelUrl, toggleBtn, toggleLabel, toggleDot);
     }
   }
 
-  function setupScene(stage, canvasContainer) {
-    var width = stage.clientWidth || 280;
-    var height = stage.clientHeight || 280;
+  function setupOuterStage(stage, canvasContainer) {
+    var width = stage.clientWidth || 290;
+    var height = stage.clientHeight || 290;
 
     var scene = new THREE.Scene();
     var camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 1000);
@@ -45,9 +59,7 @@
     var renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
     renderer.setSize(width, height);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
-    renderer.shadowMap.enabled = true;
 
-    // Style canvas
     renderer.domElement.style.position = 'absolute';
     renderer.domElement.style.top = '0';
     renderer.domElement.style.left = '0';
@@ -61,7 +73,7 @@
     var group = new THREE.Group();
     scene.add(group);
 
-    // 1. Outer Glowing Bevel Ring framing the avatar badge perimeter
+    // Outer Glowing Bevel Ring
     var bevelGeo = new THREE.TorusGeometry(1.18, 0.03, 16, 100);
     var bevelMat = new THREE.MeshStandardMaterial({
       color: 0x818cf8,
@@ -75,7 +87,7 @@
     var bevelMesh = new THREE.Mesh(bevelGeo, bevelMat);
     group.add(bevelMesh);
 
-    // 2. Nested Quantum Orbital Rings (Bloch / Atom Qubit geometry)
+    // Nested Quantum Orbital Rings (Bloch / Atom Qubit geometry)
     var rings = [];
     var ringConfigs = [
       { radius: 1.44, tube: 0.016, color: 0x06b6d4, emissive: 0x0891b2, rotX: 0.95, rotY: 0.38, speed: 0.012 },
@@ -114,7 +126,7 @@
       rings.push({ mesh: ringMesh, cfg: cfg, angle: Math.random() * Math.PI * 2, particle: particle });
     });
 
-    // 3. Ambient Quantum Particle Cloud (Sparkles / Quantum foam)
+    // Ambient Quantum Particle Cloud
     var particleCount = 45;
     var partGeom = new THREE.BufferGeometry();
     var positions = new Float32Array(particleCount * 3);
@@ -144,19 +156,12 @@
     var pointCloud = new THREE.Points(partGeom, partMaterial);
     group.add(pointCloud);
 
-    // 4. Ambient & Interactive 3D Lighting
     var ambientLight = new THREE.AmbientLight(0xffffff, 0.75);
     scene.add(ambientLight);
-
     var pointLight = new THREE.PointLight(0x818cf8, 1.8, 20);
     pointLight.position.set(2, 3, 4);
     scene.add(pointLight);
 
-    var cursorLight = new THREE.PointLight(0x06b6d4, 1.3, 10);
-    cursorLight.position.set(0, 0, 3);
-    scene.add(cursorLight);
-
-    // 5. Mouse and Touch Parallax
     var targetRotX = 0;
     var targetRotY = 0;
     var isHovered = false;
@@ -168,15 +173,11 @@
 
       var x = ((clientX - rect.left) / rect.width) * 2 - 1;
       var y = -(((clientY - rect.top) / rect.height) * 2 - 1);
-
       x = Math.max(-1.5, Math.min(1.5, x));
       y = Math.max(-1.5, Math.min(1.5, y));
 
-      targetRotY = x * 0.42;
-      targetRotX = -y * 0.42;
-
-      cursorLight.position.x = x * 2.5;
-      cursorLight.position.y = y * 2.5;
+      targetRotY = x * 0.35;
+      targetRotX = -y * 0.35;
     }
 
     stage.addEventListener('mousemove', function (e) {
@@ -189,23 +190,10 @@
       targetRotY = 0;
     });
 
-    stage.addEventListener('touchmove', function (e) {
-      isHovered = true;
-      onPointerMove(e);
-    }, { passive: true });
-    stage.addEventListener('touchend', function () {
-      isHovered = false;
-      targetRotX = 0;
-      targetRotY = 0;
-    });
-
-    // Also listen on parent card for wider interaction area
     var parentCard = stage.closest('section');
     if (parentCard) {
       parentCard.addEventListener('mousemove', function (e) {
-        if (!isHovered) {
-          onPointerMove(e);
-        }
+        if (!isHovered) onPointerMove(e);
       });
       parentCard.addEventListener('mouseleave', function () {
         if (!isHovered) {
@@ -215,7 +203,6 @@
       });
     }
 
-    // Handle Resize
     window.addEventListener('resize', function () {
       if (!stage.clientWidth || !stage.clientHeight) return;
       var newW = stage.clientWidth;
@@ -225,24 +212,18 @@
       renderer.setSize(newW, newH);
     });
 
-    // 6. Animation Loop
     var clock = new THREE.Clock();
-
-    function animate() {
-      requestAnimationFrame(animate);
+    function animateStage() {
+      requestAnimationFrame(animateStage);
       var time = clock.getElapsedTime();
 
-      // Smooth camera/group tilt
       group.rotation.x += (targetRotX - group.rotation.x) * 0.08;
       group.rotation.y += (targetRotY - group.rotation.y) * 0.08;
 
-      // Subtle breathing float when idle
       if (!isHovered) {
-        group.position.y = Math.sin(time * 1.5) * 0.04;
-        group.rotation.z = Math.sin(time * 0.8) * 0.02;
+        group.position.y = Math.sin(time * 1.5) * 0.03;
       }
 
-      // Quantum rings spin & particles orbit
       rings.forEach(function (r) {
         r.mesh.rotation.z += r.cfg.speed;
         r.mesh.rotation.x += r.cfg.speed * 0.5;
@@ -252,14 +233,257 @@
         r.particle.position.y = Math.sin(r.angle) * r.cfg.radius;
       });
 
-      // Point cloud gentle rotation
       pointCloud.rotation.y = time * 0.05;
-      pointCloud.rotation.z = time * 0.02;
+      renderer.render(scene, camera);
+    }
+    animateStage();
+  }
+
+  function setupAvatarViewer(container, posterEl, modelUrl, toggleBtn, toggleLabel, toggleDot) {
+    if (typeof THREE.GLTFLoader === 'undefined') return;
+
+    var width = container.clientWidth || 192;
+    var height = container.clientHeight || 192;
+
+    var scene = new THREE.Scene();
+    var camera = new THREE.PerspectiveCamera(36, width / height, 0.1, 100);
+    camera.position.set(0, 0, 2.3);
+
+    var renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+    renderer.setSize(width, height);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+
+    renderer.domElement.style.position = 'absolute';
+    renderer.domElement.style.top = '0';
+    renderer.domElement.style.left = '0';
+    renderer.domElement.style.width = '100%';
+    renderer.domElement.style.height = '100%';
+    renderer.domElement.style.borderRadius = '50%';
+    renderer.domElement.style.opacity = '0';
+    renderer.domElement.style.transition = 'opacity 0.6s ease';
+    renderer.domElement.style.cursor = 'grab';
+
+    container.appendChild(renderer.domElement);
+
+    var avatarRoot = new THREE.Group();
+    scene.add(avatarRoot);
+
+    var ambientLight = new THREE.AmbientLight(0xffffff, 0.85);
+    scene.add(ambientLight);
+
+    var dirLight = new THREE.DirectionalLight(0xffffff, 1.1);
+    dirLight.position.set(2, 4, 3);
+    scene.add(dirLight);
+
+    var rimLight = new THREE.PointLight(0x06b6d4, 1.4, 10);
+    rimLight.position.set(-2, 1, 2);
+    scene.add(rimLight);
+
+    var loader = new THREE.GLTFLoader();
+    if (window.MeshoptDecoder) {
+      loader.setMeshoptDecoder(window.MeshoptDecoder);
+    }
+
+    var avatarMesh = null;
+    var holoMaterial = null;
+    var photorealMaterial = null;
+    var isHologram = true;
+
+    var vertexShader = [
+      'varying vec3 vPosition;',
+      'varying vec3 vNormal;',
+      'varying vec3 vWorldPosition;',
+      'varying vec2 vUv;',
+      'void main() {',
+      '  vPosition = position;',
+      '  vNormal = normalize(normalMatrix * normal);',
+      '  vec4 worldPos = modelMatrix * vec4(position, 1.0);',
+      '  vWorldPosition = worldPos.xyz;',
+      '  vUv = uv;',
+      '  gl_Position = projectionMatrix * viewMatrix * worldPos;',
+      '}'
+    ].join('\n');
+
+    var fragmentShader = [
+      'uniform sampler2D map;',
+      'uniform float time;',
+      'varying vec3 vPosition;',
+      'varying vec3 vNormal;',
+      'varying vec3 vWorldPosition;',
+      'varying vec2 vUv;',
+      'void main() {',
+      '  vec4 tex = texture2D(map, vUv);',
+      '  float lum = dot(tex.rgb, vec3(0.299, 0.587, 0.114));',
+      '  vec3 baseColor = mix(tex.rgb, vec3(lum) * vec3(0.35, 0.75, 0.95), 0.45);',
+      '  float scale = 42.0;',
+      '  float lineY = abs(fract(vPosition.y * scale - 0.5) - 0.5) / (fwidth(vPosition.y * scale) * 1.0 + 0.0001);',
+      '  float lineX = abs(fract(vPosition.x * scale - 0.5) - 0.5) / (fwidth(vPosition.x * scale) * 1.0 + 0.0001);',
+      '  float grid = 1.0 - clamp(min(lineY, lineX), 0.0, 1.0);',
+      '  grid = pow(grid, 1.3);',
+      '  vec3 viewDir = normalize(cameraPosition - vWorldPosition);',
+      '  float fresnel = pow(1.0 - max(dot(vNormal, viewDir), 0.0), 2.2);',
+      '  float laserY = sin(time * 1.6) * 0.18 + 0.65;',
+      '  float dist = abs(vPosition.y - laserY);',
+      '  float laserCore = exp(-pow(dist * 70.0, 2.0));',
+      '  float laserGlow = exp(-pow(dist * 18.0, 2.0));',
+      '  vec3 cyan = vec3(0.0, 0.95, 1.0);',
+      '  vec3 white = vec3(1.0, 1.0, 1.0);',
+      '  vec3 color = baseColor;',
+      '  color += cyan * grid * 0.85;',
+      '  color += cyan * fresnel * 0.95;',
+      '  color += cyan * laserGlow * 1.25 + white * laserCore * 1.8;',
+      '  gl_FragColor = vec4(color, 0.95);',
+      '}'
+    ].join('\n');
+
+    loader.load(modelUrl, function (gltf) {
+      var model = gltf.scene;
+
+      // Perfectly centered: face strictly above diameter, shoulders frame bottom curve
+      model.position.set(0, -0.56, 0);
+      model.rotation.y = Math.PI; // facing directly forward towards viewer!
+
+      var origTexture = null;
+      model.traverse(function (child) {
+        if (child.isMesh) {
+          avatarMesh = child;
+          origTexture = child.material.map;
+        }
+      });
+
+      if (!avatarMesh) return;
+
+      holoMaterial = new THREE.ShaderMaterial({
+        vertexShader: vertexShader,
+        fragmentShader: fragmentShader,
+        uniforms: {
+          map: { value: origTexture },
+          time: { value: 0 }
+        },
+        extensions: {
+          derivatives: true
+        },
+        transparent: true
+      });
+
+      photorealMaterial = new THREE.MeshStandardMaterial({
+        map: origTexture,
+        roughness: 0.72,
+        metalness: 0.12
+      });
+
+      avatarMesh.material = holoMaterial;
+      avatarRoot.add(model);
+
+      renderer.domElement.style.opacity = '1';
+      if (posterEl) {
+        posterEl.style.opacity = '0';
+        setTimeout(function () {
+          if (posterEl.parentElement) posterEl.style.display = 'none';
+        }, 700);
+      }
+    });
+
+    // Strict horizontal yaw drag — vertical tilt strictly locked
+    var isDragging = false;
+    var prevX = 0;
+    var baseRotY = 0;
+
+    function onDragStart(clientX) {
+      isDragging = true;
+      prevX = clientX;
+      renderer.domElement.style.cursor = 'grabbing';
+    }
+
+    function onDragMove(clientX) {
+      if (!isDragging) return;
+      var deltaX = clientX - prevX;
+      prevX = clientX;
+
+      baseRotY += deltaX * 0.012;
+      avatarRoot.rotation.y = baseRotY;
+
+      // Strict vertical lock: no vertical movement allowed
+      avatarRoot.rotation.x = 0;
+      avatarRoot.rotation.z = 0;
+    }
+
+    function onDragEnd() {
+      if (!isDragging) return;
+      isDragging = false;
+      renderer.domElement.style.cursor = 'grab';
+    }
+
+    container.addEventListener('mousedown', function (e) {
+      onDragStart(e.clientX);
+    });
+    window.addEventListener('mousemove', function (e) {
+      onDragMove(e.clientX);
+    });
+    window.addEventListener('mouseup', onDragEnd);
+
+    container.addEventListener('touchstart', function (e) {
+      if (e.touches.length === 1) {
+        onDragStart(e.touches[0].clientX);
+      }
+    }, { passive: true });
+    window.addEventListener('touchmove', function (e) {
+      if (isDragging && e.touches.length === 1) {
+        onDragMove(e.touches[0].clientX);
+      }
+    }, { passive: true });
+    window.addEventListener('touchend', onDragEnd);
+
+    function setAvatarMode(holo) {
+      isHologram = holo;
+      if (avatarMesh) {
+        avatarMesh.material = isHologram ? holoMaterial : photorealMaterial;
+      }
+      if (toggleLabel) {
+        toggleLabel.textContent = isHologram ? '⚡ Quantum Hologram' : '👤 Photorealistic 3D';
+      }
+      if (toggleDot) {
+        toggleDot.className = isHologram
+          ? 'w-2 h-2 rounded-full bg-cyan-400 animate-pulse'
+          : 'w-2 h-2 rounded-full bg-emerald-500';
+      }
+    }
+
+    if (toggleBtn) {
+      toggleBtn.addEventListener('click', function () {
+        setAvatarMode(!isHologram);
+      });
+    }
+
+    window.addEventListener('resize', function () {
+      if (!container.clientWidth || !container.clientHeight) return;
+      var newW = container.clientWidth;
+      var newH = container.clientHeight;
+      camera.aspect = newW / newH;
+      camera.updateProjectionMatrix();
+      renderer.setSize(newW, newH);
+    });
+
+    var avatarClock = new THREE.Clock();
+    function animateAvatar() {
+      requestAnimationFrame(animateAvatar);
+      var time = avatarClock.getElapsedTime();
+
+      if (holoMaterial && isHologram) {
+        holoMaterial.uniforms.time.value = time;
+      }
+
+      if (!isDragging) {
+        // High-tech holographic scan swivel ±16 deg: keeps face prominently facing forward
+        avatarRoot.rotation.y = baseRotY + Math.sin(time * 0.9) * 0.28;
+      }
+
+      avatarRoot.rotation.x = 0;
+      avatarRoot.rotation.z = 0;
 
       renderer.render(scene, camera);
     }
-
-    animate();
+    animateAvatar();
   }
 
   window.initQuantumAvatar = initQuantumAvatar;
