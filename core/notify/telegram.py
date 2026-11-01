@@ -154,6 +154,7 @@ def handle_webhook_update(update):
             "👋 Welcome to your Blog Notification & Feedback Bot!\n\n"
             "✨ What you can do:\n"
             "• Reply directly to any post notification to report an issue or typo.\n"
+            "• Send /raise <description> to raise an independent GitHub issue.\n"
             "• Send /status to check unresolved issues.\n"
             "• Send /resolve [id] or /resolve all to close issues.\n"
             "• When issues are OPEN, cron-job.org alerts you via email."
@@ -173,6 +174,60 @@ def handle_webhook_update(update):
             lines.append("\nTip: Send `/resolve all` or `/resolve <id>` to close.")
             send_message("\n".join(lines), reply_to_message_id=incoming_msg_id)
         return {"status": "command_handled", "command": "/status"}
+
+    # Handle an independent issue command. Unlike a normal message, /raise
+    # never infers or attaches a "latest post" target.
+    if user_text == "/raise" or user_text.startswith("/raise "):
+        description = user_text[len("/raise"):].strip()
+        if not description:
+            send_message(
+                "ℹ️ Usage: `/raise <description>`\n"
+                "This creates an independent GitHub issue without linking it to a post.",
+                reply_to_message_id=incoming_msg_id,
+            )
+            return {"status": "command_handled", "command": "/raise", "created": False}
+
+        report_id = "rep_" + uuid.uuid4().hex[:12]
+        now_ts = now_str()
+        issue_doc = {
+            "report_id": report_id,
+            "post_id": None,
+            "telegram_message_id": None,
+            "reply_message_id": incoming_msg_id,
+            "reporter": user_name,
+            "text": description,
+            "status": "open",
+            "created_at": now_ts,
+            "source": "telegram_raise_command",
+        }
+        issues_coll.insert_one(issue_doc)
+
+        github_queued = False
+        try:
+            from core import github
+            if github.is_configured():
+                github.create_report_issue_async(issue_doc)
+                github_queued = True
+        except Exception as gh_err:
+            print("[github] Failed to dispatch async /raise issue creation:", gh_err)
+
+        if github_queued:
+            status_line = "queued for GitHub issue creation"
+        else:
+            status_line = "logged locally; GitHub issue creation is not configured"
+        send_message(
+            "🚨 Independent issue raised!\n"
+            f"📝 Note: \"{description}\"\n"
+            f"⚡ Status: OPEN and {status_line}.\n"
+            f"🆔 Report ID: {report_id}",
+            reply_to_message_id=incoming_msg_id,
+        )
+        return {
+            "status": "logged",
+            "report_id": report_id,
+            "post_id": None,
+            "command": "/raise",
+        }
 
     # Handle bot command: /resolve
     if user_text.startswith("/resolve"):
