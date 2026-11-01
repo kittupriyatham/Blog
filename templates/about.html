@@ -20,6 +20,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.5.0/model-viewer.min.js"></script>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="{{ url_for('static', filename='js/theme.js') }}"></script>
@@ -39,21 +40,51 @@
     body { font-family: 'Inter', ui-sans-serif, system-ui, sans-serif; }
     ::-webkit-scrollbar { width: 10px; height: 10px; }
     ::-webkit-scrollbar-track { background: transparent; }
+    .quantum-stage {
+      width: 260px;
+      height: 260px;
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    @media (min-width: 640px) {
+      .quantum-stage {
+        width: 290px;
+        height: 290px;
+      }
+    }
+    .quantum-aura {
+      position: absolute;
+      inset: 6%;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(99, 102, 241, 0.25) 0%, rgba(6, 182, 212, 0.16) 45%, transparent 70%);
+      filter: blur(24px);
+      animation: quantumPulse 4s ease-in-out infinite alternate;
+      pointer-events: none;
+      z-index: 0;
+    }
+    @keyframes quantumPulse {
+      0% { transform: scale(0.92); opacity: 0.6; }
+      100% { transform: scale(1.08); opacity: 0.95; }
+    }
     .avatar-3d-container {
-      width: 256px;
-      height: 256px;
+      width: 176px;
+      height: 176px;
       border-radius: 50%;
       overflow: hidden;
       position: relative;
       background: radial-gradient(circle at 50% 35%, #2a334e 0%, #0f172a 100%);
-      border: 3px solid rgba(99, 102, 241, 0.45);
-      box-shadow: 0 12px 32px -4px rgba(0, 0, 0, 0.5), 0 0 24px rgba(99, 102, 241, 0.25);
+      border: 3px solid rgba(99, 102, 241, 0.55);
+      box-shadow: 0 10px 28px -4px rgba(0, 0, 0, 0.6), 0 0 24px rgba(99, 102, 241, 0.35);
       flex-shrink: 0;
+      z-index: 10;
     }
     @media (min-width: 640px) {
       .avatar-3d-container {
-        width: 288px;
-        height: 288px;
+        width: 192px;
+        height: 192px;
       }
     }
     .avatar-3d-container model-viewer {
@@ -138,37 +169,49 @@
 
       <div class="flex flex-col lg:flex-row items-center gap-8 lg:gap-12 relative z-10">
         
-        <!-- 3D Avatar Column -->
+        <!-- 3D Avatar Column with Quantum Orbital Rings -->
         <div class="flex flex-col items-center">
-          <div class="avatar-3d-container relative select-none" title="Interactive 3D Avatar — Click and drag to rotate">
-            <model-viewer
-              src="{{ author_info.avatar_3d.local_model_url if author_info and author_info.avatar_3d else url_for('static', filename='models/avatar.glb') }}"
-              poster="{{ url_for('static', filename='images/avatar.webp') }}"
-              alt="Potluri Krishna Priyatham - 3D Avatar"
-              loading="eager"
-              reveal="auto"
-              auto-rotate
-              auto-rotate-delay="1000"
-              rotation-per-second="15deg"
-              camera-controls
-              disable-zoom
-              disable-pan
-              interaction-prompt="none"
-              camera-orbit="{{ author_info.avatar_3d.camera_orbit if author_info and author_info.avatar_3d else '0deg 80deg 1.15m' }}"
-              camera-target="{{ author_info.avatar_3d.camera_target if author_info and author_info.avatar_3d else '0m 0.70m 0m' }}"
-              field-of-view="{{ author_info.avatar_3d.field_of_view if author_info and author_info.avatar_3d else '28deg' }}"
-              environment-image="neutral"
-              exposure="1.05"
-              shadow-intensity="0.8"
-              shadow-softness="1">
-              <div slot="poster" class="w-full h-full flex items-center justify-center">
-                <img src="{{ url_for('static', filename='images/avatar.webp') }}" alt="Potluri Krishna Priyatham" class="w-full h-full object-cover">
-              </div>
-            </model-viewer>
+          <div class="quantum-stage relative select-none" id="quantum-avatar-stage" title="Interactive 3D Avatar & Quantum Hologram — Drag avatar to rotate, move cursor to tilt orbital rings">
+            <!-- Quantum Aura Backlight -->
+            <div class="quantum-aura"></div>
+
+            <!-- Three.js Quantum Rings & Particles Canvas Container -->
+            <div id="quantum-avatar-canvas" class="absolute inset-0 pointer-events-none z-0"></div>
+
+            <!-- Centered 3D Model Avatar (Reduced circle size, centered face framing) -->
+            <div class="avatar-3d-container relative z-10 select-none shadow-2xl">
+              <model-viewer
+                src="{{ author_info.avatar_3d.local_model_url if author_info and author_info.avatar_3d else url_for('static', filename='models/avatar.glb') }}"
+                poster="{{ url_for('static', filename='images/avatar.webp') }}"
+                alt="Potluri Krishna Priyatham - 3D Avatar"
+                loading="eager"
+                reveal="auto"
+                auto-rotate
+                auto-rotate-delay="1000"
+                rotation-per-second="15deg"
+                camera-controls
+                disable-zoom
+                disable-pan
+                interaction-prompt="none"
+                camera-orbit="{{ author_info.avatar_3d.camera_orbit if author_info and author_info.avatar_3d else '-40deg 80deg 1.05m' }}"
+                min-camera-orbit="{{ author_info.avatar_3d.min_camera_orbit if author_info and author_info.avatar_3d and author_info.avatar_3d.min_camera_orbit else 'auto 80deg auto' }}"
+                max-camera-orbit="{{ author_info.avatar_3d.max_camera_orbit if author_info and author_info.avatar_3d and author_info.avatar_3d.max_camera_orbit else 'auto 80deg auto' }}"
+                touch-action="pan-y"
+                camera-target="{{ author_info.avatar_3d.camera_target if author_info and author_info.avatar_3d else '0.044m 0.695m 0.048m' }}"
+                field-of-view="{{ author_info.avatar_3d.field_of_view if author_info and author_info.avatar_3d else '28deg' }}"
+                environment-image="neutral"
+                exposure="1.05"
+                shadow-intensity="0.8"
+                shadow-softness="1">
+                <div slot="poster" class="w-full h-full flex items-center justify-center">
+                  <img src="{{ url_for('static', filename='images/avatar.webp') }}" alt="Potluri Krishna Priyatham" class="w-full h-full object-cover">
+                </div>
+              </model-viewer>
+            </div>
           </div>
-          <span class="text-[11px] font-medium text-slate-400 dark:text-slate-500 mt-2.5 flex items-center gap-1.5">
+          <span class="text-[11px] font-medium text-slate-400 dark:text-slate-500 mt-2 flex items-center gap-1.5">
             <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-            <span>Interactive 3D Avatar (drag to spin)</span>
+            <span>Interactive 3D Avatar &amp; Quantum Gyroscope</span>
           </span>
         </div>
 
@@ -485,5 +528,14 @@
   </footer>
 
 
+  <!-- Load Three.js 3D Quantum Hologram Avatar & Orbital Rings -->
+  <script src="{{ url_for('static', filename='js/quantum_avatar.js') }}"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      if (window.initQuantumAvatar) {
+        window.initQuantumAvatar('quantum-avatar-stage', 'quantum-avatar-canvas');
+      }
+    });
+  </script>
 </body>
 </html>
