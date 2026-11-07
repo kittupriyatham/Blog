@@ -1,0 +1,37 @@
+{
+  "description": "Pre-configured Tripo 3D models for Potluri Krishna Priyatham avatar",
+  "models": [
+    {
+      "index": 1,
+      "alias": "avatar-1",
+      "id": "e30f99ed-f5c0-479a-91d8-d232fdda6b1b",
+      "slug": "adult-male-portrait-with-mustache-wearing-gray-shirt-against-blue-back",
+      "title": "Adult male portrait with mustache wearing gray shirt against blue background",
+      "url": "https://studio.tripo3d.ai/workspace/generate/adult-male-portrait-with-mustache-wearing-gray-shirt-against-blue-back-e30f99ed-f5c0-479a-91d8-d232fdda6b1b"
+    },
+    {
+      "index": 2,
+      "alias": "avatar-2",
+      "id": "2cf5ac87-105c-495f-9ed2-08d9a29620fd",
+      "slug": "adult-man-in-a-gray-patterned-shirt-on-blue-background",
+      "title": "Adult man in a gray patterned shirt on blue background",
+      "url": "https://studio.tripo3d.ai/workspace/generate/adult-man-in-a-gray-patterned-shirt-on-blue-background-2cf5ac87-105c-495f-9ed2-08d9a29620fd"
+    },
+    {
+      "index": 3,
+      "alias": "avatar-3",
+      "id": "d8fc1928-68c4-4a9f-8795-8ff3fb336874",
+      "slug": "adult-man-portrait-with-blue-background-and-gray-patterned-shirt",
+      "title": "Adult man portrait with blue background and gray patterned shirt",
+      "url": "https://studio.tripo3d.ai/workspace/generate/adult-man-portrait-with-blue-background-and-gray-patterned-shirt-d8fc1928-68c4-4a9f-8795-8ff3fb336874"
+    },
+    {
+      "index": 4,
+      "alias": "avatar-4",
+      "id": "edc7592b-7378-427c-a3b3-2a75d9de91b2",
+      "slug": "portrait-of-a-man-with-a-mustache-wearing-a-gray-patterned-shirt-again",
+      "title": "Portrait of a man with a mustache wearing a gray patterned shirt",
+      "url": "https://studio.tripo3d.ai/workspace/generate/portrait-of-a-man-with-a-mustache-wearing-a-gray-patterned-shirt-again-edc7592b-7378-427c-a3b3-2a75d9de91b2"
+    }
+  ]
+}
