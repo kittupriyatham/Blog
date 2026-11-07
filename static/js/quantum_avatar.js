@@ -287,7 +287,7 @@
     var avatarMesh = null;
     var holoMaterial = null;
     var photorealMaterial = null;
-    var isHologram = true;
+    var isHologram = false;
 
     var vertexShader = [
       'varying vec3 vPosition;',
@@ -373,7 +373,7 @@
         metalness: 0.12
       });
 
-      avatarMesh.material = holoMaterial;
+      avatarMesh.material = photorealMaterial;
       avatarRoot.add(model);
 
       renderer.domElement.style.opacity = '1';
