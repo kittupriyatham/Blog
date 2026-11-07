@@ -341,7 +341,7 @@
 
       // Perfectly centered: face strictly above diameter, shoulders frame bottom curve
       model.position.set(0, -0.56, 0);
-      model.rotation.y = Math.PI; // facing directly forward towards viewer!
+      model.rotation.y = 0; // facing directly forward towards viewer!
 
       var origTexture = null;
       model.traverse(function (child) {
