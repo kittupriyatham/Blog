@@ -248,14 +248,17 @@
     });
 
     // -------------------------------------------------------------
-    // Interactive Controls & Dynamic Coupled Gyroscope Motion
+    // Interactive Controls & Strict Container-Scoped Mouse Motion
+    // The model moves ONLY when the mouse pointer is inside the canvas/container.
+    // When pointer is outside, the model is NOT moved by the pointer.
     // -------------------------------------------------------------
     var isDragging = false;
+    var isPointerInside = false;
     var prevX = 0;
     var baseYaw = 0;
     var dragVelocity = 0;
 
-    // Mouse tilt parallax on hover
+    // Mouse tilt parallax on hover (active ONLY when pointer is inside container)
     var mouseX = 0;
     var mouseY = 0;
     var tiltX = 0;
@@ -294,32 +297,93 @@
       renderer.domElement.style.cursor = 'grab';
     }
 
+    // Check bounds strictly: returns true only when pointer is inside stage/canvas
+    function handlePointerMove(clientX, clientY) {
+      var rect = stage.getBoundingClientRect();
+      var inside = (
+        clientX >= rect.left &&
+        clientX <= rect.right &&
+        clientY >= rect.top &&
+        clientY <= rect.bottom
+      );
+
+      if (!inside) {
+        if (isPointerInside) {
+          isPointerInside = false;
+          mouseX = 0;
+          mouseY = 0;
+          if (isDragging) onDragEnd();
+        }
+        return false;
+      }
+
+      isPointerInside = true;
+      mouseX = (clientX - rect.left) / rect.width - 0.5;
+      mouseY = (clientY - rect.top) / rect.height - 0.5;
+
+      if (isDragging) {
+        onDragMove(clientX);
+      }
+      return true;
+    }
+
+    stage.addEventListener('mouseenter', function (e) {
+      isPointerInside = true;
+      handlePointerMove(e.clientX, e.clientY);
+    });
+
+    stage.addEventListener('mouseleave', function () {
+      isPointerInside = false;
+      mouseX = 0;
+      mouseY = 0;
+      if (isDragging) onDragEnd();
+    });
+
     stage.addEventListener('mousedown', function (e) {
+      isPointerInside = true;
       onDragStart(e.clientX);
     });
+
+    stage.addEventListener('mousemove', function (e) {
+      handlePointerMove(e.clientX, e.clientY);
+    });
+
+    stage.addEventListener('mouseup', onDragEnd);
+    window.addEventListener('mouseup', onDragEnd);
+
+    // Global listener ensures that if dragging moves outside the canvas, it immediately halts
     window.addEventListener('mousemove', function (e) {
-      onDragMove(e.clientX);
-      var rect = stage.getBoundingClientRect();
-      var x = (e.clientX - rect.left) / rect.width - 0.5;
-      var y = (e.clientY - rect.top) / rect.height - 0.5;
-      if (Math.abs(x) < 2 && Math.abs(y) < 2) {
-        mouseX = x;
-        mouseY = y;
+      if (isDragging || isPointerInside) {
+        handlePointerMove(e.clientX, e.clientY);
       }
     });
-    window.addEventListener('mouseup', onDragEnd);
 
     stage.addEventListener('touchstart', function (e) {
       if (e.touches.length === 1) {
+        isPointerInside = true;
         onDragStart(e.touches[0].clientX);
       }
     }, { passive: true });
-    window.addEventListener('touchmove', function (e) {
-      if (isDragging && e.touches.length === 1) {
-        onDragMove(e.touches[0].clientX);
+
+    stage.addEventListener('touchmove', function (e) {
+      if (e.touches.length === 1) {
+        handlePointerMove(e.touches[0].clientX, e.touches[0].clientY);
       }
     }, { passive: true });
-    window.addEventListener('touchend', onDragEnd);
+
+    stage.addEventListener('touchend', function () {
+      isPointerInside = false;
+      mouseX = 0;
+      mouseY = 0;
+      onDragEnd();
+    });
+
+    stage.addEventListener('touchcancel', function () {
+      isPointerInside = false;
+      mouseX = 0;
+      mouseY = 0;
+      onDragEnd();
+    });
 
     window.addEventListener('resize', function () {
       if (!stage.clientWidth || !stage.clientHeight) return;
@@ -349,9 +413,15 @@
       var dt = Math.min(time - lastTime, 0.05) || 0.016;
       lastTime = time;
 
-      // Soft perspective tilt on gyroRoot based on cursor
-      tiltX += (mouseY * 0.28 - tiltX) * 0.06;
-      tiltY += (mouseX * 0.38 - tiltY) * 0.06;
+      // Soft perspective tilt on gyroRoot: ONLY when pointer is inside canvas/container!
+      // When outside, tilt smoothly eases to 0 so outside mouse movement NEVER moves the model.
+      if (isPointerInside) {
+        tiltX += (mouseY * 0.28 - tiltX) * 0.08;
+        tiltY += (mouseX * 0.38 - tiltY) * 0.08;
+      } else {
+        tiltX += (0 - tiltX) * 0.08;
+        tiltY += (0 - tiltY) * 0.08;
+      }
       gyroRoot.rotation.x = tiltX;
       gyroRoot.rotation.y = tiltY;
 
