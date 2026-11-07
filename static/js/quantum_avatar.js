@@ -37,6 +37,9 @@
     var renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true, powerPreference: 'high-performance' });
     renderer.setSize(width, height);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    renderer.outputEncoding = THREE.sRGBEncoding;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.0;
 
     renderer.domElement.style.width = '100%';
     renderer.domElement.style.height = '100%';
@@ -49,25 +52,25 @@
     if (posterEl) container.appendChild(posterEl);
     container.appendChild(renderer.domElement);
 
-    // Warm, natural studio lighting for authentic skin tones and crisp fabric textures
-    var ambientLight = new THREE.AmbientLight(0xffffff, 1.1);
+    // Soft, natural photographic studio lighting tailored for matte, realistic skin tones
+    var ambientLight = new THREE.HemisphereLight(0xffffff, 0x334155, 1.0);
     scene.add(ambientLight);
 
-    var keyLight = new THREE.DirectionalLight(0xffffff, 1.4);
-    keyLight.position.set(2.2, 4.0, 3.2);
+    var keyLight = new THREE.DirectionalLight(0xfff7ed, 0.65);
+    keyLight.position.set(1.8, 3.0, 2.5);
     scene.add(keyLight);
 
-    var fillLight = new THREE.DirectionalLight(0xe0f2fe, 0.8);
-    fillLight.position.set(-2.0, 1.2, 2.5);
+    var fillLight = new THREE.DirectionalLight(0xe0f2fe, 0.45);
+    fillLight.position.set(-1.8, 1.2, 2.0);
     scene.add(fillLight);
 
-    // Subtle colored rim lights for quantum aesthetic
-    var cyanRim = new THREE.PointLight(0x06b6d4, 0.9, 6);
-    cyanRim.position.set(-2, 1.5, 1);
+    // Subtle colored rim lights placed BEHIND model to catch silhouette edges without shining directly on face
+    var cyanRim = new THREE.PointLight(0x06b6d4, 0.8, 6);
+    cyanRim.position.set(-2.0, 1.5, -1.2);
     scene.add(cyanRim);
 
-    var purpleRim = new THREE.PointLight(0xa855f7, 0.8, 6);
-    purpleRim.position.set(2, -1.2, 1);
+    var purpleRim = new THREE.PointLight(0xa855f7, 0.7, 6);
+    purpleRim.position.set(2.0, -1.0, -1.2);
     scene.add(purpleRim);
 
     // Master Gyroscope Root
@@ -209,7 +212,7 @@
 
     // -------------------------------------------------------------
     // Load Model: Scaled Up & Positioned in Center of Gyroscope
-    // Larger, crisper face details and shoulders framed by gimbals
+    // Matte finish (roughness 0.96, metalness 0.0) eliminates all oily sheen
     // -------------------------------------------------------------
     var loader = new THREE.GLTFLoader();
     if (window.MeshoptDecoder) {
@@ -229,8 +232,12 @@
           child.castShadow = true;
           child.receiveShadow = true;
           if (child.material) {
-            child.material.roughness = 0.65;
-            child.material.metalness = 0.05;
+            // Matte, realistic skin and clothing — eliminates all oily/plastic specular reflections
+            child.material.roughness = 0.96;
+            child.material.metalness = 0.0;
+            if (child.material.map) {
+              child.material.map.encoding = THREE.sRGBEncoding;
+            }
             child.material.needsUpdate = true;
           }
         }
