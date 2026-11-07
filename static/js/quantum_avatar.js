@@ -44,7 +44,7 @@
 
     // 2. Avatar Viewer: Tripo Hologram shader + Photorealistic 3D toggle
     if (avatarContainer) {
-      setupAvatarViewer(avatarContainer, posterEl, modelUrl, toggleBtn, toggleLabel, toggleDot);
+      setupAvatarViewer(avatarContainer, posterEl, modelUrl);
     }
   }
 
@@ -239,7 +239,7 @@
     animateStage();
   }
 
-  function setupAvatarViewer(container, posterEl, modelUrl, toggleBtn, toggleLabel, toggleDot) {
+  function setupAvatarViewer(container, posterEl, modelUrl) {
     if (typeof THREE.GLTFLoader === 'undefined') return;
 
     var width = container.clientWidth || 192;
@@ -268,112 +268,40 @@
     var avatarRoot = new THREE.Group();
     scene.add(avatarRoot);
 
-    var ambientLight = new THREE.AmbientLight(0xffffff, 0.85);
+    // Warm, natural studio lighting for authentic skin tones and crisp fabric textures
+    var ambientLight = new THREE.AmbientLight(0xffffff, 0.95);
     scene.add(ambientLight);
 
-    var dirLight = new THREE.DirectionalLight(0xffffff, 1.1);
-    dirLight.position.set(2, 4, 3);
-    scene.add(dirLight);
+    var keyLight = new THREE.DirectionalLight(0xffffff, 1.25);
+    keyLight.position.set(2, 4, 3);
+    scene.add(keyLight);
 
-    var rimLight = new THREE.PointLight(0x06b6d4, 1.4, 10);
-    rimLight.position.set(-2, 1, 2);
-    scene.add(rimLight);
+    var fillLight = new THREE.DirectionalLight(0xe0f2fe, 0.65);
+    fillLight.position.set(-2, 1, 2);
+    scene.add(fillLight);
 
     var loader = new THREE.GLTFLoader();
     if (window.MeshoptDecoder) {
       loader.setMeshoptDecoder(window.MeshoptDecoder);
     }
 
-    var avatarMesh = null;
-    var holoMaterial = null;
-    var photorealMaterial = null;
-    var isHologram = false;
-
-    var vertexShader = [
-      'varying vec3 vPosition;',
-      'varying vec3 vNormal;',
-      'varying vec3 vWorldPosition;',
-      'varying vec2 vUv;',
-      'void main() {',
-      '  vPosition = position;',
-      '  vNormal = normalize(normalMatrix * normal);',
-      '  vec4 worldPos = modelMatrix * vec4(position, 1.0);',
-      '  vWorldPosition = worldPos.xyz;',
-      '  vUv = uv;',
-      '  gl_Position = projectionMatrix * viewMatrix * worldPos;',
-      '}'
-    ].join('\n');
-
-    var fragmentShader = [
-      'uniform sampler2D map;',
-      'uniform float time;',
-      'varying vec3 vPosition;',
-      'varying vec3 vNormal;',
-      'varying vec3 vWorldPosition;',
-      'varying vec2 vUv;',
-      'void main() {',
-      '  vec4 tex = texture2D(map, vUv);',
-      '  vec3 baseColor = tex.rgb;',
-      '  vec3 lightDir = normalize(vec3(0.4, 0.6, 1.0));',
-      '  float diff = max(dot(vNormal, lightDir), 0.0) * 0.4 + 0.65;',
-      '  vec3 litColor = baseColor * diff;',
-      '  float scale = 44.0;',
-      '  float lineY = abs(fract(vPosition.y * scale - 0.5) - 0.5) / (fwidth(vPosition.y * scale) * 1.0 + 0.0001);',
-      '  float lineX = abs(fract(vPosition.x * scale - 0.5) - 0.5) / (fwidth(vPosition.x * scale) * 1.0 + 0.0001);',
-      '  float grid = 1.0 - clamp(min(lineY, lineX), 0.0, 1.0);',
-      '  grid = pow(grid, 2.0);',
-      '  vec3 viewDir = normalize(cameraPosition - vWorldPosition);',
-      '  float fresnel = pow(1.0 - max(dot(vNormal, viewDir), 0.0), 3.0);',
-      '  float laserY = sin(time * 1.5) * 0.18 + 0.65;',
-      '  float dist = abs(vPosition.y - laserY);',
-      '  float laserCore = exp(-pow(dist * 60.0, 2.0));',
-      '  float laserGlow = exp(-pow(dist * 16.0, 2.0));',
-      '  vec3 cyan = vec3(0.0, 0.94, 0.82);',
-      '  vec3 white = vec3(1.0, 1.0, 1.0);',
-      '  vec3 color = mix(litColor, cyan, grid * 0.35);',
-      '  color += cyan * fresnel * 0.35;',
-      '  color += cyan * laserGlow * 0.28 + white * laserCore * 0.65;',
-      '  gl_FragColor = vec4(color, 1.0);',
-      '}'
-    ].join('\n');
-
     loader.load(modelUrl, function (gltf) {
       var model = gltf.scene;
 
-      // Perfectly centered: face strictly above diameter, shoulders frame bottom curve
+      // Centered framing: face strictly above diameter, shoulders frame bottom curve
       model.position.set(0, -0.56, 0);
       model.rotation.y = 0; // facing directly forward towards viewer!
 
-      var origTexture = null;
       model.traverse(function (child) {
         if (child.isMesh) {
-          avatarMesh = child;
-          origTexture = child.material.map;
+          if (child.material) {
+            child.material.roughness = 0.72;
+            child.material.metalness = 0.08;
+            child.material.needsUpdate = true;
+          }
         }
       });
 
-      if (!avatarMesh) return;
-
-      holoMaterial = new THREE.ShaderMaterial({
-        vertexShader: vertexShader,
-        fragmentShader: fragmentShader,
-        uniforms: {
-          map: { value: origTexture },
-          time: { value: 0 }
-        },
-        extensions: {
-          derivatives: true
-        },
-        transparent: true
-      });
-
-      photorealMaterial = new THREE.MeshStandardMaterial({
-        map: origTexture,
-        roughness: 0.72,
-        metalness: 0.12
-      });
-
-      avatarMesh.material = photorealMaterial;
       avatarRoot.add(model);
 
       renderer.domElement.style.opacity = '1';
@@ -435,27 +363,6 @@
     }, { passive: true });
     window.addEventListener('touchend', onDragEnd);
 
-    function setAvatarMode(holo) {
-      isHologram = holo;
-      if (avatarMesh) {
-        avatarMesh.material = isHologram ? holoMaterial : photorealMaterial;
-      }
-      if (toggleLabel) {
-        toggleLabel.textContent = isHologram ? '⚡ Quantum Hologram' : '👤 Photorealistic 3D';
-      }
-      if (toggleDot) {
-        toggleDot.className = isHologram
-          ? 'w-2 h-2 rounded-full bg-cyan-400 animate-pulse'
-          : 'w-2 h-2 rounded-full bg-emerald-500';
-      }
-    }
-
-    if (toggleBtn) {
-      toggleBtn.addEventListener('click', function () {
-        setAvatarMode(!isHologram);
-      });
-    }
-
     window.addEventListener('resize', function () {
       if (!container.clientWidth || !container.clientHeight) return;
       var newW = container.clientWidth;
@@ -470,13 +377,9 @@
       requestAnimationFrame(animateAvatar);
       var time = avatarClock.getElapsedTime();
 
-      if (holoMaterial && isHologram) {
-        holoMaterial.uniforms.time.value = time;
-      }
-
       if (!isDragging) {
-        // High-tech holographic scan swivel ±16 deg: keeps face prominently facing forward
-        avatarRoot.rotation.y = baseRotY + Math.sin(time * 0.9) * 0.28;
+        // Natural subtle ambient sway ±13 deg: keeps face prominently facing forward
+        avatarRoot.rotation.y = baseRotY + Math.sin(time * 0.8) * 0.22;
       }
 
       avatarRoot.rotation.x = 0;
