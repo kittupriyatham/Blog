@@ -54,7 +54,7 @@ class DevtoSyndicator(Syndicator):
 
         title = doc.get("title", "").strip() or "Untitled Article"
         base_url = os.environ.get("SITE_URL", "").strip().rstrip("/")
-        markdown_body = build_article_markdown(doc, base_url, canonical_url=url)
+        markdown_body = build_article_markdown(doc, base_url, canonical_url=url, include_title=False)
 
         tags = [t.lower().replace(" ", "") for t in (doc.get("tags") or [])][:4]
         # Dev.to tags cannot contain special chars

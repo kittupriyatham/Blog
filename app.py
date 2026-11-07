@@ -1877,15 +1877,17 @@ def api_disconnect_syndication():
 
     Removes the platform from `post.syndications`, unsets cached metrics from
     `post.platform_metrics`, and deletes associated click-out analytics events.
-    Enforces a validation guard (Option C): if the link is not known to be broken
-    and force is False, prompts for explicit confirmation before severing.
+    Supports `delete_remote=1` to automatically delete the post on the remote social network
+    (LinkedIn, Facebook, Bluesky, Pinterest, Twitter) so the author does not have to delete it manually.
     """
     if not session.get("logged_in"):
         return jsonify({"status": "error", "message": "Unauthorized"}), 401
 
-    post_id = (request.form.get("post_id") or (request.get_json(silent=True) or {}).get("post_id") or "").strip()
-    platform = (request.form.get("platform") or (request.get_json(silent=True) or {}).get("platform") or "").strip().lower()
-    force = str(request.form.get("force") or (request.get_json(silent=True) or {}).get("force") or "").lower() in ("1", "true", "yes")
+    data = request.get_json(silent=True) or {}
+    post_id = (request.form.get("post_id") or data.get("post_id") or "").strip()
+    platform = (request.form.get("platform") or data.get("platform") or "").strip().lower()
+    force = str(request.form.get("force") or data.get("force") or "").lower() in ("1", "true", "yes")
+    delete_remote = str(request.form.get("delete_remote") or data.get("delete_remote") or "").lower() in ("1", "true", "yes")
 
     if not post_id or not platform:
         return jsonify({"status": "error", "message": "Missing post_id or platform"}), 400
@@ -1899,48 +1901,23 @@ def api_disconnect_syndication():
     if not target_syn:
         return jsonify({"status": "error", "message": f"No syndication found for platform '{platform}'"}), 404
 
-    # Validation Guard (Option C):
-    cached_metrics = (doc.get("platform_metrics") or {}).get(platform) or {}
-    err_text = str(cached_metrics.get("error") or target_syn.get("error") or "").lower()
-    is_known_broken = bool("404" in err_text or "not found" in err_text or "revoked" in err_text or cached_metrics.get("is_broken"))
-
-    if not is_known_broken and not force:
-        # Check if platform syndicator token or credentials are valid
-        if platform == "linkedin":
+    # If delete_remote is requested, delete the remote post using the platform adapter
+    remote_deleted = False
+    remote_err = None
+    if delete_remote:
+        remote_id = target_syn.get("remote_id") or target_syn.get("url")
+        s = syndication.get(platform)
+        if s and hasattr(s, "delete") and remote_id:
             try:
-                from core.syndication.linkedin import LinkedinSyndicator
-                res = LinkedinSyndicator().check()
-                if not res.ok:
-                    is_known_broken = True
-            except Exception:
-                pass
-
-        # Also probe the URL directly if available to detect dead/deleted links
-        target_url = target_syn.get("url")
-        if not is_known_broken and target_url:
-            try:
-                import urllib.request
-                probe_req = urllib.request.Request(
-                    target_url,
-                    headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"}
-                )
-                with urllib.request.urlopen(probe_req, timeout=5) as probe_resp:
-                    final_url = probe_resp.url or ""
-                    # LinkedIn redirects deleted posts to signup/cold-join or login
-                    if "linkedin.com" in target_url and ("cold-join" in final_url or "uas/login" in final_url):
-                        is_known_broken = True
-            except urllib.error.HTTPError as e:
-                if e.code in (401, 403, 404, 410):
-                    is_known_broken = True
-            except Exception:
-                pass
-
-    if not is_known_broken and not force:
-        return jsonify({
-            "status": "guard_warning",
-            "needs_confirmation": True,
-            "message": f"The {platform.capitalize()} link does not currently show an error/404. Are you sure you want to disconnect it from the blog and analytics?"
-        }), 200
+                s.delete(remote_id)
+                remote_deleted = True
+            except Exception as e:
+                err_msg = str(e).lower()
+                if "404" in err_msg or "not found" in err_msg:
+                    remote_deleted = True
+                else:
+                    remote_err = str(e)[:300]
+                    print(f"[disconnect] Remote delete warning for {platform}: {remote_err}")
 
     # 1. Pull from post.syndications & unset platform_metrics
     posts_collection.update_one(
@@ -1962,9 +1939,16 @@ def api_disconnect_syndication():
     except Exception as e:
         print(f"[analytics] Could not purge click_out events: {e}")
 
+    msg = f"Successfully disconnected {platform.capitalize()} from {post_id}."
+    if remote_deleted:
+        msg += " Remote post was deleted from the platform."
+    elif remote_err:
+        msg += f" (Note: Remote deletion reported: {remote_err})"
+
     return jsonify({
         "status": "success",
-        "message": f"Successfully disconnected {platform.capitalize()} from {post_id}. Link and tracking removed."
+        "message": msg,
+        "remote_deleted": remote_deleted
     })
 
 
@@ -1992,11 +1976,23 @@ def api_link_external_syndication():
     if not doc:
         return jsonify({"status": "error", "message": "Post not found"}), 404
 
+    # Preserve or derive remote_id
+    remote_id = None
+    existing_syn = next((s for s in (doc.get("syndications") or []) if s.get("platform") == platform), None)
+    if existing_syn and existing_syn.get("remote_id"):
+        remote_id = existing_syn.get("remote_id")
+    elif platform == "medium":
+        import re
+        m = re.search(r"-([0-9a-fA-F]{8,12})(?:\?|$)", url)
+        if m:
+            remote_id = m.group(1)
+
     label = syndication.label_for(platform) or platform.capitalize()
     new_entry = {
         "platform": platform,
         "label": label,
         "url": url,
+        "remote_id": remote_id,
         "status": "posted",
         "posted_at": content.now_str(),
         "error": None,

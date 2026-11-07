@@ -263,17 +263,25 @@ class LinkedinSyndicator(Syndicator):
 
         # Resolve Cover Image or attached Media first
         # (articles have covers in .cover_image, standard posts use media paths)
+        from . import imageprep
         first_image = None
-        if is_article:
+        if doc and doc.get("cover_image"):
             first_image = doc.get("cover_image")
         if not first_image:
-            first_image = next((m for m in (media or []) if m), None)
+            # Filter specifically for images so a video attachment is not mistakenly chosen
+            first_image = next((m for m in (media or []) if m and imageprep.is_image(m)), None)
 
         image_urn = self._upload_image(token, author, first_image) if first_image else None
 
+        # Clean commentary text and ensure boundary-safe length <= 3000
+        commentary = (text or "").strip()
+        if len(commentary) > 3000:
+            from . import truncate_on_boundary
+            commentary = truncate_on_boundary(commentary, 3000)
+
         payload: dict[str, Any] = {
             "author": author,
-            "commentary": text[:3000],
+            "commentary": commentary,
             "visibility": "PUBLIC",
             "distribution": {"feedDistribution": "MAIN_FEED",
                              "targetEntities": [], "thirdPartyDistributionChannels": []},
@@ -283,13 +291,19 @@ class LinkedinSyndicator(Syndicator):
 
         # Handle Article shares using LinkedIn's rich article bookmark style
         if is_article:
-            # Shorten rich commentary if text exceeds limit, standard is 3000 but articles need room
-            # We enforce a clean promotion and hook back to the original self-hosted domain
+            description = (doc.get("description") or doc.get("excerpt") or "").strip()
+            if not description:
+                for b in (doc.get("blocks", []) or []):
+                    if b.get("type") == "text" and b.get("content"):
+                        description = b.get("content").strip().split("\n")[0][:250]
+                        break
+            if not description:
+                description = "Read the full story on my blog."
             payload["content"] = {
                 "article": {
                     "source": url,
                     "title": doc.get("title") or "Article Update",
-                    "description": "Read the full story on my blog."
+                    "description": description[:250]
                 }
             }
             if image_urn:

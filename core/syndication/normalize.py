@@ -132,10 +132,12 @@ def build_article_html(doc: dict, base_url: str, canonical_url: str = "") -> str
     return normalize_html_assets(html, base_url)
 
 
-def build_article_markdown(doc: dict, base_url: str, canonical_url: str = "") -> str:
+def build_article_markdown(doc: dict, base_url: str, canonical_url: str = "", include_title: bool = True) -> str:
     """Build clean Markdown representation of the article with absolute asset links."""
     title = (doc or {}).get("title", "").strip() or "Untitled"
-    md_parts = [f"# {title}\n"]
+    md_parts = []
+    if include_title:
+        md_parts.append(f"# {title}\n")
 
     cover = (doc or {}).get("cover_image")
     if cover:
@@ -147,7 +149,10 @@ def build_article_markdown(doc: dict, base_url: str, canonical_url: str = "") ->
         if btype == "text":
             content = block.get("content", "")
             if content.strip():
-                md_parts.append(normalize_markdown_assets(content, base_url) + "\n")
+                from . import clean_social_text
+                cleaned = clean_social_text(content)
+                if cleaned.strip():
+                    md_parts.append(normalize_markdown_assets(cleaned, base_url) + "\n")
         elif btype == "media":
             for path in block.get("media_paths", []) or []:
                 abs_path = to_absolute_url(path, base_url)

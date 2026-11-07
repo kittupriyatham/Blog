@@ -29,12 +29,12 @@ else 'text-xs text-slate-500 dark:text-slate-400' %}
 {% endfor %}
 {% set _names = {'linkedin': 'LinkedIn', 'facebook': 'Facebook', 'instagram': 'Instagram',
 'youtube': 'YouTube', 'twitter': 'X', 'bluesky': 'Bluesky',
-'pinterest': 'Pinterest', 'medium': 'Medium'} %}
+'pinterest': 'Pinterest', 'medium': 'Medium', 'devto': 'Dev.to', 'hashnode': 'Hashnode'} %}
 
 <div class="{{ _sep }}  dark:border-slate-800">
   <div class="flex items-center {{ _gap }} flex-wrap">
     <span class="font-medium {{ _heading }}">{{ _intro }}</span>
-    {% for _pid in ['linkedin', 'facebook', 'instagram', 'youtube', 'twitter', 'bluesky', 'pinterest', 'medium'] %}
+    {% for _pid in ['linkedin', 'facebook', 'instagram', 'youtube', 'twitter', 'bluesky', 'pinterest', 'medium', 'devto', 'hashnode'] %}
     {% set _u = _urls.get(_pid) %}
     {% if _u %}
     <a href="{{ _u }}" target="_blank" rel="noopener" title="{{ _names[_pid] }}" data-platform="{{ _pid }}"
@@ -84,6 +84,14 @@ else 'text-xs text-slate-500 dark:text-slate-400' %}
           <path
             d="M13.54 12a6.8 6.8 0 0 1-6.77 6.82A6.8 6.8 0 0 1 0 12a6.8 6.8 0 0 1 6.77-6.82A6.8 6.8 0 0 1 13.54 12zM20.96 12c0 3.54-1.51 6.42-3.38 6.42-1.87 0-3.39-2.88-3.39-6.42s1.52-6.42 3.39-6.42 3.38 2.88 3.38 6.42M24 12c0 3.17-.53 5.75-1.19 5.75-.66 0-1.19-2.58-1.19-5.75s.53-5.75 1.19-5.75S24 8.83 24 12z" />
         </svg>
+        {% elif _pid == 'devto' %}
+        <svg class="{{ _icon }}" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+          <path d="M7.42 10.05c-.18-.12-.46-.23-.85-.23H4.72v4.36h1.85c.39 0 .67-.11.85-.23.24-.16.4-.49.4-.95v-2c0-.46-.16-.79-.4-.95zM0 0v24h24V0H0zm8.99 13.03c0 .87-.31 1.54-.88 1.95-.54.39-1.29.58-2.23.58H3.27V8.44h2.61c.94 0 1.69.19 2.23.58.57.41.88 1.08.88 1.95v2.06zm4.78 4.1h-4.32V8.44h4.32v1.51h-2.87v1.89h2.61v1.51h-2.61v1.97h2.87v1.81zm6.96-5.83l-2.06 7.34h-1.57l-2.06-7.34h1.63l1.22 4.96 1.22-4.96h1.62z"/>
+        </svg>
+        {% elif _pid == 'hashnode' %}
+        <svg class="{{ _icon }}" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+          <path d="M22.351 8.019l-6.37-6.37a5.63 5.63 0 0 0-7.962 0l-6.37 6.37a5.63 5.63 0 0 0 0 7.962l6.37 6.37a5.63 5.63 0 0 0 7.962 0l6.37-6.37a5.63 5.63 0 0 0 0-7.962zM12 15.6a3.6 3.6 0 1 1 0-7.2 3.6 3.6 0 0 1 0 7.2z"/>
+        </svg>
         {% endif %}
         {% if _u %}</a>{% else %}</span>{% endif %}
     {% endfor %}
@@ -99,9 +107,10 @@ else 'text-xs text-slate-500 dark:text-slate-400' %}
             <span class="capitalize font-medium text-slate-700 dark:text-slate-300">{{ _names.get(s.platform, s.platform) }}</span>
             {% if _is_broken %}
               <span class="px-1 py-0.2 rounded text-[9px] bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300 font-semibold uppercase">Dead Link</span>
-              <button type="button" onclick="disconnectSocial('{{ post.post_id }}', '{{ s.platform }}', true)" class="text-red-600 dark:text-red-400 hover:text-red-700 font-bold ml-1 hover:underline cursor-pointer" title="Remove dead link & purge from analytics">Remove Dead Link</button>
+              <button type="button" onclick="disconnectSocial('{{ post.post_id }}', '{{ s.platform }}', true, false)" class="text-red-600 dark:text-red-400 hover:text-red-700 font-bold ml-1 hover:underline cursor-pointer" title="Remove dead link & purge from analytics">Remove Link</button>
             {% else %}
-              <button type="button" onclick="disconnectSocial('{{ post.post_id }}', '{{ s.platform }}', false)" class="text-slate-400 hover:text-red-500 hover:underline ml-1 cursor-pointer" title="Disconnect social link">Disconnect</button>
+              <button type="button" onclick="disconnectSocial('{{ post.post_id }}', '{{ s.platform }}', false, false)" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:underline ml-1 cursor-pointer" title="Unlink from blog without deleting remote post">Unlink</button>
+              <button type="button" onclick="disconnectSocial('{{ post.post_id }}', '{{ s.platform }}', false, true)" class="text-red-500 hover:text-red-700 hover:underline ml-1 cursor-pointer font-semibold text-[10px]" title="Delete post on remote social network and unlink">Delete Remote</button>
             {% endif %}
           </span>
         {% endfor %}
@@ -140,11 +149,13 @@ else 'text-xs text-slate-500 dark:text-slate-400' %}
       };
     }
     if (!window.disconnectSocial) {
-        window.disconnectSocial = async function(postId, platform, isBroken, force = false) {
-          if (!isBroken && !force) {
-            const ok = confirm(`Are you sure you want to disconnect ${platform.toUpperCase()} from this post?\n\nThis will remove the syndication link from your blog, grey out the icon, and delete tracking and analytics for this link.`);
-            if (!ok) return;
-          }
+        window.disconnectSocial = async function(postId, platform, isBroken, deleteRemote = false) {
+          const actionText = deleteRemote
+            ? `DELETE the remote post on ${platform.toUpperCase()} and remove the link`
+            : `unlink ${platform.toUpperCase()}`;
+          const ok = confirm(`Are you sure you want to ${actionText} from this post?\n\nThis will remove the syndication icon, stop click tracking, and purge metrics for this platform.`);
+          if (!ok) return;
+
           try {
             const res = await fetch('/api/disconnect_syndication', {
               method: 'POST',
@@ -152,22 +163,22 @@ else 'text-xs text-slate-500 dark:text-slate-400' %}
                 'Content-Type': 'application/json',
                 'X-CSRFToken': '{{ csrf_token() }}'
               },
-              body: JSON.stringify({ post_id: postId, platform: platform, force: force, csrf_token: '{{ csrf_token() }}' })
+              body: JSON.stringify({
+                post_id: postId,
+                platform: platform,
+                force: true,
+                delete_remote: deleteRemote,
+                csrf_token: '{{ csrf_token() }}'
+              })
             });
             const data = await res.json();
-            if (data.status === "guard_warning") {
-              if (confirm(data.message + "\n\nDo you want to proceed and force disconnect anyway?")) {
-                return window.disconnectSocial(postId, platform, isBroken, true);
-              }
-              return;
-            }
-            if (data.status !== "success") {
+            if (!res.ok || data.status !== 'success') {
               alert('Error: ' + (data.message || data.error || 'Failed to disconnect'));
               return;
             }
             location.reload();
           } catch (err) {
-            alert('Network error disconnecting social link: ' + err.message);
+            alert('Network error: ' + err.message);
           }
         };
       }

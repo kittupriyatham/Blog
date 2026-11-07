@@ -217,7 +217,7 @@ def _expand_attachments(doc, body, url=None):
     
     Returns (expanded_body, has_primary_attached_url).
     """
-    pattern = re.compile(r"/(article|post)/([a-zA-Z0-9_.-]+)")
+    pattern = re.compile(r"(?:https?://[^\s/\"'()]+)?/(article|post)/([a-zA-Z0-9_.-]+)")
     matches = list(pattern.finditer(body))
     if not matches:
         return body, False
@@ -229,6 +229,15 @@ def _expand_attachments(doc, body, url=None):
     if len(matches) == 1 and body.strip() == matches[0].group(0):
         m = matches[0]
         kind, tid = m.group(1), m.group(2)
+        if tid.startswith("draft_"):
+            try:
+                from core.db import Post
+                found_draft = Post._get_collection().find_one({"$or": [{"post_id": tid}, {"draft_id": tid}]})
+                if found_draft and found_draft.get("post_id") and not found_draft.get("post_id").startswith("draft_"):
+                    tid = found_draft.get("post_id")
+                    kind = "article" if tid.startswith("article_") else "post"
+            except Exception:
+                pass
         canonical_target_url = f"{base}/{kind}/{tid}"
         target = attached_docs.get(tid)
         title = (target.get("title") or "").strip() if target else ""
@@ -238,11 +247,20 @@ def _expand_attachments(doc, body, url=None):
             return f"{title}\n\n{canonical_target_url}", True
         return canonical_target_url, True
 
-    # Otherwise, replace every relative route in the body
+    # Otherwise, replace every relative route or full URL in the body
     has_attached_url = False
     new_body = body
     for m in reversed(matches):
         kind, tid = m.group(1), m.group(2)
+        if tid.startswith("draft_"):
+            try:
+                from core.db import Post
+                found_draft = Post._get_collection().find_one({"$or": [{"post_id": tid}, {"draft_id": tid}]})
+                if found_draft and found_draft.get("post_id") and not found_draft.get("post_id").startswith("draft_"):
+                    tid = found_draft.get("post_id")
+                    kind = "article" if tid.startswith("article_") else "post"
+            except Exception:
+                pass
         canonical_target_url = f"{base}/{kind}/{tid}"
         target = attached_docs.get(tid)
         title = (target.get("title") or "").strip() if target else ""
@@ -375,6 +393,79 @@ def truncate_on_boundary(text, limit, boundary_share=0.6):
     return window.rstrip() + "\u2026"
 
 
+def clean_social_text(text: str) -> str:
+    """Transform custom rich-text block directives into clean, readable text for social media."""
+    if not text:
+        return ""
+    s = text.replace("\r\n", "\n").replace("\r", "\n")
+
+    # 1. Remove :::toc entirely
+    s = re.sub(r":::\s*toc\s*(?:\n|$)", "", s, flags=re.IGNORECASE)
+
+    # 2. Transform :::callout{type=...} ... :::
+    def _replace_callout(m):
+        ctype = (m.group(1) or "").lower()
+        content = m.group(2).strip()
+        icon = {"tip": "\U0001f4a1 ", "warn": "\u26a0\ufe0f ", "danger": "\u26d4 ", "success": "\u2705 ", "info": "\u2139\ufe0f "}.get(ctype, "")
+        return f"{icon}{content}"
+    s = re.sub(r":::\s*callout(?:\{type=([a-zA-Z]+)\})?\s*\n?(.*?)\n?:::", _replace_callout, s, flags=re.DOTALL)
+
+    # 3. Transform :::quote ... :::
+    def _replace_quote(m):
+        content = m.group(1).strip()
+        lines = [f"> {line}" if line else ">" for line in content.split("\n")]
+        return "\n".join(lines)
+    s = re.sub(r":::\s*quote\s*\n?(.*?)\n?:::", _replace_quote, s, flags=re.DOTALL)
+
+    # 4. Transform :::link (url) ... :::
+    def _replace_link_block(m):
+        url = m.group(1).strip()
+        desc = m.group(2).strip()
+        return f"{desc}\n{url}" if desc else url
+    s = re.sub(r":::\s*link\s+(https?://[^\s<\x00]+)\s*(?:\{.*?\})?\s*\n?(.*?)\n?:::", _replace_link_block, s, flags=re.DOTALL)
+
+    # 5. Transform :::toggle Title ... :::
+    def _replace_toggle(m):
+        title = m.group(1).strip()
+        content = m.group(2).strip()
+        return f"{title}:\n{content}"
+    s = re.sub(r":::\s*toggle\s+(.*?)\s*\n(.*?)\n?:::", _replace_toggle, s, flags=re.DOTALL)
+
+    # 6. Transform :::cta URL ... :::
+    def _replace_cta(m):
+        url = m.group(1).strip()
+        label = m.group(2).strip()
+        return f"{label}: {url}" if label else url
+    s = re.sub(r":::\s*cta\s+(https?://[^\s<\x00]+)\s*\n?(.*?)\n?:::", _replace_cta, s, flags=re.DOTALL)
+
+    # 7. Transform :::table ... ::: -> strip fence, keep inner table rows
+    s = re.sub(r":::\s*table\s*\n?(.*?)\n?:::", r"\1", s, flags=re.DOTALL)
+
+    # 8. Transform :::gallery ... ::: -> strip gallery fence, keep any lines/captions
+    s = re.sub(r":::\s*gallery\s*\n?(.*?)\n?:::", r"\1", s, flags=re.DOTALL)
+
+    # 9. Transform :::math ... ::: -> keep math expressions
+    s = re.sub(r":::\s*math\s*\n?(.*?)\n?:::", r"\1", s, flags=re.DOTALL)
+
+    # 10. Transform :::embed URL
+    s = re.sub(r":::\s*embed\s+(https?://[^\s<\x00]+)", r"\1", s)
+
+    # 11. Transform :::divider -> ---
+    s = re.sub(r":::\s*divider\s*(?:\n|$)", "---\n", s)
+
+    # 12. Strip any remaining stray ::: block tags
+    s = re.sub(r"^:::\s*[a-zA-Z0-9_-]*(?:\{.*?\})?\s*$", "", s, flags=re.MULTILINE)
+    s = re.sub(r"^:::\s*$", "", s, flags=re.MULTILINE)
+
+    # 13. Strip footnotes definitions and markers
+    s = re.sub(r"^\[\^[\w-]+\]:\s*.*$", "", s, flags=re.MULTILINE)
+    s = re.sub(r"\[\^[\w-]+\]", "", s)
+
+    # Clean up excessive blank lines
+    s = re.sub(r"\n{3,}", "\n\n", s).strip()
+    return s
+
+
 def compose_text(doc, url, platforms=None):
     """Social text = the body, plus the canonical link when the domain is public.
 
@@ -405,25 +496,51 @@ def compose_text(doc, url, platforms=None):
     # Textareas submit CRLF, which platforms render as a stray control character.
     body = body.replace("\r\n", "\n").replace("\r", "\n")
 
+    # Clean rich-text directives into readable plain/social markdown
+    body = clean_social_text(body)
+
     # Expand relative routes (like /article/<id> or /post/<id>) into rich text + canonical URL
     body, has_attached_url = _expand_attachments(doc, body, url)
 
-    # When the body already carries the attached article's canonical URL, avoid appending
-    # a duplicate link to the wrapper post so social platforms unfurl the target article preview.
-    suffix = ("\n\n" + url) if (url and is_public_url(url) and not has_attached_url) else ""
+    # Determine canonical URL and attached URL
+    is_public = bool(url and is_public_url(url))
+    primary_url = url if is_public else ""
+
+    target_url = primary_url
+    if has_attached_url:
+        m_target = re.search(r"https?://[^\s/\"'()]+/(?:article|post)/[a-zA-Z0-9_.-]+", body)
+        if m_target:
+            target_url = m_target.group(0)
+
+    # If body already carries the attached link in its text and fits, no extra suffix needed
+    suffix = ("\n\n" + primary_url) if (primary_url and not has_attached_url) else ""
     limit = text_limit_for(platforms) if platforms else 3000
     if limit is None:
         return body + suffix
+
     room = limit - len(suffix)
     if room < 1:
-        return suffix[:limit]
+        return (body[:max(0, limit - len(suffix))] + suffix)[:limit]
     if len(body) <= room:
         return body + suffix
-    # Too long for this platform: rewrite the whole post down to size instead of
-    # cutting it off. `room` already excludes the link, so the result fits the
-    # limit including the link. Falls back to trimming when no model is available,
-    # so publishing never depends on the rewrite.
-    rewritten = rewrite.condense(body, room)
+
+    # Too long for this platform:
+    # When rewriting or truncating, ensure the canonical link (or target article link) is preserved!
+    link_to_append = target_url or primary_url
+    rewritten_suffix = ("\n\n" + link_to_append) if link_to_append else ""
+    rewritten_room = max(10, limit - len(rewritten_suffix))
+
+    # Strip any existing links from body before condensing so the LLM doesn't see or mangle them
+    clean_body_for_rewrite = body
+    if link_to_append and link_to_append in clean_body_for_rewrite:
+        clean_body_for_rewrite = clean_body_for_rewrite.replace(link_to_append, "").strip()
+
+    rewritten = rewrite.condense(clean_body_for_rewrite, rewritten_room)
     if rewritten:
-        return rewritten + suffix
-    return truncate_on_boundary(body, room) + suffix
+        if len(rewritten) > rewritten_room:
+            rewritten = truncate_on_boundary(rewritten, rewritten_room)
+        res = rewritten + rewritten_suffix
+        if len(res) <= limit:
+            return res
+
+    return truncate_on_boundary(clean_body_for_rewrite, rewritten_room) + rewritten_suffix

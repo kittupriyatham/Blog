@@ -62,15 +62,13 @@ def _set_platform_state(posts_collection, doc_id, platform, state, **fields):
 
 
 def _resolve_preview_placeholder_link(text: str, canonical_url: str) -> str:
-    """Replace preview-only placeholder post/article links with the real canonical URL."""
+    """Replace preview-only placeholder post/article links or draft links with the real canonical URL."""
     if not text or not canonical_url:
         return text
-    if "/post/" in canonical_url:
-        pattern = r"(?:https?://[^\s)]+)?/post/(?:post_)?[xX]{8}"
-    elif "/article/" in canonical_url:
-        pattern = r"(?:https?://[^\s)]+)?/article/(?:article_)?[xX]{8}"
-    else:
-        return text
+    # Match any placeholder pattern:
+    # 1. /post/xxxxxxxx or /post/draft_... or http(s)://.../post/xxxxxxxx or http(s)://.../post/draft_...
+    # 2. /article/xxxxxxxx or /article/draft_... or http(s)://.../article/xxxxxxxx or http(s)://.../article/draft_...
+    pattern = r"(?:https?://[^\s/\"'()]+)?/(?:post|article)/(?:(?:post_|article_)?[xX]{8}|draft_[a-zA-Z0-9_-]+)"
     return re.sub(pattern, canonical_url, text)
 
 
@@ -89,8 +87,31 @@ def run_syndication(doc_id, url, platforms):
         # Composed per platform, or uses an author's custom override if supplied.
         custom_map = doc.get("custom_syndications") or {}
         custom_text = (custom_map.get(pid) or "").strip()
+        limit = syndication.text_limit_for([pid])
         if custom_text:
             text = _resolve_preview_placeholder_link(custom_text, url)
+            # Ensure the canonical URL or an attached link is present in the post
+            has_link = bool(url and url in text)
+            if not has_link:
+                has_link = bool(re.search(r"https?://[^\s/\"'()]+/(?:post|article)/[a-zA-Z0-9_.-]+", text))
+            if not has_link and url and syndication.is_public_url(url):
+                suffix = "\n\n" + url
+                if limit:
+                    room = limit - len(suffix)
+                    if room > 0 and len(text) > room:
+                        text = syndication.truncate_on_boundary(text, room)
+                text = text + suffix
+            elif limit and len(text) > limit:
+                # If custom text exceeds limit, truncate safely while preserving canonical URL suffix
+                if url and url in text:
+                    prefix_part, url_part = text.rsplit(url, 1)
+                    target_room = limit - len(url) - len(url_part)
+                    if target_room > 0:
+                        text = syndication.truncate_on_boundary(prefix_part.rstrip(), target_room) + ("\n\n" if prefix_part.endswith("\n") else " ") + url + url_part
+                    else:
+                        text = syndication.truncate_on_boundary(text, limit)
+                else:
+                    text = syndication.truncate_on_boundary(text, limit)
         else:
             text = syndication.compose_text(doc, url, [pid])
         existing = next((s for s in doc.get("syndications", [])

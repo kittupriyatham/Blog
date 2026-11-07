@@ -58,7 +58,7 @@ DEFAULT_PLATFORMS = [
 
 # Conservative per-platform text caps; the provider validates too and returns a
 # per-target error, so these only avoid guaranteed failures.
-TEXT_LIMITS = {"twitter": 280, "instagram": 2200, "facebook": 6000, "bluesky": 300, "pinterest": 800}
+TEXT_LIMITS = {"twitter": 280, "bluesky": 300, "threads": 500, "pinterest": 800, "instagram": 2200, "facebook": 63206, "linkedin": 3000}
 DEFAULT_TEXT_LIMIT = 3000
 
 TERMINAL = {"published", "failed", "cancelled", "partial"}
@@ -405,8 +405,12 @@ class SocialApiSyndicator(Syndicator):
         Instagram's content_type stays inside `platform_data`; both live here.
         """
         limit = TEXT_LIMITS.get(self.id, DEFAULT_TEXT_LIMIT)
+        raw_text = text or ""
+        if len(raw_text) > limit:
+            from . import truncate_on_boundary
+            raw_text = truncate_on_boundary(raw_text, limit)
         body: dict = {
-            "text": (text or "")[:limit],
+            "text": raw_text,
             "targets": [self._target(account_id or self._account_id())],
         }
         if for_validate:
