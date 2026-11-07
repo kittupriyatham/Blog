@@ -31,8 +31,8 @@
     var height = stage.clientHeight || 320;
 
     var scene = new THREE.Scene();
-    var camera = new THREE.PerspectiveCamera(42, width / height, 0.1, 100);
-    camera.position.set(0, 0, 4.3);
+    var camera = new THREE.PerspectiveCamera(44, width / height, 0.1, 100);
+    camera.position.set(0, 0, 3.8);
 
     var renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true, powerPreference: 'high-performance' });
     renderer.setSize(width, height);
@@ -50,23 +50,23 @@
     container.appendChild(renderer.domElement);
 
     // Warm, natural studio lighting for authentic skin tones and crisp fabric textures
-    var ambientLight = new THREE.AmbientLight(0xffffff, 0.95);
+    var ambientLight = new THREE.AmbientLight(0xffffff, 1.1);
     scene.add(ambientLight);
 
-    var keyLight = new THREE.DirectionalLight(0xffffff, 1.25);
-    keyLight.position.set(2, 4, 3);
+    var keyLight = new THREE.DirectionalLight(0xffffff, 1.4);
+    keyLight.position.set(2.2, 4.0, 3.2);
     scene.add(keyLight);
 
-    var fillLight = new THREE.DirectionalLight(0xe0f2fe, 0.65);
-    fillLight.position.set(-2, 1, 2);
+    var fillLight = new THREE.DirectionalLight(0xe0f2fe, 0.8);
+    fillLight.position.set(-2.0, 1.2, 2.5);
     scene.add(fillLight);
 
     // Subtle colored rim lights for quantum aesthetic
-    var cyanRim = new THREE.PointLight(0x06b6d4, 0.8, 6);
+    var cyanRim = new THREE.PointLight(0x06b6d4, 0.9, 6);
     cyanRim.position.set(-2, 1.5, 1);
     scene.add(cyanRim);
 
-    var purpleRim = new THREE.PointLight(0xa855f7, 0.7, 6);
+    var purpleRim = new THREE.PointLight(0xa855f7, 0.8, 6);
     purpleRim.position.set(2, -1.2, 1);
     scene.add(purpleRim);
 
@@ -84,29 +84,30 @@
 
     // -----------------------------------------------------------------
     // 3-Axis Gyroscope Architecture
-    // Radii enlarged (1.68 - 1.98) so circles NEVER obstruct the face!
-    // The 3 rings are mutually perpendicular at all times (90 deg).
+    // Compact radii (1.08 - 1.35) so rings totally fit into the canvas
+    // while the 3D model inside is scaled up larger, clearer & prominent!
+    // The 3 rings remain strictly mutually perpendicular (90 deg).
     // -----------------------------------------------------------------
-    var r1Radius = 1.98; // Ring 1: Outer Cyan
-    var r2Radius = 1.83; // Ring 2: Middle Electric Purple
-    var r3Radius = 1.68; // Ring 3: Inner Golden Amber
+    var r1Radius = 1.35; // Ring 1: Outer Cyan (diameter = 2.70)
+    var r2Radius = 1.22; // Ring 2: Middle Electric Purple (diameter = 2.44)
+    var r3Radius = 1.08; // Ring 3: Inner Golden Amber (diameter = 2.16)
 
     // Ring 1: Cyan Gimbal (in XY plane, normal = Z)
     var ring1Group = new THREE.Group();
-    var ring1Geo = new THREE.TorusGeometry(r1Radius, 0.016, 16, 120);
+    var ring1Geo = new THREE.TorusGeometry(r1Radius, 0.014, 16, 120);
     var ring1Mat = new THREE.MeshStandardMaterial({
       color: 0x06b6d4,
       emissive: 0x0891b2,
-      emissiveIntensity: 0.9,
+      emissiveIntensity: 0.95,
       metalness: 0.85,
-      roughness: 0.18
+      roughness: 0.2
     });
     var ring1Mesh = new THREE.Mesh(ring1Geo, ring1Mat);
     ring1Group.add(ring1Mesh);
 
     // Bearing caps on Ring 1
     var bearingMat = new THREE.MeshStandardMaterial({ color: 0xf1f5f9, metalness: 0.95, roughness: 0.1 });
-    var bearingGeo = new THREE.SphereGeometry(0.046, 16, 16);
+    var bearingGeo = new THREE.SphereGeometry(0.036, 16, 16);
     var p1a = new THREE.Mesh(bearingGeo, bearingMat);
     p1a.position.set(r1Radius, 0, 0);
     ring1Group.add(p1a);
@@ -115,7 +116,7 @@
     ring1Group.add(p1b);
 
     // Orbiting electron on Ring 1
-    var electronGeo = new THREE.SphereGeometry(0.052, 16, 16);
+    var electronGeo = new THREE.SphereGeometry(0.042, 16, 16);
     var electron1Mat = new THREE.MeshStandardMaterial({ color: 0x22d3ee, emissive: 0x06b6d4, emissiveIntensity: 1.8 });
     var electron1 = new THREE.Mesh(electronGeo, electron1Mat);
     ring1Group.add(electron1);
@@ -124,13 +125,13 @@
 
     // Ring 2: Electric Purple Gimbal (in YZ plane, normal = X, strictly perp to Ring 1)
     var ring2Group = new THREE.Group();
-    var ring2Geo = new THREE.TorusGeometry(r2Radius, 0.015, 16, 120);
+    var ring2Geo = new THREE.TorusGeometry(r2Radius, 0.013, 16, 120);
     var ring2Mat = new THREE.MeshStandardMaterial({
       color: 0xa855f7,
       emissive: 0x7c3aed,
-      emissiveIntensity: 0.9,
+      emissiveIntensity: 0.95,
       metalness: 0.85,
-      roughness: 0.18
+      roughness: 0.2
     });
     var ring2Mesh = new THREE.Mesh(ring2Geo, ring2Mat);
     ring2Mesh.rotation.y = Math.PI / 2; // Normal is X axis -> dot(Z, X) = 0!
@@ -151,17 +152,24 @@
 
     // Ring 3: Golden Amber Gimbal (in ZX plane, normal = Y, strictly perp to Ring 1 & Ring 2)
     var ring3Group = new THREE.Group();
-    var ring3Geo = new THREE.TorusGeometry(r3Radius, 0.014, 16, 120);
+    var ring3Geo = new THREE.TorusGeometry(r3Radius, 0.012, 16, 120);
     var ring3Mat = new THREE.MeshStandardMaterial({
       color: 0xf59e0b,
       emissive: 0xd97706,
-      emissiveIntensity: 0.9,
+      emissiveIntensity: 0.95,
       metalness: 0.85,
-      roughness: 0.18
+      roughness: 0.2
     });
     var ring3Mesh = new THREE.Mesh(ring3Geo, ring3Mat);
     ring3Mesh.rotation.x = Math.PI / 2; // Normal is Y axis -> dot(Z, Y) = 0, dot(X, Y) = 0!
     ring3Group.add(ring3Mesh);
+
+    var p3a = new THREE.Mesh(bearingGeo, bearingMat);
+    p3a.position.set(r3Radius, 0, 0);
+    ring3Group.add(p3a);
+    var p3b = new THREE.Mesh(bearingGeo, bearingMat);
+    p3b.position.set(-r3Radius, 0, 0);
+    ring3Group.add(p3b);
 
     var electron3Mat = new THREE.MeshStandardMaterial({ color: 0xfde047, emissive: 0xf59e0b, emissiveIntensity: 1.8 });
     var electron3 = new THREE.Mesh(electronGeo, electron3Mat);
@@ -169,13 +177,13 @@
 
     gyroFrame.add(ring3Group);
 
-    // Ambient Quantum Particle Cloud
+    // Ambient Quantum Particle Cloud (Kept within compact radius)
     var particleCount = 45;
     var partGeom = new THREE.BufferGeometry();
     var positions = new Float32Array(particleCount * 3);
     var colors = new Float32Array(particleCount * 3);
     for (var i = 0; i < particleCount; i++) {
-      var rad = 1.45 + Math.random() * 0.9;
+      var rad = 0.88 + Math.random() * 0.46;
       var theta = Math.random() * Math.PI * 2;
       var phi = (Math.random() - 0.5) * Math.PI * 0.8;
       positions[i * 3] = rad * Math.cos(theta) * Math.cos(phi);
@@ -190,18 +198,18 @@
     partGeom.setAttribute('position', new THREE.BufferAttribute(positions, 3));
     partGeom.setAttribute('color', new THREE.BufferAttribute(colors, 3));
     var partMaterial = new THREE.PointsMaterial({
-      size: 0.038,
+      size: 0.028,
       vertexColors: true,
       transparent: true,
-      opacity: 0.8,
+      opacity: 0.75,
       blending: THREE.AdditiveBlending
     });
     var pointCloud = new THREE.Points(partGeom, partMaterial);
     gyroRoot.add(pointCloud);
 
     // -------------------------------------------------------------
-    // Load Model: Positioned in the Center of the Gyroscope
-    // With enlarged radii, face sits clear and completely unobstructed!
+    // Load Model: Scaled Up & Positioned in Center of Gyroscope
+    // Larger, crisper face details and shoulders framed by gimbals
     // -------------------------------------------------------------
     var loader = new THREE.GLTFLoader();
     if (window.MeshoptDecoder) {
@@ -211,8 +219,9 @@
     loader.load(modelUrl, function (gltf) {
       var model = gltf.scene;
 
-      // Perfectly centered: face sits clear in the hollow, shoulders framed by the lower curves
-      model.position.set(0, -0.62, 0);
+      // Scale model up so the avatar bust is significantly larger and clearer
+      model.scale.set(1.42, 1.42, 1.42);
+      model.position.set(0, -0.74, 0);
       model.rotation.y = 0; // facing forward towards viewer
 
       model.traverse(function (child) {
@@ -220,8 +229,8 @@
           child.castShadow = true;
           child.receiveShadow = true;
           if (child.material) {
-            child.material.roughness = 0.72;
-            child.material.metalness = 0.08;
+            child.material.roughness = 0.65;
+            child.material.metalness = 0.05;
             child.material.needsUpdate = true;
           }
         }
@@ -349,7 +358,7 @@
       // Idle precession and spin: continuous graceful tumbling
       if (!isDragging) {
         dragVelocity *= 0.94;
-        baseYaw += 0.0035 + dragVelocity;
+        baseYaw += 0.003 + dragVelocity;
       }
 
       // -------------------------------------------------------------
@@ -358,9 +367,9 @@
       // The 3 internal rings are ALWAYS mutually perpendicular (90 deg)
       // no matter what 3D orientation gyroFrame assumes!
       // -------------------------------------------------------------
-      gyroFrame.rotation.y = baseYaw + Math.sin(time * 0.42) * 0.25;
-      gyroFrame.rotation.x = Math.sin(time * 0.35) * 0.32 + 0.38; // Tilted dynamic pitch
-      gyroFrame.rotation.z = Math.cos(time * 0.28) * 0.22 - 0.22; // Tilted dynamic roll
+      gyroFrame.rotation.y = baseYaw + Math.sin(time * 0.42) * 0.22;
+      gyroFrame.rotation.x = Math.sin(time * 0.35) * 0.26 + 0.35; // Tilted dynamic pitch
+      gyroFrame.rotation.z = Math.cos(time * 0.28) * 0.18 - 0.18; // Tilted dynamic roll
 
       // Dynamic mechanical coupling with spring flex:
       // When one ring is moved, momentum transfers to the other rings with organic compliance

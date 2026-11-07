@@ -156,7 +156,7 @@
             <!-- Single Unified Three.js Quantum Gyroscope & Avatar Canvas -->
             <div id="quantum-avatar-canvas" class="w-full h-full relative z-10 flex items-center justify-center">
               <div id="avatar-poster" class="absolute inset-0 flex items-center justify-center transition-opacity duration-700 pointer-events-none z-0">
-                <img src="{{ url_for('static', filename='images/avatar.webp') }}" alt="Potluri Krishna Priyatham" class="w-36 h-36 rounded-full object-cover opacity-75 blur-sm">
+                <img src="{{ url_for('static', filename='images/avatar.webp') }}" alt="Potluri Krishna Priyatham" class="w-44 h-44 rounded-full object-cover opacity-75 blur-sm">
               </div>
             </div>
           </div>
@@ -485,7 +485,7 @@
 
 
   <!-- Load Three.js 3D Avatar & Orbital Rings -->
-  <script src="{{ url_for('static', filename='js/quantum_avatar.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/quantum_avatar.js') }}?v=gyro_scale_v4"></script>
   <script>
     document.addEventListener('DOMContentLoaded', function() {
       if (window.initQuantumAvatar) {
