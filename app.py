@@ -48,7 +48,7 @@ from flask import (
 )
 from flask_wtf.csrf import CSRFProtect
 
-from core import ai, analytics, content, media, syndication
+from core import ai, analytics, api, content, media, syndication
 from core.config import (ADMIN_PASSWORD, ADMIN_USERNAME, ANALYTICS_STORE, MEDIA_FOLDER,
                         SECRET_KEY, SITE_URL, UPLOAD_TOKEN, YOUTUBE_CATEGORY, YOUTUBE_VISIBILITY)
 from core.db import Comment, Post, IssueReport, connect_db, ensure_schema
@@ -76,6 +76,7 @@ issues_collection = IssueReport._get_collection()
 # canonical/site_url context processor, and the syndication background worker.
 content.register(app)
 content.register_urls(app)
+api.register_api_v1(app, csrf=csrf)
 runner.start_worker()
 
 # Automatically register Telegram webhook on startup in the background
