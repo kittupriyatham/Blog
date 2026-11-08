@@ -380,7 +380,10 @@ src="https://www.facebook.com/tr?id=2092273818327635&ev=PageView&noscript=1"
         {% else %}<span></span>{% endif %}
         <span class="text-xs text-slate-400 dark:text-slate-500">Page {{ page }}{% if total %} &middot; {{ total }} post{{ 's' if total != 1 }}{% endif %}</span>
         {% if has_next %}
-          <a href="{{ url_for('index', page=page+1, q=q or None, tag=tag or None) }}" class="px-4 py-2 rounded-full text-sm font-medium bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800 transition">Older &rarr;</a>
+          <a id="feed-load-more"
+             href="{{ url_for('index', page=page+1, q=q or None, tag=tag or None) }}"
+             data-feed-page="{{ page }}"
+             class="px-4 py-2 rounded-full text-sm font-medium bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800 transition">Load More &rarr;</a>
         {% else %}<span></span>{% endif %}
       </div>
     {% endif %}
@@ -618,6 +621,21 @@ src="https://www.facebook.com/tr?id=2092273818327635&ev=PageView&noscript=1"
         document.querySelectorAll('.js-action-dropdown button').forEach(b => b.setAttribute('aria-expanded', 'false'));
       }
     });
+
+    const feedLoadMore = document.getElementById('feed-load-more');
+    if (feedLoadMore) {
+      feedLoadMore.addEventListener('click', function() {
+        const currentPage = parseInt(feedLoadMore.dataset.feedPage || '1', 10);
+        const page = Number.isFinite(currentPage) && currentPage > 0 ? currentPage : 1;
+        const nextPage = page + 1;
+        feedLoadMore.dataset.feedPage = String(nextPage);
+        try {
+          const href = new URL(feedLoadMore.href, window.location.origin);
+          href.searchParams.set('page', String(nextPage));
+          feedLoadMore.href = href.toString();
+        } catch (e) {}
+      });
+    }
   </script>
 
   {% include '_footer.html' %}
