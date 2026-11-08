@@ -1,0 +1,9 @@
+<resources>
+    <color name="brand_500">#6366F1</color>
+    <color name="brand_600">#4F46E5</color>
+    <color name="brand_700">#4338CA</color>
+    <color name="slate_900">#0F172A</color>
+    <color name="slate_800">#1E293B</color>
+    <color name="slate_700">#334155</color>
+    <color name="slate_50">#F8FAFC</color>
+</resources>
