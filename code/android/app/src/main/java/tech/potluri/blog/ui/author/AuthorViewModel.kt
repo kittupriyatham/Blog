@@ -26,6 +26,12 @@ class AuthorViewModel(
         loadAuthor()
     }
 
+    fun ensureLoaded() {
+        if (!_uiState.value.isLoading && _uiState.value.author == null) {
+            loadAuthor()
+        }
+    }
+
     fun loadAuthor() {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
@@ -33,7 +39,8 @@ class AuthorViewModel(
                 onSuccess = { response ->
                     _uiState.value = _uiState.value.copy(
                         isLoading = false,
-                        author = response.author
+                        author = response.author,
+                        error = null
                     )
                 },
                 onFailure = { err ->

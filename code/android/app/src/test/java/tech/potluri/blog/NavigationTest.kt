@@ -1,0 +1,234 @@
+package tech.potluri.blog
+
+import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onNodeWithContentDescription
+import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.performTextInput
+import org.junit.Assert.assertTrue
+import org.junit.Rule
+import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
+import retrofit2.Response
+import tech.potluri.blog.data.model.AuthResponse
+import tech.potluri.blog.data.model.AuthUser
+import tech.potluri.blog.data.model.AuthorInfo
+import tech.potluri.blog.data.model.AuthorResponse
+import tech.potluri.blog.data.model.CommentResponse
+import tech.potluri.blog.data.model.CommentsResponse
+import tech.potluri.blog.data.model.CreatePostRequest
+import tech.potluri.blog.data.model.CreatePostResponse
+import tech.potluri.blog.data.model.LoginRequest
+import tech.potluri.blog.data.model.Post
+import tech.potluri.blog.data.model.PostResponse
+import tech.potluri.blog.data.model.PostsResponse
+import tech.potluri.blog.data.model.ReactionResponse
+import tech.potluri.blog.data.model.ShareResponse
+import tech.potluri.blog.data.model.TagItem
+import tech.potluri.blog.data.model.TagsResponse
+import tech.potluri.blog.data.remote.BlogApiService
+import tech.potluri.blog.data.repository.BlogRepository
+import tech.potluri.blog.ui.auth.AuthViewModel
+import tech.potluri.blog.ui.author.AuthorViewModel
+import tech.potluri.blog.ui.feed.FeedViewModel
+import tech.potluri.blog.ui.theme.BlogTheme
+
+private class FakeBlogApiService : BlogApiService {
+    private var currentUser: AuthUser? = null
+    private val posts = mutableListOf(
+        Post(
+            post_id = "post-1",
+            type = "post",
+            title = "Initial Quantum Post",
+            content = "Exploring quantum compilers in Rust.",
+            timestamp = "2026-10-31",
+            tags = listOf("quantum", "rust")
+        )
+    )
+
+    override suspend fun login(request: LoginRequest): Response<AuthResponse> {
+        val isDemo = request.username == "demo" && request.password == "demo"
+        val user = AuthUser(
+            username = if (isDemo) "Demo Publisher" else request.username,
+            is_demo = isDemo,
+            is_admin = !isDemo
+        )
+        currentUser = user
+        return Response.success(AuthResponse(status = "success", user = user))
+    }
+
+    override suspend fun currentUser(): Response<AuthResponse> {
+        val user = currentUser
+        return if (user != null) {
+            Response.success(AuthResponse(status = "success", user = user))
+        } else {
+            Response.error(401, okhttp3.ResponseBody.create(null, ""))
+        }
+    }
+
+    override suspend fun logout(): Response<AuthResponse> {
+        currentUser = null
+        return Response.success(AuthResponse(status = "success"))
+    }
+
+    override suspend fun createPost(request: CreatePostRequest): Response<CreatePostResponse> {
+        val created = Post(
+            post_id = "post-${posts.size + 1}",
+            type = request.type,
+            title = request.title ?: "",
+            content = request.content,
+            timestamp = "2026-11-09",
+            tags = request.tags
+        )
+        posts.add(0, created)
+        return Response.success(
+            CreatePostResponse(status = "success", message = "Post created", post = created)
+        )
+    }
+
+    override suspend fun getPosts(
+        page: Int,
+        limit: Int,
+        type: String?,
+        tag: String?,
+        query: String?
+    ): PostsResponse {
+        return PostsResponse(
+            posts = posts.toList(),
+            page = 1,
+            per_page = limit,
+            total = posts.size,
+            total_pages = 1,
+            has_next = false,
+            has_prev = false
+        )
+    }
+
+    override suspend fun getPost(postId: String): PostResponse {
+        return PostResponse(post = posts.first { it.post_id == postId })
+    }
+
+    override suspend fun getComments(postId: String): CommentsResponse = CommentsResponse()
+
+    override suspend fun addComment(postId: String, name: String, body: String): CommentResponse {
+        throw UnsupportedOperationException()
+    }
+
+    override suspend fun react(postId: String, type: String): ReactionResponse = ReactionResponse()
+
+    override suspend fun share(postId: String, platform: String): ShareResponse = ShareResponse()
+
+    override suspend fun getTags(): TagsResponse =
+        TagsResponse(tags = listOf(TagItem(tag = "quantum", count = 1)))
+
+    override suspend fun getAuthor(): AuthorResponse =
+        AuthorResponse(
+            author = AuthorInfo(
+                name = "Potluri Krishna Priyatham",
+                role = "PhD Scholar",
+                organization = "SRM AP University",
+                research_field = "Quantum Technologies & Quantum Computing",
+                bio_full = "Researching Quantum Technologies and Quantum Computing."
+            )
+        )
+}
+
+@RunWith(RobolectricTestRunner::class)
+@Config(sdk = [28], qualifiers = "w411dp-h891dp-xxhdpi")
+class NavigationTest {
+
+    @get:Rule
+    val composeTestRule = createComposeRule()
+
+    private fun clickBottomTab(label: String) {
+        val nodes = composeTestRule.onAllNodesWithText(label)
+        val count = nodes.fetchSemanticsNodes().size
+        assertTrue("Expected bottom tab '$label' to exist", count >= 1)
+        nodes[count - 1].performClick()
+        composeTestRule.waitForIdle()
+    }
+
+    @Test
+    fun testAllTabTransitionsAndMobilePublishing() {
+        val repo = BlogRepository(FakeBlogApiService())
+        val feedVm = FeedViewModel(repo)
+        val authVm = AuthViewModel(repo)
+        val authorVm = AuthorViewModel(repo)
+
+        composeTestRule.setContent {
+            BlogTheme {
+                BlogApp(
+                    feedViewModel = feedVm,
+                    authViewModel = authVm,
+                    authorViewModel = authorVm
+                )
+            }
+        }
+        composeTestRule.waitForIdle()
+
+        // 1. Initial Feed screen
+        composeTestRule.onNodeWithText("Search posts & articles…").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Exploring quantum compilers in Rust.").assertIsDisplayed()
+
+        // 2. Feed -> About
+        clickBottomTab("About")
+        composeTestRule.onNodeWithText("About Author").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Potluri Krishna Priyatham").assertIsDisplayed()
+
+        // 3. About -> Feed -> About
+        clickBottomTab("Feed")
+        composeTestRule.onNodeWithText("Search posts & articles…").assertIsDisplayed()
+        clickBottomTab("About")
+        composeTestRule.onNodeWithText("About Author").assertIsDisplayed()
+
+        // 4. About -> Admin -> Feed -> About
+        clickBottomTab("Admin")
+        composeTestRule.onNodeWithText("Admin Access").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Admin Sign In").assertIsDisplayed()
+        clickBottomTab("Feed")
+        composeTestRule.onNodeWithText("Search posts & articles…").assertIsDisplayed()
+        clickBottomTab("About")
+        composeTestRule.onNodeWithText("About Author").assertIsDisplayed()
+
+        // 5. About -> Admin -> Sign in with real account credentials
+        clickBottomTab("Admin")
+        composeTestRule.onNodeWithText("Username").performTextInput("kittu")
+        composeTestRule.onNodeWithText("Password").performTextInput("secret")
+        composeTestRule.onNodeWithText("Sign In").performClick()
+        composeTestRule.waitForIdle()
+
+        composeTestRule.onNodeWithText("Publisher Studio").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Administrator").assertIsDisplayed()
+        composeTestRule.onNodeWithText("New Publication").assertIsDisplayed()
+
+        // 6. Signed-in Admin -> Feed -> Signed-in Admin -> About -> Signed-in Admin
+        clickBottomTab("Feed")
+        composeTestRule.onNodeWithText("Search posts & articles…").assertIsDisplayed()
+        clickBottomTab("Admin")
+        composeTestRule.onNodeWithText("Publisher Studio").assertIsDisplayed()
+        clickBottomTab("About")
+        composeTestRule.onNodeWithText("About Author").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Potluri Krishna Priyatham").assertIsDisplayed()
+
+        // 7. About Back arrow -> Feed
+        composeTestRule.onNodeWithContentDescription("Back").performClick()
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithText("Search posts & articles…").assertIsDisplayed()
+
+        // 8. Publish a new post from Admin and verify it appears on Feed
+        clickBottomTab("Admin")
+        composeTestRule.onNodeWithText("Content (Markdown supported) *")
+            .performTextInput("Hello from my mobile Publisher Studio!")
+        composeTestRule.onNodeWithText("Publish").performScrollTo().performClick()
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithText("Post published successfully!").assertIsDisplayed()
+
+        clickBottomTab("Feed")
+        composeTestRule.onNodeWithText("Hello from my mobile Publisher Studio!").assertIsDisplayed()
+    }
+}

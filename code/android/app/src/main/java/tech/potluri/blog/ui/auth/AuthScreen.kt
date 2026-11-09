@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -43,7 +44,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -51,8 +52,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.lifecycle.viewmodel.compose.viewModel
+import tech.potluri.blog.BuildConfig
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -63,19 +64,13 @@ fun AuthScreen(
     viewModel: AuthViewModel = viewModel()
 ) {
     val state by viewModel.uiState.collectAsState()
-    var username by remember { mutableStateOf("") }
-    var password by remember { mutableStateOf("") }
+    var username by rememberSaveable { mutableStateOf("") }
+    var password by rememberSaveable { mutableStateOf("") }
 
-    // Post creation form state
-    var postType by rememberSaveable { mutableStateOf("post") }
-    var postTitle by rememberSaveable { mutableStateOf("") }
-    var postContent by rememberSaveable { mutableStateOf("") }
-    var postTags by rememberSaveable { mutableStateOf("") }
-
-    var submittedTitle by rememberSaveable { mutableStateOf<String?>(null) }
-    var submittedContent by rememberSaveable { mutableStateOf<String?>(null) }
-    var submittedTags by rememberSaveable { mutableStateOf<String?>(null) }
-    var submittedType by rememberSaveable { mutableStateOf<String?>(null) }
+    val postType = state.draftType
+    val postTitle = state.draftTitle
+    val postContent = state.draftContent
+    val postTags = state.draftTags
 
     LaunchedEffect(state.loginSucceeded) {
         if (state.loginSucceeded) {
@@ -84,26 +79,22 @@ fun AuthScreen(
         }
     }
 
-    LaunchedEffect(state.postCreated) {
-        if (state.postCreated) {
-            if (postTitle == submittedTitle) postTitle = ""
-            if (postContent == submittedContent) postContent = ""
-            if (postTags == submittedTags) postTags = ""
-            if (postType == submittedType) postType = "post"
-            submittedTitle = null
-            submittedContent = null
-            submittedTags = null
-            submittedType = null
-        }
-    }
-
     Scaffold(
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
         topBar = {
             TopAppBar(
                 title = {
                     Text(
                         if (state.user != null) "Publisher Studio" else "Admin Access",
                         fontWeight = FontWeight.SemiBold
+                    )
+                },
+                actions = {
+                    Text(
+                        text = "v${BuildConfig.VERSION_NAME}",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(end = 16.dp)
                     )
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -225,12 +216,12 @@ fun AuthScreen(
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             FilterChip(
                                 selected = postType == "post",
-                                onClick = { postType = "post" },
+                                onClick = { viewModel.updateDraftType("post") },
                                 label = { Text("Quick Post") }
                             )
                             FilterChip(
                                 selected = postType == "article",
-                                onClick = { postType = "article" },
+                                onClick = { viewModel.updateDraftType("article") },
                                 label = { Text("Article") }
                             )
                         }
@@ -240,7 +231,7 @@ fun AuthScreen(
                         // Title field (visible for articles, or optional for posts)
                         OutlinedTextField(
                             value = postTitle,
-                            onValueChange = { postTitle = it },
+                            onValueChange = { viewModel.updateDraftTitle(it) },
                             label = { Text(if (postType == "article") "Article Title *" else "Title (optional)") },
                             singleLine = true,
                             modifier = Modifier.fillMaxWidth(),
@@ -252,10 +243,7 @@ fun AuthScreen(
                         // Content field
                         OutlinedTextField(
                             value = postContent,
-                            onValueChange = {
-                                postContent = it
-                                if (state.postError != null) viewModel.resetPostState()
-                            },
+                            onValueChange = { viewModel.updateDraftContent(it) },
                             label = { Text("Content (Markdown supported) *") },
                             placeholder = { Text("What would you like to share today?") },
                             minLines = 5,
@@ -269,7 +257,7 @@ fun AuthScreen(
                         // Tags field
                         OutlinedTextField(
                             value = postTags,
-                            onValueChange = { postTags = it },
+                            onValueChange = { viewModel.updateDraftTags(it) },
                             label = { Text("Tags (comma-separated)") },
                             placeholder = { Text("e.g. android, technology, life") },
                             singleLine = true,
@@ -341,10 +329,6 @@ fun AuthScreen(
                         ) {
                             Button(
                                 onClick = {
-                                    submittedTitle = postTitle
-                                    submittedContent = postContent
-                                    submittedTags = postTags
-                                    submittedType = postType
                                     val tagsList = postTags
                                         .split(",")
                                         .map { it.trim() }

@@ -2,8 +2,10 @@ package tech.potluri.blog
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
@@ -20,18 +22,18 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.navigation.NavGraph.Companion.findStartDestination
-import androidx.navigation.NavType
-import androidx.navigation.compose.NavHost
-import androidx.navigation.compose.composable
-import androidx.navigation.compose.currentBackStackEntryAsState
-import androidx.navigation.compose.rememberNavController
-import androidx.navigation.navArgument
+import androidx.lifecycle.viewmodel.compose.viewModel
 import tech.potluri.blog.ui.author.AuthorScreen
+import tech.potluri.blog.ui.author.AuthorViewModel
 import tech.potluri.blog.ui.auth.AuthScreen
+import tech.potluri.blog.ui.auth.AuthViewModel
 import tech.potluri.blog.ui.detail.DetailScreen
 import tech.potluri.blog.ui.feed.FeedScreen
+import tech.potluri.blog.ui.feed.FeedViewModel
 import tech.potluri.blog.ui.navigation.Screen
 import tech.potluri.blog.ui.theme.BlogTheme
 
@@ -53,23 +55,23 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-fun BlogApp() {
-    val navController = rememberNavController()
-    val navBackStackEntry by navController.currentBackStackEntryAsState()
-    val currentRoute = navBackStackEntry?.destination?.route
+fun BlogApp(
+    feedViewModel: FeedViewModel = viewModel(),
+    authViewModel: AuthViewModel = viewModel(),
+    authorViewModel: AuthorViewModel = viewModel()
+) {
+    var currentTab by rememberSaveable { mutableStateOf(Screen.Feed.route) }
+    var selectedPostId by rememberSaveable { mutableStateOf<String?>(null) }
 
-    val showBottomBar = currentRoute in listOf(Screen.Feed.route, Screen.Author.route, Screen.Admin.route)
-
-    fun navigateToTab(route: String) {
-        if (currentRoute == route) return
-        navController.navigate(route) {
-            popUpTo(navController.graph.findStartDestination().id) {
-                saveState = true
-            }
-            launchSingleTop = true
-            restoreState = true
+    BackHandler(enabled = selectedPostId != null || currentTab != Screen.Feed.route) {
+        if (selectedPostId != null) {
+            selectedPostId = null
+        } else {
+            currentTab = Screen.Feed.route
         }
     }
+
+    val showBottomBar = selectedPostId == null
 
     Scaffold(
         bottomBar = {
@@ -79,8 +81,11 @@ fun BlogApp() {
                     contentColor = MaterialTheme.colorScheme.primary
                 ) {
                     NavigationBarItem(
-                        selected = currentRoute == Screen.Feed.route,
-                        onClick = { navigateToTab(Screen.Feed.route) },
+                        selected = currentTab == Screen.Feed.route,
+                        onClick = {
+                            selectedPostId = null
+                            currentTab = Screen.Feed.route
+                        },
                         icon = { Icon(Icons.Default.RssFeed, contentDescription = "Feed") },
                         label = { Text("Feed") },
                         colors = NavigationBarItemDefaults.colors(
@@ -90,8 +95,11 @@ fun BlogApp() {
                     )
 
                     NavigationBarItem(
-                        selected = currentRoute == Screen.Admin.route,
-                        onClick = { navigateToTab(Screen.Admin.route) },
+                        selected = currentTab == Screen.Admin.route,
+                        onClick = {
+                            selectedPostId = null
+                            currentTab = Screen.Admin.route
+                        },
                         icon = { Icon(Icons.Default.AdminPanelSettings, contentDescription = "Admin") },
                         label = { Text("Admin") },
                         colors = NavigationBarItemDefaults.colors(
@@ -101,8 +109,12 @@ fun BlogApp() {
                     )
 
                     NavigationBarItem(
-                        selected = currentRoute == Screen.Author.route,
-                        onClick = { navigateToTab(Screen.Author.route) },
+                        selected = currentTab == Screen.Author.route,
+                        onClick = {
+                            selectedPostId = null
+                            authorViewModel.ensureLoaded()
+                            currentTab = Screen.Author.route
+                        },
                         icon = { Icon(Icons.Default.Person, contentDescription = "About") },
                         label = { Text("About") },
                         colors = NavigationBarItemDefaults.colors(
@@ -114,52 +126,50 @@ fun BlogApp() {
             }
         }
     ) { paddingValues ->
-        NavHost(
-            navController = navController,
-            startDestination = Screen.Feed.route,
-            modifier = Modifier.padding(paddingValues)
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
         ) {
-            composable(Screen.Feed.route) {
-                FeedScreen(
-                    onPostClick = { postId ->
-                        navController.navigate(Screen.Detail.createRoute(postId))
-                    },
-                    onNavigateToAdmin = {
-                        navigateToTab(Screen.Admin.route)
-                    }
-                )
-            }
-
-            composable(
-                route = Screen.Detail.route,
-                arguments = listOf(navArgument("postId") { type = NavType.StringType })
-            ) { backStackEntry ->
-                val postId = backStackEntry.arguments?.getString("postId") ?: ""
+            val activePostId = selectedPostId
+            if (activePostId != null) {
                 DetailScreen(
-                    postId = postId,
-                    onBack = { navController.popBackStack() }
+                    postId = activePostId,
+                    onBack = { selectedPostId = null }
                 )
-            }
-
-            composable(Screen.Author.route) {
-                AuthorScreen(
-                    onBack = { navController.popBackStack() }
-                )
-            }
-
-            composable(Screen.Admin.route) {
-                AuthScreen(
-                    onPublished = {
-                        val feedEntry = navController.getBackStackEntry(Screen.Feed.route)
-                        val feedViewModel = androidx.lifecycle.ViewModelProvider(feedEntry)[
-                            tech.potluri.blog.ui.feed.FeedViewModel::class.java
-                        ]
-                        feedViewModel.refresh()
-                    },
-                    onNavigateToFeed = {
-                        navigateToTab(Screen.Feed.route)
+            } else {
+                when (currentTab) {
+                    Screen.Admin.route -> {
+                        AuthScreen(
+                            viewModel = authViewModel,
+                            onPublished = {
+                                feedViewModel.refresh()
+                            },
+                            onNavigateToFeed = {
+                                currentTab = Screen.Feed.route
+                            }
+                        )
                     }
-                )
+                    Screen.Author.route -> {
+                        AuthorScreen(
+                            viewModel = authorViewModel,
+                            onBack = {
+                                currentTab = Screen.Feed.route
+                            }
+                        )
+                    }
+                    else -> {
+                        FeedScreen(
+                            viewModel = feedViewModel,
+                            onPostClick = { postId ->
+                                selectedPostId = postId
+                            },
+                            onNavigateToAdmin = {
+                                currentTab = Screen.Admin.route
+                            }
+                        )
+                    }
+                }
             }
         }
     }

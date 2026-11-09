@@ -18,7 +18,11 @@ data class AuthUiState(
     val loginSucceeded: Boolean = false,
     val isPosting: Boolean = false,
     val postCreated: Boolean = false,
-    val postError: String? = null
+    val postError: String? = null,
+    val draftType: String = "post",
+    val draftTitle: String = "",
+    val draftContent: String = "",
+    val draftTags: String = ""
 )
 
 class AuthViewModel(
@@ -33,16 +37,35 @@ class AuthViewModel(
 
     private fun loadSession() {
         viewModelScope.launch {
-            _uiState.value = AuthUiState(isLoading = true)
+            _uiState.value = _uiState.value.copy(isLoading = true)
             repository.currentUser().fold(
-                onSuccess = { user -> _uiState.value = AuthUiState(user = user) },
-                onFailure = { _uiState.value = AuthUiState(isLoading = false) }
+                onSuccess = { user -> _uiState.value = _uiState.value.copy(isLoading = false, user = user, error = null) },
+                onFailure = { _uiState.value = _uiState.value.copy(isLoading = false, user = null) }
             )
         }
     }
 
     fun consumeLoginSuccess() {
         _uiState.value = _uiState.value.copy(loginSucceeded = false)
+    }
+
+    fun updateDraftType(type: String) {
+        _uiState.value = _uiState.value.copy(draftType = type)
+    }
+
+    fun updateDraftTitle(title: String) {
+        _uiState.value = _uiState.value.copy(draftTitle = title)
+    }
+
+    fun updateDraftContent(content: String) {
+        _uiState.value = _uiState.value.copy(
+            draftContent = content,
+            postError = if (_uiState.value.postError != null) null else _uiState.value.postError
+        )
+    }
+
+    fun updateDraftTags(tags: String) {
+        _uiState.value = _uiState.value.copy(draftTags = tags)
     }
 
     fun logout() {
@@ -64,10 +87,15 @@ class AuthViewModel(
             return
         }
         viewModelScope.launch {
-            _uiState.value = AuthUiState(isLoading = true)
+            _uiState.value = _uiState.value.copy(isLoading = true, error = null)
             repository.login(username.trim(), password).fold(
                 onSuccess = { response ->
-                    _uiState.value = AuthUiState(user = response.user, loginSucceeded = response.user != null)
+                    _uiState.value = _uiState.value.copy(
+                        isLoading = false,
+                        user = response.user,
+                        error = null,
+                        loginSucceeded = response.user != null
+                    )
                 },
                 onFailure = { error ->
                     val message = when {
@@ -75,7 +103,7 @@ class AuthViewModel(
                         error is IOException -> "Unable to connect. Check your connection and try again."
                         else -> "Sign in is unavailable. Please try again later."
                     }
-                    _uiState.value = AuthUiState(error = message)
+                    _uiState.value = _uiState.value.copy(isLoading = false, user = null, error = message)
                 }
             )
         }
@@ -95,6 +123,10 @@ class AuthViewModel(
             _uiState.value = _uiState.value.copy(postError = "Post content cannot be empty.")
             return
         }
+        val submittedTitle = _uiState.value.draftTitle
+        val submittedContent = _uiState.value.draftContent
+        val submittedTags = _uiState.value.draftTags
+        val submittedType = _uiState.value.draftType
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isPosting = true, postError = null, postCreated = false)
             repository.createPost(
@@ -104,7 +136,16 @@ class AuthViewModel(
                 tags = tags
             ).fold(
                 onSuccess = {
-                    _uiState.value = _uiState.value.copy(isPosting = false, postCreated = true, postError = null)
+                    val cur = _uiState.value
+                    _uiState.value = cur.copy(
+                        isPosting = false,
+                        postCreated = true,
+                        postError = null,
+                        draftTitle = if (cur.draftTitle == submittedTitle) "" else cur.draftTitle,
+                        draftContent = if (cur.draftContent == submittedContent) "" else cur.draftContent,
+                        draftTags = if (cur.draftTags == submittedTags) "" else cur.draftTags,
+                        draftType = if (cur.draftType == submittedType) "post" else cur.draftType
+                    )
                     onCreated()
                 },
                 onFailure = { err ->

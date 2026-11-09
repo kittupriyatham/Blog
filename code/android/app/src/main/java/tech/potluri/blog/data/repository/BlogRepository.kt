@@ -84,9 +84,9 @@ class BlogRepository(
     private suspend fun <T> request(block: suspend () -> T): Result<T> =
         try {
             Result.success(block())
-        } catch (error: IOException) {
-            Result.failure(error)
-        } catch (error: HttpException) {
+        } catch (error: kotlinx.coroutines.CancellationException) {
+            throw error
+        } catch (error: Exception) {
             Result.failure(error)
         }
 
@@ -101,9 +101,9 @@ class BlogRepository(
             } else {
                 Result.failure(HttpException(response))
             }
-        } catch (error: IOException) {
-            Result.failure(error)
-        } catch (error: HttpException) {
+        } catch (error: kotlinx.coroutines.CancellationException) {
+            throw error
+        } catch (error: Exception) {
             Result.failure(error)
         }
 }
