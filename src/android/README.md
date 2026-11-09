@@ -2,7 +2,7 @@
 
 Native Android client for [blog.potluri-krishna-priyatham.tech](https://blog.potluri-krishna-priyatham.tech) built using **Kotlin**, **Jetpack Compose (Material 3)**, and clean **MVVM architecture**.
 
-Powered by the Flask REST API Blueprint (`/api/v1/posts`) on the same backend and MongoDB Atlas database.
+Powered by the Flask REST API Blueprint (`/api/v1/posts` and `/api/v1/auth/*`) on the same backend and MongoDB Atlas database.
 
 ---
 
@@ -28,6 +28,10 @@ Powered by the Flask REST API Blueprint (`/api/v1/posts`) on the same backend an
   * Research biography, quantum computing & distributed systems domains, and one-tap external links to Google Scholar, ORCID, GitHub, and LinkedIn.
 * **Adaptive Theme:**
   * Material 3 Dark / Light modes matching the website's Tailwind Indigo & Slate palette.
+* **Admin access:**
+  * Open the **Admin** tab to sign in with `BLOG_ADMIN_USERNAME` / `BLOG_ADMIN_PASSWORD`.
+  * Use **Explore demo (demo / demo)** for the publisher demo account.
+  * The app keeps the authenticated Flask session for subsequent API requests.
 
 ---
 

@@ -134,3 +134,23 @@ data class CommentResponse(val comment: Comment)
 
 @Serializable
 data class ShareResponse(val shares: Int = 0)
+
+@Serializable
+data class LoginRequest(
+    val username: String,
+    val password: String
+)
+
+@Serializable
+data class AuthUser(
+    val username: String = "",
+    val is_demo: Boolean = false,
+    val is_admin: Boolean = false
+)
+
+@Serializable
+data class AuthResponse(
+    val status: String = "",
+    val user: AuthUser? = null,
+    val message: String? = null
+)

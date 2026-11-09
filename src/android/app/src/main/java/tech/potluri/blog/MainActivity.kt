@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Article
+import androidx.compose.material.icons.filled.AdminPanelSettings
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.RssFeed
 import androidx.compose.material3.Icon
@@ -29,6 +30,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import tech.potluri.blog.ui.author.AuthorScreen
+import tech.potluri.blog.ui.auth.AuthScreen
 import tech.potluri.blog.ui.detail.DetailScreen
 import tech.potluri.blog.ui.feed.FeedScreen
 import tech.potluri.blog.ui.navigation.Screen
@@ -57,7 +59,7 @@ fun BlogApp() {
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
 
-    val showBottomBar = currentRoute in listOf(Screen.Feed.route, Screen.Author.route)
+    val showBottomBar = currentRoute in listOf(Screen.Feed.route, Screen.Author.route, Screen.Admin.route)
 
     Scaffold(
         bottomBar = {
@@ -82,6 +84,21 @@ fun BlogApp() {
                         colors = NavigationBarItemDefaults.colors(
                             selectedIconColor = MaterialTheme.colorScheme.primary,
                             indicatorColor = MaterialTheme.colorScheme.primaryContainer
+                        )
+
+                        NavigationBarItem(
+                            selected = currentRoute == Screen.Admin.route,
+                            onClick = {
+                                navController.navigate(Screen.Admin.route) {
+                                    launchSingleTop = true
+                                }
+                            },
+                            icon = { Icon(Icons.Default.AdminPanelSettings, contentDescription = "Admin") },
+                            label = { Text("Admin") },
+                            colors = NavigationBarItemDefaults.colors(
+                                selectedIconColor = MaterialTheme.colorScheme.primary,
+                                indicatorColor = MaterialTheme.colorScheme.primaryContainer
+                            )
                         )
                     )
 
@@ -134,6 +151,12 @@ fun BlogApp() {
             composable(Screen.Author.route) {
                 AuthorScreen(
                     onBack = { navController.popBackStack() }
+                )
+            }
+
+            composable(Screen.Admin.route) {
+                AuthScreen(
+                    onSignedIn = { navController.navigate(Screen.Feed.route) { launchSingleTop = true } }
                 )
             }
         }

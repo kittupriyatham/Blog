@@ -1,6 +1,8 @@
 package tech.potluri.blog.data.remote
 
 import tech.potluri.blog.data.model.AuthorResponse
+import tech.potluri.blog.data.model.AuthResponse
+import tech.potluri.blog.data.model.LoginRequest
 import tech.potluri.blog.data.model.CommentResponse
 import tech.potluri.blog.data.model.CommentsResponse
 import tech.potluri.blog.data.model.PostResponse
@@ -9,13 +11,21 @@ import tech.potluri.blog.data.model.ReactionResponse
 import tech.potluri.blog.data.model.ShareResponse
 import tech.potluri.blog.data.model.TagsResponse
 import retrofit2.http.Field
+import retrofit2.http.Body
 import retrofit2.http.FormUrlEncoded
 import retrofit2.http.GET
 import retrofit2.http.POST
 import retrofit2.http.Path
 import retrofit2.http.Query
+import retrofit2.Response
 
 interface BlogApiService {
+    @POST("api/v1/auth/login")
+    suspend fun login(@Body request: LoginRequest): Response<AuthResponse>
+
+    @POST("api/v1/auth/logout")
+    suspend fun logout(): Response<AuthResponse>
+
     @GET("api/v1/posts")
     suspend fun getPosts(
         @Query("page") page: Int,

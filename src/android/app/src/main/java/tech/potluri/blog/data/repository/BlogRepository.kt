@@ -3,7 +3,9 @@ package tech.potluri.blog.data.repository
 import java.io.IOException
 import retrofit2.HttpException
 import tech.potluri.blog.data.model.AuthorResponse
+import tech.potluri.blog.data.model.AuthResponse
 import tech.potluri.blog.data.model.Comment
+import tech.potluri.blog.data.model.LoginRequest
 import tech.potluri.blog.data.model.Post
 import tech.potluri.blog.data.model.PostsResponse
 import tech.potluri.blog.data.model.ReactionResponse
@@ -14,6 +16,12 @@ import tech.potluri.blog.data.remote.NetworkModule
 class BlogRepository(
     private val api: BlogApiService = NetworkModule.api
 ) {
+    suspend fun login(username: String, password: String): Result<AuthResponse> =
+        requestResponse { api.login(LoginRequest(username, password)) }
+
+    suspend fun logout(): Result<Unit> =
+        requestResponse { api.logout() }
+
     suspend fun fetchPosts(
         page: Int,
         limit: Int,
@@ -46,6 +54,23 @@ class BlogRepository(
     private suspend fun <T> request(block: suspend () -> T): Result<T> =
         try {
             Result.success(block())
+        } catch (error: IOException) {
+            Result.failure(error)
+        } catch (error: HttpException) {
+            Result.failure(error)
+        }
+
+    private suspend fun <T> requestResponse(
+        block: suspend () -> retrofit2.Response<T>
+    ): Result<T> =
+        try {
+            val response = block()
+            if (response.isSuccessful) {
+                response.body()?.let { Result.success(it) }
+                    ?: Result.failure(IOException("Empty server response"))
+            } else {
+                Result.failure(IOException(response.errorBody()?.string() ?: "Request failed (${response.code()})"))
+            }
         } catch (error: IOException) {
             Result.failure(error)
         } catch (error: HttpException) {

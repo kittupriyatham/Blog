@@ -217,6 +217,17 @@ The blog operates under strict **POSSE** rules (*Publish Own Site, Syndicate Els
 - **YouTube Pipeline:** Dedicated tracking pages and inline panels capture video metrics and metadata bundles, converting files smoothly inside the SocialAPI adapter workflows.
 - **Validation Engine:** Dry-run post validations (`POST /v1/posts/validate`) across Facebook, Instagram, YouTube, Bluesky, and Pinterest channels for credit-free integrity checks prior to publishing.
 
+### Mobile authentication
+
+The Android client uses the same Flask session as the web admin through:
+
+- `POST /api/v1/auth/login` with JSON `{ "username": "...", "password": "..." }`
+- `GET /api/v1/auth/me` to inspect the current session
+- `POST /api/v1/auth/logout` to clear it
+
+The demo account is available in both clients with `demo / demo`; real admin access uses
+`BLOG_ADMIN_USERNAME` and `BLOG_ADMIN_PASSWORD`.
+
 ### Manual Setup for Optional Integrations
 
 > [!NOTE]
