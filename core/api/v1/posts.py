@@ -120,7 +120,7 @@ def create_post():
 
     Requires an authenticated session (admin or demo).
     JSON payload:
-      - title: optional string
+      - title: string (required for published articles)
       - content: string (required)
       - type: 'post' | 'article' (default: 'post')
       - tags: list[str] or comma-separated string
@@ -160,6 +160,8 @@ def create_post():
     post_status = (data.get("status") or "published").strip().lower()
     if post_status not in ("published", "draft"):
         post_status = "published"
+    if post_type == "article" and post_status == "published" and not title:
+        return jsonify({"status": "error", "message": "Article title is required to publish."}), 400
 
     col = _posts_collection()
     post_id = media.generate_post_id(posts_collection=col)

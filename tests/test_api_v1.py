@@ -327,6 +327,46 @@ def test_create_post_empty_content(client):
     assert res.get_json()["status"] == "error"
 
 
+@pytest.mark.parametrize("title", [None, "", "   "])
+@pytest.mark.parametrize("status", [None, "published", "invalid"])
+def test_published_article_requires_title(client, mock_db, title, status):
+    with client.session_transaction() as sess:
+        sess.update(logged_in=True, is_demo=False, mobile_authenticated=True)
+    payload = {"type": " ARTICLE ", "content": "Article content"}
+    if title is not None:
+        payload["title"] = title
+    if status is not None:
+        payload["status"] = status
+
+    posts_col, _ = mock_db
+    count = posts_col.count_documents({})
+    with patch.object(posts_module.analytics, "record_analytics") as record:
+        response = client.post("/api/v1/posts", json=payload,
+                               headers={"X-Mobile-Client": "blog-android"})
+    assert response.status_code == 400
+    assert response.get_json()["message"] == "Article title is required to publish."
+    assert posts_col.count_documents({}) == count
+    record.assert_not_called()
+
+
+@pytest.mark.parametrize("post_type,status,title", [
+    ("article", "published", "  A title  "),
+    ("article", "draft", ""),
+    ("post", "published", ""),
+])
+def test_create_post_title_rules_preserve_other_publications(client, mock_db, post_type, status, title):
+    with client.session_transaction() as sess:
+        sess.update(logged_in=True, is_demo=False, mobile_authenticated=True)
+    with patch.object(posts_module.analytics, "record_analytics"):
+        response = client.post("/api/v1/posts", json={
+            "type": post_type, "status": status, "title": title, "content": "Content"
+        }, headers={"X-Mobile-Client": "blog-android"})
+    assert response.status_code == 201
+    assert response.get_json()["post"]["title"] == title.strip()
+    posts_col, _ = mock_db
+    assert posts_col.find_one({"post_id": response.get_json()["post"]["post_id"]})["status"] == status
+
+
 @pytest.mark.parametrize("payload", [[], [1], "text", 2, None] + [
     {"content": "valid", field: value}
     for field in ("content", "body", "title", "type", "status")
@@ -356,6 +396,11 @@ def test_browser_creation_requires_csrf_and_accepts_valid_token(client):
         raw_token = session["csrf_token"]
     with client.session_transaction() as sess:
         sess["csrf_token"] = raw_token
+    response = client.post("/api/v1/posts", data={
+        "content": "Article", "type": "article", "csrf_token": token,
+    })
+    assert response.status_code == 400
+    assert response.get_json()["message"] == "Article title is required to publish."
     with patch.object(posts_module.analytics, "record_analytics"):
         response = client.post("/api/v1/posts", data={"body": " fallback ", "tags": "a, b", "csrf_token": token})
     assert response.status_code == 201
