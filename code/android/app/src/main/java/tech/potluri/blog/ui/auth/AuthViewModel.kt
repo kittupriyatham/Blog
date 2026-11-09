@@ -29,7 +29,7 @@ class AuthViewModel(
         viewModelScope.launch {
             repository.currentUser().fold(
                 onSuccess = { user -> _uiState.value = AuthUiState(user = user) },
-                onFailure = { _uiState.value = AuthUiState() }
+                onFailure = { _uiState.value = AuthUiState(isLoading = false) }
             )
         }
     }
