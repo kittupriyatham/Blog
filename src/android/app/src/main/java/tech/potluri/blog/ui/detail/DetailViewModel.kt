@@ -55,14 +55,18 @@ class DetailViewModel(
         }
     }
 
-    fun addComment(postId: String, name: String, body: String) {
-        viewModelScope.launch {
-            repository.postComment(postId, name, body).onSuccess { newComment ->
+    suspend fun addComment(postId: String, name: String, body: String): Boolean {
+        return repository.postComment(postId, name, body).fold(
+            onSuccess = { newComment ->
                 _uiState.value = _uiState.value.copy(
                     comments = _uiState.value.comments + newComment
                 )
+                true
+            },
+            onFailure = {
+                false
             }
-        }
+        )
     }
 
     fun react(reactionType: String) {

@@ -17,6 +17,14 @@ def _comments_collection():
     return Comment._get_collection()
 
 
+def _can_view_draft(post):
+    if post.get("status") != "draft":
+        return True
+    return bool(session.get("logged_in")) and (
+        not session.get("is_demo") or post.get("is_demo") is True
+    )
+
+
 @api_v1.route("/posts", methods=["GET"])
 def get_posts():
     """Paginated list of posts and articles.
@@ -47,9 +55,19 @@ def get_posts():
     # Query conditions
     query = {"$or": [{"status": "published"}, {"status": {"$exists": False}}]}
 
-    # Admin view includes drafts if logged in
-    if session.get("logged_in") and request.args.get("status") == "all":
-        query = {}
+    # Real admins can inspect all posts; demo users can only inspect published
+    # posts and drafts created by the demo account.
+    if request.args.get("status") == "all":
+        if session.get("logged_in") and not session.get("is_demo"):
+            query = {}
+        elif session.get("logged_in") and session.get("is_demo"):
+            query = {
+                "$or": [
+                    {"status": "published"},
+                    {"status": {"$exists": False}},
+                    {"is_demo": True},
+                ]
+            }
 
     filters = [query]
 
@@ -102,7 +120,7 @@ def get_post_detail(post_id):
     if not doc:
         return jsonify({"status": "error", "message": "Post not found"}), 404
 
-    if doc.get("status") == "draft" and not session.get("logged_in"):
+    if not _can_view_draft(doc):
         return jsonify({"status": "error", "message": "Post not found"}), 404
 
     track_view = request.args.get("track_view", "true").lower() in ("1", "true")
@@ -127,7 +145,7 @@ def get_post_detail(post_id):
 def get_post_comments(post_id):
     """Retrieve comments for a specific post."""
     post = _posts_collection().find_one({"post_id": post_id})
-    if not post or (post.get("status") == "draft" and not session.get("logged_in")):
+    if not post or not _can_view_draft(post):
         return jsonify({"status": "error", "message": "Post not found"}), 404
 
     comments_col = _comments_collection()

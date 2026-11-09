@@ -57,7 +57,11 @@ def serialize_post(doc: Optional[Dict[str, Any]], resolve_embedded: bool = False
         match = POST_ID_REF_PATTERN.search(content)
         if match:
             ref_id = match.group(1)
-            ref_doc = posts_collection.find_one({"post_id": ref_id, "type": "article"})
+            ref_doc = posts_collection.find_one({
+                "post_id": ref_id,
+                "type": "article",
+                "$or": [{"status": "published"}, {"status": {"$exists": False}}],
+            })
             if ref_doc:
                 embedded_article = {
                     "post_id": ref_doc.get("post_id"),

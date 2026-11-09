@@ -6,6 +6,7 @@ from unittest.mock import patch
 
 from app import app
 from core.api.v1 import posts as posts_module
+from core.api.v1.serializers import serialize_post
 
 
 @pytest.fixture
@@ -88,6 +89,16 @@ def test_get_posts_list(client):
     assert data["posts"][0]["post_id"] in ("test_post_1", "test_article_1")
 
 
+def test_demo_cannot_list_original_drafts(client):
+    with client.session_transaction() as session:
+        session["logged_in"] = True
+        session["is_demo"] = True
+
+    res = client.get("/api/v1/posts?status=all")
+    assert res.status_code == 200
+    assert res.get_json()["total"] == 2
+
+
 def test_get_posts_filter_type(client):
     """Test filtering posts by type=article."""
     res = client.get("/api/v1/posts?type=article")
@@ -125,6 +136,15 @@ def test_get_post_detail_draft_hidden(client):
     assert data["status"] == "error"
 
 
+def test_demo_cannot_read_original_draft(client):
+    with client.session_transaction() as session:
+        session["logged_in"] = True
+        session["is_demo"] = True
+
+    res = client.get("/api/v1/posts/draft_post_1")
+    assert res.status_code == 404
+
+
 def test_get_comments_draft_hidden(client):
     """Comments for drafts must return 404 for non-logged in users."""
     res = client.get("/api/v1/posts/draft_post_1/comments")
@@ -137,6 +157,30 @@ def test_get_post_detail_not_found(client):
     """Non-existent post returns 404."""
     res = client.get("/api/v1/posts/does_not_exist")
     assert res.status_code == 404
+
+
+def test_embedded_draft_article_is_hidden():
+    collection = mongomock.MongoClient().test_blog_db.posts
+    collection.insert_many([
+        {
+            "post_id": "published_post",
+            "type": "post",
+            "content": "/article/draft_article",
+        },
+        {
+            "post_id": "draft_article",
+            "type": "article",
+            "status": "draft",
+            "title": "Secret article",
+        },
+    ])
+
+    data = serialize_post(
+        collection.find_one({"post_id": "published_post"}),
+        resolve_embedded=True,
+        posts_collection=collection,
+    )
+    assert data["embedded_article"] is None
 
 
 def test_get_comments(client):

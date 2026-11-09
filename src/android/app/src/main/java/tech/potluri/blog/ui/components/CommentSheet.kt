@@ -29,6 +29,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -36,6 +37,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import kotlinx.coroutines.launch
 import tech.potluri.blog.data.model.Comment
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -45,10 +47,12 @@ fun CommentSheet(
     comments: List<Comment>,
     isLoading: Boolean,
     onDismiss: () -> Unit,
-    onSubmitComment: (name: String, body: String) -> Unit
+    onSubmitComment: suspend (name: String, body: String) -> Boolean
 ) {
     var name by remember { mutableStateOf("") }
     var body by remember { mutableStateOf("") }
+    var isSubmitting by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -147,11 +151,18 @@ fun CommentSheet(
                     IconButton(
                         onClick = {
                             if (body.isNotBlank()) {
-                                onSubmitComment(name.ifBlank { "Anonymous" }, body.trim())
-                                body = ""
+                                val submittedName = name.ifBlank { "Anonymous" }
+                                val submittedBody = body.trim()
+                                scope.launch {
+                                    isSubmitting = true
+                                    if (onSubmitComment(submittedName, submittedBody)) {
+                                        body = ""
+                                    }
+                                    isSubmitting = false
+                                }
                             }
                         },
-                        enabled = body.isNotBlank()
+                        enabled = body.isNotBlank() && !isSubmitting
                     ) {
                         Icon(
                             imageVector = Icons.Default.Send,
