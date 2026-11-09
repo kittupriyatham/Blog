@@ -149,9 +149,6 @@ fun BlogApp() {
 
             composable(Screen.Admin.route) {
                 AuthScreen(
-                    onSignedIn = {
-                        navigateToTab(Screen.Feed.route)
-                    },
                     onPublished = {
                         val feedEntry = navController.getBackStackEntry(Screen.Feed.route)
                         val feedViewModel = androidx.lifecycle.ViewModelProvider(feedEntry)[

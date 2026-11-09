@@ -99,6 +99,35 @@ def test_demo_cannot_list_original_drafts(client):
     assert res.get_json()["total"] == 2
 
 
+def test_admin_all_posts_includes_demo_while_public_feed_excludes_it(client, mock_db):
+    posts_col, _ = mock_db
+    posts_col.insert_many([
+        {"post_id": "demo_published", "type": "post", "status": "published",
+         "is_demo": True, "tags": ["demo"], "timestamp": "2026-11-04"},
+        {"post_id": "demo_draft", "type": "post", "status": "draft",
+         "is_demo": True, "tags": ["demo"], "timestamp": "2026-11-05"},
+    ])
+
+    def ids(path):
+        response = client.get(path)
+        assert response.status_code == 200
+        return {post["post_id"] for post in response.get_json()["posts"]}
+
+    assert ids("/api/v1/posts?status=all") == {"test_post_1", "test_article_1"}
+    with client.session_transaction() as session:
+        session.update(logged_in=True, is_demo=True)
+    assert ids("/api/v1/posts") == {"test_post_1", "test_article_1", "demo_published"}
+    assert ids("/api/v1/posts?status=all") == {
+        "test_post_1", "test_article_1", "demo_published", "demo_draft"
+    }
+    with client.session_transaction() as session:
+        session.update(logged_in=True, is_demo=False)
+    assert ids("/api/v1/posts?status=all") == {
+        "test_post_1", "test_article_1", "draft_post_1", "demo_published", "demo_draft"
+    }
+    assert ids("/api/v1/posts?status=all&tag=demo") == {"demo_published", "demo_draft"}
+
+
 def test_get_posts_filter_type(client):
     """Test filtering posts by type=article."""
     res = client.get("/api/v1/posts?type=article")

@@ -1,5 +1,7 @@
 package tech.potluri.blog.ui.components
 
+import android.util.TypedValue
+import android.widget.TextView
 import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Box
@@ -13,20 +15,28 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.viewinterop.AndroidView
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
+import io.noties.markwon.Markwon
 import tech.potluri.blog.data.model.BlockItem
 import tech.potluri.blog.ui.theme.Slate800
 import tech.potluri.blog.ui.theme.Slate900
+
+internal fun setMarkdownContent(view: TextView, markwon: Markwon, content: String) {
+    markwon.setMarkdown(view, content)
+}
 
 @Composable
 fun BlockRenderer(
@@ -37,12 +47,18 @@ fun BlockRenderer(
         "text" -> {
             val content = block.content ?: ""
             if (content.isNotBlank()) {
-                Text(
-                    text = content,
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onBackground,
-                    lineHeight = 26.sp,
-                    modifier = modifier.padding(vertical = 6.dp)
+                val context = LocalContext.current
+                val markwon = remember(context) { Markwon.create(context) }
+                val textColor = MaterialTheme.colorScheme.onBackground.toArgb()
+                val fontSize = MaterialTheme.typography.bodyLarge.fontSize.value
+                AndroidView(
+                    factory = { TextView(it) },
+                    modifier = modifier.padding(vertical = 6.dp),
+                    update = { textView ->
+                        textView.setTextColor(textColor)
+                        textView.setTextSize(TypedValue.COMPLEX_UNIT_SP, fontSize)
+                        setMarkdownContent(textView, markwon, content)
+                    }
                 )
             }
         }

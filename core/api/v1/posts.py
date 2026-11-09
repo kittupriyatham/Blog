@@ -71,7 +71,9 @@ def get_posts():
             }
 
     filters = [query]
-    if not (session.get("logged_in") and session.get("is_demo")):
+    admin_all = (request.args.get("status") == "all" and session.get("logged_in")
+                 and not session.get("is_demo"))
+    if not admin_all and not (session.get("logged_in") and session.get("is_demo")):
         filters.append({"is_demo": {"$ne": True}})
 
     if post_type:
