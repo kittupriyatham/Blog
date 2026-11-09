@@ -25,7 +25,9 @@ def _set_session(username, is_demo):
 @auth_bp.route("/auth/login", methods=["POST"])
 def login():
     """Create the same session used by the web admin, accepting JSON or form data."""
-    data = request.get_json(silent=True) or request.form
+    data = request.get_json(silent=True) if request.is_json else request.form
+    if request.is_json and not isinstance(data, dict):
+        return jsonify({"status": "error", "message": "Expected a JSON object."}), 400
     username, password = _credentials(data)
 
     is_demo = username.lower() == "demo" and password.lower() == "demo"
