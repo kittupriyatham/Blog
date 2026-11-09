@@ -12,6 +12,8 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="{{ url_for('static', filename='js/theme.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/ambient-canvas.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/command-palette.js') }}"></script>
   <script>window.ANALYTICS = {page:'feed', post_id: null, type: null};</script>
   <script src="{{ url_for('static', filename='js/analytics.js') }}"></script>
   <!-- Meta Pixel Code -->
@@ -93,7 +95,12 @@ src="https://www.facebook.com/tr?id=2092273818327635&ev=PageView&noscript=1"
           </a>
 
         {% endif %}
-                <a href="{{ url_for('about') }}" class="p-1 rounded-full ring-2 ring-brand-500/30 hover:ring-brand-500 transition ml-1" title="About the Author">
+                <div class="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800/70 border border-slate-200 dark:border-slate-700/60 hover:border-cyan-500 dark:hover:border-cyan-400 hover:text-cyan-600 dark:hover:text-cyan-300 transition cursor-pointer" onclick="window.openCommandPalette && window.openCommandPalette()" title="Press Ctrl+K to search">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+          <span>Search</span>
+          <kbd class="px-1 py-0.5 text-[10px] bg-slate-200 dark:bg-slate-700 rounded font-mono">Ctrl+K</kbd>
+        </div>
+        <a href="{{ url_for('about') }}" class="p-1 rounded-full ring-2 ring-brand-500/30 hover:ring-brand-500 transition ml-1" title="About the Author">
           <img src="{{ url_for('static', filename='images/avatar_thumb.webp') }}" alt="Kittu Priyatham" class="w-7 h-7 rounded-full object-cover">
         </a>
         <a href="{{ url_for('rss_feed') }}" target="_blank" rel="noopener" class="p-2 rounded-full text-slate-500 dark:text-slate-400 hover:text-amber-500 dark:hover:text-amber-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition" title="RSS Feed" aria-label="RSS Feed">
