@@ -126,6 +126,10 @@ def get_post_detail(post_id):
 @api_v1.route("/posts/<post_id>/comments", methods=["GET"])
 def get_post_comments(post_id):
     """Retrieve comments for a specific post."""
+    post = _posts_collection().find_one({"post_id": post_id})
+    if not post or (post.get("status") == "draft" and not session.get("logged_in")):
+        return jsonify({"status": "error", "message": "Post not found"}), 404
+
     comments_col = _comments_collection()
     cursor = comments_col.find({"post_id": post_id}).sort("timestamp", 1)
     comments = [serialize_comment(c) for c in cursor]

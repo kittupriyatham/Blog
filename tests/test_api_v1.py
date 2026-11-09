@@ -125,6 +125,14 @@ def test_get_post_detail_draft_hidden(client):
     assert data["status"] == "error"
 
 
+def test_get_comments_draft_hidden(client):
+    """Comments for drafts must return 404 for non-logged in users."""
+    res = client.get("/api/v1/posts/draft_post_1/comments")
+    assert res.status_code == 404
+    data = res.get_json()
+    assert data["status"] == "error"
+
+
 def test_get_post_detail_not_found(client):
     """Non-existent post returns 404."""
     res = client.get("/api/v1/posts/does_not_exist")
