@@ -6,6 +6,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import tech.potluri.blog.data.model.Comment
 import tech.potluri.blog.data.model.Post
 import tech.potluri.blog.data.repository.BlogRepository
@@ -15,6 +17,7 @@ data class DetailUiState(
     val post: Post? = null,
     val comments: List<Comment> = emptyList(),
     val isCommentsLoading: Boolean = false,
+    val commentsError: String? = null,
     val error: String? = null
 )
 
@@ -24,8 +27,12 @@ class DetailViewModel(
 
     private val _uiState = MutableStateFlow(DetailUiState())
     val uiState: StateFlow<DetailUiState> = _uiState.asStateFlow()
+    private val reactionMutex = Mutex()
+
+    private var reactionRequest = 0L
 
     fun loadPost(postId: String) {
+        reactionRequest++
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
             repository.fetchPostDetail(postId).fold(
@@ -45,13 +52,22 @@ class DetailViewModel(
 
     fun loadComments(postId: String) {
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isCommentsLoading = true)
-            repository.fetchComments(postId).onSuccess { comments ->
-                _uiState.value = _uiState.value.copy(
-                    comments = comments,
-                    isCommentsLoading = false
-                )
-            }
+            _uiState.value = _uiState.value.copy(isCommentsLoading = true, commentsError = null)
+            repository.fetchComments(postId).fold(
+                onSuccess = { comments ->
+                    _uiState.value = _uiState.value.copy(
+                        comments = comments,
+                        isCommentsLoading = false,
+                        commentsError = null
+                    )
+                },
+                onFailure = { error ->
+                    _uiState.value = _uiState.value.copy(
+                        isCommentsLoading = false,
+                        commentsError = error.localizedMessage ?: "Failed to load comments"
+                    )
+                }
+            )
         }
     }
 
@@ -70,15 +86,22 @@ class DetailViewModel(
     }
 
     fun react(reactionType: String) {
-        val currentPost = _uiState.value.post ?: return
+        val postId = _uiState.value.post?.post_id ?: return
+        val request = reactionRequest
         viewModelScope.launch {
-            repository.submitReaction(currentPost.post_id, reactionType).onSuccess { updatedReactions ->
-                _uiState.value = _uiState.value.copy(
-                    post = currentPost.copy(
-                        reactions = updatedReactions,
-                        likes = currentPost.likes + 1
-                    )
-                )
+            reactionMutex.withLock {
+                repository.submitReaction(postId, reactionType).onSuccess { response ->
+                    _uiState.value.post?.takeIf {
+                        it.post_id == postId && request == reactionRequest
+                    }?.let { currentPost ->
+                        _uiState.value = _uiState.value.copy(
+                            post = currentPost.copy(
+                                reactions = response.reactions,
+                                likes = response.likes
+                            )
+                        )
+                    }
+                }
             }
         }
     }

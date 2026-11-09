@@ -3,10 +3,13 @@ package tech.potluri.blog.data.repository
 import java.io.IOException
 import retrofit2.HttpException
 import tech.potluri.blog.data.model.AuthorResponse
+import tech.potluri.blog.data.model.AuthResponse
 import tech.potluri.blog.data.model.Comment
+import tech.potluri.blog.data.model.LoginRequest
+import tech.potluri.blog.data.model.AuthUser
 import tech.potluri.blog.data.model.Post
 import tech.potluri.blog.data.model.PostsResponse
-import tech.potluri.blog.data.model.ReactionCounts
+import tech.potluri.blog.data.model.ReactionResponse
 import tech.potluri.blog.data.model.TagItem
 import tech.potluri.blog.data.remote.BlogApiService
 import tech.potluri.blog.data.remote.NetworkModule
@@ -14,6 +17,21 @@ import tech.potluri.blog.data.remote.NetworkModule
 class BlogRepository(
     private val api: BlogApiService = NetworkModule.api
 ) {
+    suspend fun login(username: String, password: String): Result<AuthResponse> =
+        requestResponse { api.login(LoginRequest(username, password)) }
+
+    suspend fun logout(): Result<Unit> =
+        requestResponse { api.logout() }.map { Unit }
+
+    suspend fun currentUser(): Result<AuthUser> =
+        requestResponse { api.currentUser() }.fold(
+            onSuccess = { response ->
+                response.user?.let { Result.success(it) }
+                    ?: Result.failure(IOException("Authenticated user missing from server response"))
+            },
+            onFailure = { Result.failure(it) }
+        )
+
     suspend fun fetchPosts(
         page: Int,
         limit: Int,
@@ -31,8 +49,8 @@ class BlogRepository(
     suspend fun postComment(postId: String, name: String, body: String): Result<Comment> =
         request { api.addComment(postId, name, body).comment }
 
-    suspend fun submitReaction(postId: String, type: String): Result<ReactionCounts> =
-        request { api.react(postId, type).reactions }
+    suspend fun submitReaction(postId: String, type: String): Result<ReactionResponse> =
+        request { api.react(postId, type) }
 
     suspend fun recordShare(postId: String): Result<Int> =
         request { api.share(postId).shares }
@@ -46,6 +64,23 @@ class BlogRepository(
     private suspend fun <T> request(block: suspend () -> T): Result<T> =
         try {
             Result.success(block())
+        } catch (error: IOException) {
+            Result.failure(error)
+        } catch (error: HttpException) {
+            Result.failure(error)
+        }
+
+    private suspend fun <T> requestResponse(
+        block: suspend () -> retrofit2.Response<T>
+    ): Result<T> =
+        try {
+            val response = block()
+            if (response.isSuccessful) {
+                response.body()?.let { Result.success(it) }
+                    ?: Result.failure(IllegalStateException("Empty server response"))
+            } else {
+                Result.failure(HttpException(response))
+            }
         } catch (error: IOException) {
             Result.failure(error)
         } catch (error: HttpException) {

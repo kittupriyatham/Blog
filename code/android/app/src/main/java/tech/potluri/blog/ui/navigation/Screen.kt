@@ -6,4 +6,5 @@ sealed class Screen(val route: String) {
         fun createRoute(postId: String) = "detail/$postId"
     }
     object Author : Screen("author")
+    object Admin : Screen("admin")
 }
