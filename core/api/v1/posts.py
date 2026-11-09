@@ -1,7 +1,8 @@
 """REST API endpoints for Posts, Articles, Comments, Reactions, and Tags."""
 
 import math
-from flask import Blueprint, jsonify, request, session
+from flask import Blueprint, current_app, jsonify, request, session
+from core.api.v1.auth import _mobile_request
 from core.db import Comment, Post
 from core import analytics, content, media
 from core.api.v1.serializers import serialize_comment, serialize_post
@@ -70,6 +71,8 @@ def get_posts():
             }
 
     filters = [query]
+    if not (session.get("logged_in") and session.get("is_demo")):
+        filters.append({"is_demo": {"$ne": True}})
 
     if post_type:
         filters.append({"type": post_type})
@@ -126,7 +129,17 @@ def create_post():
     if not session.get("logged_in"):
         return jsonify({"status": "error", "message": "Authentication required."}), 401
 
-    data = request.get_json(silent=True) or request.form or {}
+    # Only sessions established by native login can use the mobile JSON path.
+    # Browser requests must supply the usual Flask-WTF CSRF token.
+    if not (session.get("mobile_authenticated") and _mobile_request() and request.is_json):
+        current_app.extensions["csrf"].protect()
+
+    data = request.get_json(silent=True) if request.is_json else request.form
+    if not isinstance(data, dict):
+        return jsonify({"status": "error", "message": "Request data must be an object."}), 400
+    for field in ("content", "body", "title", "type", "status"):
+        if field in data and not isinstance(data[field], str):
+            return jsonify({"status": "error", "message": f"{field} must be a string."}), 400
     content_body = (data.get("content") or data.get("body") or "").strip()
     if not content_body:
         return jsonify({"status": "error", "message": "Content is required."}), 400

@@ -26,6 +26,7 @@ def _set_session(username, is_demo):
     session["logged_in"] = True
     session["is_demo"] = is_demo
     session["username"] = username
+    session["mobile_authenticated"] = True
 
 
 @auth_bp.route("/auth/login", methods=["POST"])

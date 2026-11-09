@@ -152,6 +152,13 @@ fun BlogApp() {
                     onSignedIn = {
                         navigateToTab(Screen.Feed.route)
                     },
+                    onPublished = {
+                        val feedEntry = navController.getBackStackEntry(Screen.Feed.route)
+                        val feedViewModel = androidx.lifecycle.ViewModelProvider(feedEntry)[
+                            tech.potluri.blog.ui.feed.FeedViewModel::class.java
+                        ]
+                        feedViewModel.refresh()
+                    },
                     onNavigateToFeed = {
                         navigateToTab(Screen.Feed.route)
                     }

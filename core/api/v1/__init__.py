@@ -11,10 +11,13 @@ def register_api_v1(app, csrf=None):
     app.register_blueprint(author_bp, url_prefix="/api/v1")
     app.register_blueprint(auth_bp, url_prefix="/api/v1")
 
-    # Mobile API clients send JSON payloads without browser CSRF cookies
+    # Keep existing public mutation and native authentication behavior.
     if csrf is not None:
         try:
-            csrf.exempt(posts_bp)
+            # Creation validates CSRF itself, with a narrow native-session path.
+            from core.api.v1.posts import create_post, add_post_comment, react_to_post, share_post
+            for view in (create_post, add_post_comment, react_to_post, share_post):
+                csrf.exempt(view)
             csrf.exempt(author_bp)
             csrf.exempt(auth_bp)
         except Exception as e:

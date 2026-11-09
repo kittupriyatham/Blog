@@ -296,8 +296,9 @@ def test_create_post_success(client):
         sess["logged_in"] = True
         sess["username"] = "admin"
         sess["is_demo"] = False
+        sess["mobile_authenticated"] = True
 
-    res = client.post("/api/v1/posts", json={
+    res = client.post("/api/v1/posts", headers={"X-Mobile-Client": "blog-android"}, json={
         "title": "Mobile Announcement",
         "content": "Posted straight from the Android app!",
         "tags": ["mobile", "android"],
@@ -318,8 +319,59 @@ def test_create_post_empty_content(client):
         sess["logged_in"] = True
         sess["username"] = "admin"
         sess["is_demo"] = False
+        sess["mobile_authenticated"] = True
 
-    res = client.post("/api/v1/posts", json={"content": "  "})
+    res = client.post("/api/v1/posts", json={"content": "  "},
+                      headers={"X-Mobile-Client": "blog-android"})
     assert res.status_code == 400
     assert res.get_json()["status"] == "error"
 
+
+@pytest.mark.parametrize("payload", [[], [1], "text", 2, None] + [
+    {"content": "valid", field: value}
+    for field in ("content", "body", "title", "type", "status")
+    for value in ([], {}, 1, True, None)
+])
+def test_create_post_rejects_invalid_types(client, payload):
+    with client.session_transaction() as sess:
+        sess.update(logged_in=True, is_demo=False, mobile_authenticated=True)
+    import json
+    response = client.post("/api/v1/posts", data=json.dumps(payload),
+                           content_type="application/json",
+                           headers={"X-Mobile-Client": "blog-android"})
+    assert response.status_code == 400
+
+
+def test_browser_creation_requires_csrf_and_accepts_valid_token(client):
+    from flask_wtf.csrf import generate_csrf
+    with client.session_transaction() as sess:
+        sess.update(logged_in=True, is_demo=False)
+    assert client.post("/api/v1/posts", data={"content": "blocked"}).status_code == 400
+    # A mobile header alone must not bypass browser session protection.
+    assert client.post("/api/v1/posts", json={"content": "blocked"},
+                       headers={"X-Mobile-Client": "blog-android"}).status_code == 400
+    with app.test_request_context():
+        token = generate_csrf()
+        from flask import session
+        raw_token = session["csrf_token"]
+    with client.session_transaction() as sess:
+        sess["csrf_token"] = raw_token
+    with patch.object(posts_module.analytics, "record_analytics"):
+        response = client.post("/api/v1/posts", data={"body": " fallback ", "tags": "a, b", "csrf_token": token})
+    assert response.status_code == 201
+    assert response.get_json()["post"]["content"] == "fallback"
+    assert response.get_json()["post"]["tags"] == ["a", "b"]
+
+
+def test_native_login_can_publish_and_demo_feed_is_isolated(client):
+    headers = {"X-Mobile-Client": "blog-android"}
+    assert client.post("/api/v1/auth/login", json={"username": "demo", "password": "demo"}, headers=headers).status_code == 200
+    with patch.object(posts_module.analytics, "record_analytics"):
+        response = client.post("/api/v1/posts", json={"content": "demo publication"}, headers=headers)
+    assert response.status_code == 201
+    post_id = response.get_json()["post"]["post_id"]
+    assert any(p["post_id"] == post_id for p in client.get("/api/v1/posts").get_json()["posts"])
+    assert client.post("/api/v1/posts", data={"content": "form bypass"}, headers=headers).status_code == 400
+    client.post("/api/v1/auth/logout", headers=headers)
+    assert all(p["post_id"] != post_id for p in client.get("/api/v1/posts").get_json()["posts"])
+    assert client.get("/api/v1/posts?status=all").get_json()["total"] == 2

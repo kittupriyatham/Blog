@@ -31,12 +31,21 @@ class FeedViewModel(
     private val _uiState = MutableStateFlow(FeedUiState())
     val uiState: StateFlow<FeedUiState> = _uiState.asStateFlow()
 
+    private var feedRequestId = 0L
+    private var tagsRequestId = 0L
+
     init {
         loadFeed()
         loadTags()
     }
 
+    fun refresh() {
+        loadFeed(refresh = true)
+        loadTags()
+    }
+
     fun loadFeed(refresh: Boolean = false) {
+        val requestId = ++feedRequestId
         viewModelScope.launch {
             val currentPage = if (refresh) 1 else _uiState.value.page
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
@@ -57,6 +66,8 @@ class FeedViewModel(
                 tag = tagFilter,
                 query = queryFilter
             )
+
+            if (requestId != feedRequestId) return@launch
 
             result.fold(
                 onSuccess = { response ->
@@ -80,8 +91,10 @@ class FeedViewModel(
     }
 
     private fun loadTags() {
+        val requestId = ++tagsRequestId
         viewModelScope.launch {
             repository.fetchTags().onSuccess { tags ->
+                if (requestId != tagsRequestId) return@onSuccess
                 _uiState.value = _uiState.value.copy(tags = tags)
             }
         }

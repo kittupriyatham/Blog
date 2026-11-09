@@ -51,6 +51,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.lifecycle.viewmodel.compose.viewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -58,6 +59,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 fun AuthScreen(
     onSignedIn: () -> Unit = {},
     onNavigateToFeed: () -> Unit = {},
+    onPublished: () -> Unit = {},
     viewModel: AuthViewModel = viewModel()
 ) {
     val state by viewModel.uiState.collectAsState()
@@ -65,10 +67,15 @@ fun AuthScreen(
     var password by remember { mutableStateOf("") }
 
     // Post creation form state
-    var postType by remember { mutableStateOf("post") }
-    var postTitle by remember { mutableStateOf("") }
-    var postContent by remember { mutableStateOf("") }
-    var postTags by remember { mutableStateOf("") }
+    var postType by rememberSaveable { mutableStateOf("post") }
+    var postTitle by rememberSaveable { mutableStateOf("") }
+    var postContent by rememberSaveable { mutableStateOf("") }
+    var postTags by rememberSaveable { mutableStateOf("") }
+
+    var submittedTitle by rememberSaveable { mutableStateOf<String?>(null) }
+    var submittedContent by rememberSaveable { mutableStateOf<String?>(null) }
+    var submittedTags by rememberSaveable { mutableStateOf<String?>(null) }
+    var submittedType by rememberSaveable { mutableStateOf<String?>(null) }
 
     LaunchedEffect(state.loginSucceeded) {
         if (state.loginSucceeded) {
@@ -79,9 +86,14 @@ fun AuthScreen(
 
     LaunchedEffect(state.postCreated) {
         if (state.postCreated) {
-            postTitle = ""
-            postContent = ""
-            postTags = ""
+            if (postTitle == submittedTitle) postTitle = ""
+            if (postContent == submittedContent) postContent = ""
+            if (postTags == submittedTags) postTags = ""
+            if (postType == submittedType) postType = "post"
+            submittedTitle = null
+            submittedContent = null
+            submittedTags = null
+            submittedType = null
         }
     }
 
@@ -329,6 +341,10 @@ fun AuthScreen(
                         ) {
                             Button(
                                 onClick = {
+                                    submittedTitle = postTitle
+                                    submittedContent = postContent
+                                    submittedTags = postTags
+                                    submittedType = postType
                                     val tagsList = postTags
                                         .split(",")
                                         .map { it.trim() }
@@ -337,10 +353,12 @@ fun AuthScreen(
                                         content = postContent,
                                         title = postTitle,
                                         type = postType,
-                                        tags = tagsList
+                                        tags = tagsList,
+                                        onCreated = onPublished
                                     )
                                 },
-                                enabled = !state.isPosting && postContent.isNotBlank(),
+                                enabled = !state.isPosting && postContent.isNotBlank() &&
+                                    (postType != "article" || postTitle.isNotBlank()),
                                 modifier = Modifier.weight(1f),
                                 shape = RoundedCornerShape(12.dp)
                             ) {

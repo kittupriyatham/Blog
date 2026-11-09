@@ -110,7 +110,11 @@ class AuthViewModel(
                 onFailure = { err ->
                     _uiState.value = _uiState.value.copy(
                         isPosting = false,
-                        postError = err.localizedMessage ?: "Failed to publish post. Try again."
+                        postError = if (err is HttpException && err.code() == 401) {
+                            "Your session expired. Sign out and sign in again to publish."
+                        } else {
+                            err.localizedMessage ?: "Failed to publish post. Try again."
+                        }
                     )
                 }
             )
