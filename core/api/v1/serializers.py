@@ -16,8 +16,8 @@ def serialize_post(doc: Optional[Dict[str, Any]], resolve_embedded: bool = False
     content = doc.get("content") or ""
     media_paths = list(doc.get("media_paths") or [])
 
-    # Extract content and media from blocks if not pre-populated
-    if blocks and not content:
+    # Extract content and media from blocks
+    if blocks:
         text_parts = []
         for b in blocks:
             if isinstance(b, dict):
@@ -28,7 +28,8 @@ def serialize_post(doc: Optional[Dict[str, Any]], resolve_embedded: bool = False
                     for p in b.get("media_paths", []):
                         if p not in media_paths:
                             media_paths.append(p)
-        content = "\n\n".join(text_parts)
+        if not content:
+            content = "\n\n".join(text_parts)
 
     reactions = doc.get("reactions")
     if not isinstance(reactions, dict):
@@ -48,10 +49,10 @@ def serialize_post(doc: Optional[Dict[str, Any]], resolve_embedded: bool = False
                 "status": s.get("status"),
                 "url": s.get("url") or s.get("permalink") or s.get("target_url"),
                 "error": s.get("error"),
-                "synced_at": s.get("synced_at") or s.get("timestamp"),
+                "synced_at": s.get("synced_at") or s.get("posted_at") or s.get("timestamp"),
             })
 
-    # Embedded article linking if requested
+    # Embedded article or post linking if requested
     embedded_article = None
     if resolve_embedded and posts_collection is not None and content:
         match = POST_ID_REF_PATTERN.search(content)
@@ -59,13 +60,25 @@ def serialize_post(doc: Optional[Dict[str, Any]], resolve_embedded: bool = False
             ref_id = match.group(1)
             ref_doc = posts_collection.find_one({
                 "post_id": ref_id,
-                "type": "article",
                 "$or": [{"status": "published"}, {"status": {"$exists": False}}],
             })
             if ref_doc:
+                ref_type = ref_doc.get("type") or "post"
+                ref_content = ref_doc.get("content") or ""
+                if not ref_content and ref_doc.get("blocks"):
+                    ref_content = "\n\n".join(
+                        str(b.get("content")).strip()
+                        for b in ref_doc.get("blocks", [])
+                        if isinstance(b, dict) and b.get("type") == "text" and b.get("content")
+                    )
+                default_title = "Article" if ref_type == "article" else (
+                    ref_content.split("\n")[0][:80] if ref_content else "Post"
+                )
                 embedded_article = {
                     "post_id": ref_doc.get("post_id"),
-                    "title": ref_doc.get("title") or "Article",
+                    "type": ref_type,
+                    "title": ref_doc.get("title") or default_title,
+                    "content": ref_content[:240],
                     "cover_image": ref_doc.get("cover_image") or "",
                     "timestamp": ref_doc.get("timestamp") or "",
                 }

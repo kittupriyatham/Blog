@@ -38,6 +38,12 @@ import tech.potluri.blog.ui.author.AuthorViewModel
 import tech.potluri.blog.ui.feed.FeedViewModel
 import tech.potluri.blog.ui.theme.BlogTheme
 
+import okhttp3.MultipartBody
+import tech.potluri.blog.data.model.ArticlesResponse
+import tech.potluri.blog.data.model.MediaUploadResponse
+import tech.potluri.blog.data.model.SyndicationPlatform
+import tech.potluri.blog.data.model.SyndicationPlatformsResponse
+
 private class FakeBlogApiService : BlogApiService {
     private var currentUser: AuthUser? = null
     private val posts = mutableListOf(
@@ -48,6 +54,15 @@ private class FakeBlogApiService : BlogApiService {
             content = "Exploring quantum compilers in Rust.",
             timestamp = "2026-10-31",
             tags = listOf("quantum", "rust")
+        )
+    )
+    private val articles = mutableListOf(
+        Post(
+            post_id = "art-1",
+            type = "article",
+            title = "Deep Dive Quantum Error Correction",
+            content = "Full guide to surface codes.",
+            timestamp = "2026-11-01"
         )
     )
 
@@ -83,11 +98,41 @@ private class FakeBlogApiService : BlogApiService {
             title = request.title ?: "",
             content = request.content,
             timestamp = "2026-11-09",
-            tags = request.tags
+            tags = request.tags,
+            media_paths = request.media_paths
         )
         posts.add(0, created)
         return Response.success(
             CreatePostResponse(status = "success", message = "Post created", post = created)
+        )
+    }
+
+    override suspend fun uploadMedia(file: MultipartBody.Part): Response<MediaUploadResponse> {
+        return Response.success(
+            MediaUploadResponse(
+                status = "success",
+                post_id = "post-temp",
+                url = "/media/test_upload.png",
+                name = "test_upload.png"
+            )
+        )
+    }
+
+    override suspend fun getSyndicationPlatforms(kind: String): SyndicationPlatformsResponse {
+        return SyndicationPlatformsResponse(
+            status = "success",
+            platforms = listOf(
+                SyndicationPlatform(id = "linkedin", label = "LinkedIn", configured = true, limit = 3000),
+                SyndicationPlatform(id = "twitter", label = "X / Twitter", configured = true, limit = 280)
+            )
+        )
+    }
+
+    override suspend fun getArticles(): ArticlesResponse {
+        return ArticlesResponse(
+            status = "success",
+            count = articles.size,
+            articles = articles.toList()
         )
     }
 
@@ -110,7 +155,8 @@ private class FakeBlogApiService : BlogApiService {
     }
 
     override suspend fun getPost(postId: String): PostResponse {
-        return PostResponse(post = posts.first { it.post_id == postId })
+        val found = posts.find { it.post_id == postId } ?: articles.first { it.post_id == postId }
+        return PostResponse(post = found)
     }
 
     override suspend fun getComments(postId: String): CommentsResponse = CommentsResponse()
@@ -190,6 +236,7 @@ class NavigationTest {
         clickBottomTab("Admin")
         composeTestRule.onNodeWithText("Admin Access").assertIsDisplayed()
         composeTestRule.onNodeWithText("Admin Sign In").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Use Google Passwords").assertIsDisplayed()
         clickBottomTab("Feed")
         composeTestRule.onNodeWithText("Search posts & articles…").assertIsDisplayed()
         clickBottomTab("About")
@@ -204,7 +251,22 @@ class NavigationTest {
 
         composeTestRule.onNodeWithText("Publisher Studio").assertIsDisplayed()
         composeTestRule.onNodeWithText("Administrator").assertIsDisplayed()
-        composeTestRule.onNodeWithText("New Publication").assertIsDisplayed()
+        composeTestRule.onNodeWithText("New Post").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Upload File").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Attach Article").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Insert Block").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Syndicate to (POSSE)").assertIsDisplayed()
+        composeTestRule.onNodeWithText("LinkedIn (3000ch)").assertIsDisplayed()
+
+        // Select syndication platform
+        composeTestRule.onNodeWithText("LinkedIn (3000ch)").performClick()
+
+        // Attach Article via picker
+        composeTestRule.onNodeWithText("Attach Article").performClick()
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithText("Deep Dive Quantum Error Correction").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Deep Dive Quantum Error Correction").performClick()
+        composeTestRule.waitForIdle()
 
         // 6. Signed-in Admin -> Feed -> Signed-in Admin -> About -> Signed-in Admin
         clickBottomTab("Feed")
@@ -220,15 +282,13 @@ class NavigationTest {
         composeTestRule.waitForIdle()
         composeTestRule.onNodeWithText("Search posts & articles…").assertIsDisplayed()
 
-        // 8. Publish a new post from Admin and verify it appears on Feed
+        // 8. Publish the post from Admin with embedded article and verify it appears on Feed
         clickBottomTab("Admin")
-        composeTestRule.onNodeWithText("Content (Markdown supported) *")
-            .performTextInput("Hello from my mobile Publisher Studio!")
         composeTestRule.onNodeWithText("Publish").performScrollTo().performClick()
         composeTestRule.waitForIdle()
         composeTestRule.onNodeWithText("Post published successfully!").assertIsDisplayed()
 
         clickBottomTab("Feed")
-        composeTestRule.onNodeWithText("Hello from my mobile Publisher Studio!").assertIsDisplayed()
+        composeTestRule.onNodeWithText("/article/art-1").assertIsDisplayed()
     }
 }

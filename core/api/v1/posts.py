@@ -3,8 +3,10 @@
 import math
 from flask import Blueprint, current_app, jsonify, request, session
 from core.api.v1.auth import _mobile_request
+from core.config import SITE_URL
 from core.db import Comment, Post
-from core import analytics, content, media
+from core import analytics, content, media, syndication
+from core.syndication import runner
 from core.api.v1.serializers import serialize_comment, serialize_post
 
 api_v1 = Blueprint("api_v1", __name__)
@@ -24,6 +26,59 @@ def _can_view_draft(post):
     return bool(session.get("logged_in")) and (
         not session.get("is_demo") or post.get("is_demo") is True
     )
+
+
+def _demo_syndication_url(platform: str, kind: str, doc_id: str) -> str:
+    base = (SITE_URL or "").rstrip("/")
+    if not base:
+        try:
+            base = request.host_url.rstrip("/")
+        except Exception:
+            base = "https://blog.potluri-krishna-priyatham.tech"
+    doc_id_str = str(doc_id).strip()
+    target = doc_id_str if doc_id_str.startswith(f"{kind}_") else f"{kind}_{doc_id_str}"
+    return f"{base}/example/{platform}/{target}"
+
+
+@api_v1.route("/syndication/platforms", methods=["GET"])
+def get_syndication_platforms():
+    """Return available syndication platforms for the mobile composer."""
+    kind = (request.args.get("kind") or "post").strip().lower()
+    if kind not in ("post", "article"):
+        kind = "post"
+    platforms = syndication.available_platforms(kind=kind)
+    return jsonify({
+        "status": "success",
+        "kind": kind,
+        "platforms": platforms,
+    })
+
+
+@api_v1.route("/media", methods=["POST"])
+def upload_media_v1():
+    """Upload a media or document attachment for a post from the mobile app or API."""
+    if not session.get("logged_in") and not media.upload_authorized():
+        return jsonify({"status": "error", "message": "Authentication required."}), 401
+
+    if not (session.get("mobile_authenticated") and _mobile_request()):
+        if not media.upload_authorized() or session.get("logged_in"):
+            # Only require CSRF for browser sessions without mobile_authenticated
+            current_app.extensions["csrf"].protect()
+
+    f = request.files.get("file") or request.files.get("media")
+    if not f or not f.filename:
+        return jsonify({"status": "error", "message": "No file provided."}), 400
+    if not media.allowed_file(f.filename):
+        return jsonify({"status": "error", "message": "Unsupported file type."}), 400
+
+    post_id = (request.form.get("post_id") or "").strip() or media.generate_post_id(posts_collection=_posts_collection())
+    url = media.upload_to_server(f, media.media_stem(post_id), set())
+    return jsonify({
+        "status": "success",
+        "post_id": post_id,
+        "url": url,
+        "name": url.rsplit("/", 1)[-1],
+    }), 201
 
 
 @api_v1.route("/posts", methods=["GET"])
@@ -123,10 +178,12 @@ def create_post():
     Requires an authenticated session (admin or demo).
     JSON payload:
       - title: string (required for published articles)
-      - content: string (required)
+      - content: string (required unless media_paths is non-empty)
       - type: 'post' | 'article' (default: 'post')
       - tags: list[str] or comma-separated string
       - status: 'published' | 'draft' (default: 'published')
+      - media_paths: list[str] (optional uploaded media URLs)
+      - platforms: list[str] or comma-separated string (optional syndication platform IDs)
     """
     if not session.get("logged_in"):
         return jsonify({"status": "error", "message": "Authentication required."}), 401
@@ -142,8 +199,25 @@ def create_post():
     for field in ("content", "body", "title", "type", "status"):
         if field in data and not isinstance(data[field], str):
             return jsonify({"status": "error", "message": f"{field} must be a string."}), 400
+
+    media_raw = data.get("media_paths") or []
+    if isinstance(media_raw, str):
+        media_paths = [m.strip() for m in media_raw.split(",") if m.strip()]
+    elif isinstance(media_raw, list):
+        media_paths = [str(m).strip() for m in media_raw if isinstance(m, str) and m.strip()]
+    else:
+        return jsonify({"status": "error", "message": "media_paths must be a list of strings."}), 400
+
+    platforms_raw = data.get("platforms") or []
+    if isinstance(platforms_raw, str):
+        platforms = [p.strip() for p in platforms_raw.split(",") if p.strip()]
+    elif isinstance(platforms_raw, list):
+        platforms = [str(p).strip() for p in platforms_raw if isinstance(p, str) and p.strip()]
+    else:
+        return jsonify({"status": "error", "message": "platforms must be a list of strings."}), 400
+
     content_body = (data.get("content") or data.get("body") or "").strip()
-    if not content_body:
+    if not content_body and not media_paths:
         return jsonify({"status": "error", "message": "Content is required."}), 400
 
     title = (data.get("title") or "").strip()
@@ -169,7 +243,11 @@ def create_post():
     post_id = media.generate_post_id(posts_collection=col)
     now = content.now_str()
 
-    blocks = [{"type": "text", "content": content_body}]
+    blocks = []
+    if content_body:
+        blocks.append({"type": "text", "content": content_body})
+    if media_paths:
+        blocks.append({"type": "media", "media_paths": media_paths})
 
     is_demo = bool(session.get("is_demo"))
     author = "Demo Publisher" if is_demo else (session.get("username") or "Kittu Priyatham")
@@ -191,8 +269,32 @@ def create_post():
         "author": author,
     }
 
+    valid_platforms = [p for p in platforms if p != "youtube" and syndication.get(p) is not None]
+    if post_status == "published" and valid_platforms and is_demo:
+        demo_syndications = []
+        for p in valid_platforms:
+            demo_syndications.append({
+                "platform": p,
+                "label": syndication.label_for(p),
+                "url": _demo_syndication_url(p, post_type, post_id),
+                "remote_id": f"demo_{p}_{post_id}",
+                "status": "posted",
+                "posted_at": now,
+                "error": None,
+            })
+        if demo_syndications:
+            new_post["syndications"] = demo_syndications
+
     res = col.insert_one(new_post)
     new_post["_id"] = res.inserted_id
+
+    if post_status == "published" and valid_platforms and not is_demo:
+        canonical_endpoint = "article_detail" if post_type == "article" else "post_detail"
+        runner.enqueue_syndication(
+            post_id,
+            content.canonical(canonical_endpoint, post_id=post_id),
+            valid_platforms,
+        )
 
     analytics.record_analytics({
         "event": "create_post",
@@ -201,7 +303,7 @@ def create_post():
         "is_demo": is_demo,
     })
 
-    serialized = serialize_post(new_post, resolve_embedded=False)
+    serialized = serialize_post(new_post, resolve_embedded=True, posts_collection=col)
     return jsonify({
         "status": "success",
         "message": "Post created successfully",

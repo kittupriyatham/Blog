@@ -33,7 +33,9 @@ data class Syndication(
 @Serializable
 data class EmbeddedArticle(
     val post_id: String = "",
+    val type: String = "article",
     val title: String = "",
+    val content: String = "",
     val cover_image: String = "",
     val timestamp: String = ""
 )
@@ -112,6 +114,37 @@ data class PostsResponse(
 )
 
 @Serializable
+data class ArticlesResponse(
+    val status: String = "",
+    val count: Int = 0,
+    val articles: List<Post> = emptyList()
+)
+
+@Serializable
+data class SyndicationPlatform(
+    val id: String = "",
+    val label: String = "",
+    val configured: Boolean = false,
+    val limit: Int? = null
+)
+
+@Serializable
+data class SyndicationPlatformsResponse(
+    val status: String = "",
+    val kind: String = "post",
+    val platforms: List<SyndicationPlatform> = emptyList()
+)
+
+@Serializable
+data class MediaUploadResponse(
+    val status: String = "",
+    val post_id: String = "",
+    val url: String = "",
+    val name: String = "",
+    val message: String? = null
+)
+
+@Serializable
 data class PostResponse(val post: Post)
 
 @Serializable
@@ -161,7 +194,9 @@ data class CreatePostRequest(
     val title: String? = null,
     val type: String = "post",
     val tags: List<String> = emptyList(),
-    val status: String = "published"
+    val status: String = "published",
+    val media_paths: List<String> = emptyList(),
+    val platforms: List<String> = emptyList()
 )
 
 @Serializable
@@ -170,4 +205,5 @@ data class CreatePostResponse(
     val message: String? = null,
     val post: Post? = null
 )
+
 

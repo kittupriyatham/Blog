@@ -9,7 +9,14 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import tech.potluri.blog.data.model.AuthUser
+import tech.potluri.blog.data.model.Post
+import tech.potluri.blog.data.model.SyndicationPlatform
 import tech.potluri.blog.data.repository.BlogRepository
+
+data class AttachedMediaItem(
+    val url: String,
+    val name: String
+)
 
 data class AuthUiState(
     val isLoading: Boolean = false,
@@ -19,10 +26,16 @@ data class AuthUiState(
     val isPosting: Boolean = false,
     val postCreated: Boolean = false,
     val postError: String? = null,
-    val draftType: String = "post",
     val draftTitle: String = "",
     val draftContent: String = "",
-    val draftTags: String = ""
+    val draftTags: String = "",
+    val syndicationPlatforms: List<SyndicationPlatform> = emptyList(),
+    val selectedPlatforms: Set<String> = emptySet(),
+    val attachedMedia: List<AttachedMediaItem> = emptyList(),
+    val isUploadingMedia: Boolean = false,
+    val uploadError: String? = null,
+    val availableArticles: List<Post> = emptyList(),
+    val isLoadingArticles: Boolean = false
 )
 
 class AuthViewModel(
@@ -39,18 +52,45 @@ class AuthViewModel(
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true)
             repository.currentUser().fold(
-                onSuccess = { user -> _uiState.value = _uiState.value.copy(isLoading = false, user = user, error = null) },
+                onSuccess = { user ->
+                    _uiState.value = _uiState.value.copy(isLoading = false, user = user, error = null)
+                    loadComposerOptions()
+                },
                 onFailure = { _uiState.value = _uiState.value.copy(isLoading = false, user = null) }
+            )
+        }
+    }
+
+    fun loadComposerOptions() {
+        viewModelScope.launch {
+            // Load syndication platforms
+            repository.fetchSyndicationPlatforms("post").fold(
+                onSuccess = { platforms ->
+                    _uiState.value = _uiState.value.copy(syndicationPlatforms = platforms)
+                },
+                onFailure = { /* non-fatal */ }
+            )
+            // Load available articles for attachment picker
+            loadArticles()
+        }
+    }
+
+    fun loadArticles() {
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isLoadingArticles = true)
+            repository.fetchArticles().fold(
+                onSuccess = { articles ->
+                    _uiState.value = _uiState.value.copy(isLoadingArticles = false, availableArticles = articles)
+                },
+                onFailure = {
+                    _uiState.value = _uiState.value.copy(isLoadingArticles = false)
+                }
             )
         }
     }
 
     fun consumeLoginSuccess() {
         _uiState.value = _uiState.value.copy(loginSucceeded = false)
-    }
-
-    fun updateDraftType(type: String) {
-        _uiState.value = _uiState.value.copy(draftType = type)
     }
 
     fun updateDraftTitle(title: String) {
@@ -66,6 +106,64 @@ class AuthViewModel(
 
     fun updateDraftTags(tags: String) {
         _uiState.value = _uiState.value.copy(draftTags = tags)
+    }
+
+    fun togglePlatform(platformId: String) {
+        val current = _uiState.value.selectedPlatforms.toMutableSet()
+        if (current.contains(platformId)) {
+            current.remove(platformId)
+        } else {
+            current.add(platformId)
+        }
+        _uiState.value = _uiState.value.copy(selectedPlatforms = current)
+    }
+
+    fun appendSnippet(snippet: String) {
+        val currentContent = _uiState.value.draftContent
+        val newContent = if (currentContent.isBlank()) {
+            snippet
+        } else {
+            currentContent.trimEnd() + "\n\n" + snippet
+        }
+        updateDraftContent(newContent)
+    }
+
+    fun attachArticle(articleId: String) {
+        appendSnippet("/article/$articleId")
+    }
+
+    fun attachPost(postId: String) {
+        appendSnippet("/post/$postId")
+    }
+
+    fun uploadMediaFile(fileName: String, mimeType: String, bytes: ByteArray) {
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isUploadingMedia = true, uploadError = null)
+            repository.uploadMedia(fileName, mimeType, bytes).fold(
+                onSuccess = { response ->
+                    val newMedia = _uiState.value.attachedMedia + AttachedMediaItem(
+                        url = response.url,
+                        name = response.name.ifBlank { fileName }
+                    )
+                    _uiState.value = _uiState.value.copy(
+                        isUploadingMedia = false,
+                        attachedMedia = newMedia,
+                        uploadError = null
+                    )
+                },
+                onFailure = { err ->
+                    _uiState.value = _uiState.value.copy(
+                        isUploadingMedia = false,
+                        uploadError = err.localizedMessage ?: "Failed to upload file."
+                    )
+                }
+            )
+        }
+    }
+
+    fun removeAttachedMedia(url: String) {
+        val updated = _uiState.value.attachedMedia.filter { it.url != url }
+        _uiState.value = _uiState.value.copy(attachedMedia = updated)
     }
 
     fun logout() {
@@ -96,6 +194,7 @@ class AuthViewModel(
                         error = null,
                         loginSucceeded = response.user != null
                     )
+                    loadComposerOptions()
                 },
                 onFailure = { error ->
                     val message = when {
@@ -114,26 +213,29 @@ class AuthViewModel(
     fun createPost(
         content: String,
         title: String? = null,
-        type: String = "post",
         tags: List<String> = emptyList(),
         onCreated: () -> Unit = {}
     ) {
         if (_uiState.value.isPosting) return
-        if (content.isBlank()) {
-            _uiState.value = _uiState.value.copy(postError = "Post content cannot be empty.")
+        val mediaUrls = _uiState.value.attachedMedia.map { it.url }
+        if (content.isBlank() && mediaUrls.isEmpty()) {
+            _uiState.value = _uiState.value.copy(postError = "Post content or an attachment is required.")
             return
         }
         val submittedTitle = _uiState.value.draftTitle
         val submittedContent = _uiState.value.draftContent
         val submittedTags = _uiState.value.draftTags
-        val submittedType = _uiState.value.draftType
+        val platformsList = _uiState.value.selectedPlatforms.toList()
+
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isPosting = true, postError = null, postCreated = false)
             repository.createPost(
                 content = content.trim(),
                 title = title?.trim()?.ifBlank { null },
-                type = type,
-                tags = tags
+                type = "post",
+                tags = tags,
+                mediaPaths = mediaUrls,
+                platforms = platformsList
             ).fold(
                 onSuccess = {
                     val cur = _uiState.value
@@ -144,7 +246,8 @@ class AuthViewModel(
                         draftTitle = if (cur.draftTitle == submittedTitle) "" else cur.draftTitle,
                         draftContent = if (cur.draftContent == submittedContent) "" else cur.draftContent,
                         draftTags = if (cur.draftTags == submittedTags) "" else cur.draftTags,
-                        draftType = if (cur.draftType == submittedType) "post" else cur.draftType
+                        attachedMedia = emptyList(),
+                        selectedPlatforms = emptySet()
                     )
                     onCreated()
                 },

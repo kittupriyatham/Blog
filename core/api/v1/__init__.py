@@ -15,8 +15,14 @@ def register_api_v1(app, csrf=None):
     if csrf is not None:
         try:
             # Creation validates CSRF itself, with a narrow native-session path.
-            from core.api.v1.posts import create_post, add_post_comment, react_to_post, share_post
-            for view in (create_post, add_post_comment, react_to_post, share_post):
+            from core.api.v1.posts import (
+                create_post,
+                upload_media_v1,
+                add_post_comment,
+                react_to_post,
+                share_post,
+            )
+            for view in (create_post, upload_media_v1, add_post_comment, react_to_post, share_post):
                 csrf.exempt(view)
             csrf.exempt(author_bp)
             csrf.exempt(auth_bp)

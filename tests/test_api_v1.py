@@ -449,3 +449,98 @@ def test_native_login_can_publish_and_demo_feed_is_isolated(client):
     client.post("/api/v1/auth/logout", headers=headers)
     assert all(p["post_id"] != post_id for p in client.get("/api/v1/posts").get_json()["posts"])
     assert client.get("/api/v1/posts?status=all").get_json()["total"] == 2
+
+
+def test_get_syndication_platforms(client):
+    res = client.get("/api/v1/syndication/platforms?kind=post")
+    assert res.status_code == 200
+    data = res.get_json()
+    assert data["status"] == "success"
+    assert data["kind"] == "post"
+    assert isinstance(data["platforms"], list)
+    platform_ids = {p["id"] for p in data["platforms"]}
+    assert "linkedin" in platform_ids
+    assert "medium" not in platform_ids
+
+
+def test_upload_media_v1_and_create_post_with_attachments_and_syndication(client, mock_db):
+    import io
+    headers = {"X-Mobile-Client": "blog-android"}
+
+    # Unauthenticated upload should fail
+    res_unauth = client.post(
+        "/api/v1/media",
+        data={"file": (io.BytesIO(b"fake image"), "photo.png")},
+        content_type="multipart/form-data",
+        headers=headers,
+    )
+    assert res_unauth.status_code == 401
+
+    with client.session_transaction() as sess:
+        sess.update(logged_in=True, username="demo", is_demo=True, mobile_authenticated=True)
+
+    # Unsupported extension should fail
+    res_bad = client.post(
+        "/api/v1/media",
+        data={"file": (io.BytesIO(b"bad"), "malware.exe")},
+        content_type="multipart/form-data",
+        headers=headers,
+    )
+    assert res_bad.status_code == 400
+
+    with patch.object(posts_module.media, "upload_to_server", return_value="/media/media_test123.png"):
+        res_upload = client.post(
+            "/api/v1/media",
+            data={"file": (io.BytesIO(b"fake png"), "screenshot.png")},
+            content_type="multipart/form-data",
+            headers=headers,
+        )
+    assert res_upload.status_code == 201
+    upload_data = res_upload.get_json()
+    assert upload_data["status"] == "success"
+    assert upload_data["url"] == "/media/media_test123.png"
+
+    # Create post with media_paths, embedded article (/article/test_article_1), and syndication platforms in demo mode
+    with patch.object(posts_module.analytics, "record_analytics"):
+        res_post = client.post(
+            "/api/v1/posts",
+            json={
+                "content": "Check out this article /article/test_article_1",
+                "media_paths": ["/media/media_test123.png"],
+                "platforms": ["linkedin", "twitter"],
+                "tags": ["mobile", "posse"],
+            },
+            headers=headers,
+        )
+    assert res_post.status_code == 201
+    created = res_post.get_json()["post"]
+    assert created["media_paths"] == ["/media/media_test123.png"]
+    assert created["embedded_article"] is not None
+    assert created["embedded_article"]["post_id"] == "test_article_1"
+    assert created["embedded_article"]["title"] == "Distributed Systems at Scale"
+    syndicated_platforms = {s["platform"] for s in created["syndications"]}
+    assert syndicated_platforms == {"linkedin", "twitter"}
+
+    # Admin post creation should enqueue real syndication
+    with client.session_transaction() as sess:
+        sess.update(logged_in=True, username="admin", is_demo=False, mobile_authenticated=True)
+
+    with patch.object(posts_module.analytics, "record_analytics"), \
+         patch.object(posts_module.runner, "enqueue_syndication") as mock_enqueue:
+        res_admin = client.post(
+            "/api/v1/posts",
+            json={
+                "content": "",
+                "media_paths": ["/media/media_test123.png"],
+                "platforms": ["linkedin"],
+            },
+            headers=headers,
+        )
+    assert res_admin.status_code == 201
+    admin_post = res_admin.get_json()["post"]
+    assert admin_post["media_paths"] == ["/media/media_test123.png"]
+    mock_enqueue.assert_called_once()
+    args = mock_enqueue.call_args[0]
+    assert args[0] == admin_post["post_id"]
+    assert args[2] == ["linkedin"]
+

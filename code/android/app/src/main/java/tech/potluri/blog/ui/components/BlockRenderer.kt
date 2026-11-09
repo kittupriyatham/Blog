@@ -12,10 +12,18 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.material.icons.filled.AttachFile
+import androidx.compose.material.icons.filled.PictureAsPdf
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.VolumeUp
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
@@ -24,6 +32,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontStyle
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -99,20 +108,68 @@ fun BlockRenderer(
         }
 
         "media" -> {
+            val context = LocalContext.current
             block.media_paths.forEach { path ->
                 val fullUrl = if (path.startsWith("http")) path else "https://blog.potluri-krishna-priyatham.tech$path"
+                val ext = path.substringAfterLast(".", "").lowercase()
+                val isImage = ext in listOf("png", "jpg", "jpeg", "gif", "webp")
+
                 Column(modifier = modifier.padding(vertical = 8.dp)) {
-                    AsyncImage(
-                        model = ImageRequest.Builder(LocalContext.current)
-                            .data(fullUrl)
-                            .crossfade(true)
-                            .build(),
-                        contentDescription = block.caption,
-                        contentScale = ContentScale.FillWidth,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(12.dp))
-                    )
+                    if (isImage) {
+                        AsyncImage(
+                            model = ImageRequest.Builder(context)
+                                .data(fullUrl)
+                                .crossfade(true)
+                                .build(),
+                            contentDescription = block.caption,
+                            contentScale = ContentScale.FillWidth,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(12.dp))
+                        )
+                    } else {
+                        // Media file attachment card (Audio, Video, PDF, Docs)
+                        androidx.compose.material3.Surface(
+                            onClick = {
+                                val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(fullUrl))
+                                context.startActivity(intent)
+                            },
+                            shape = RoundedCornerShape(12.dp),
+                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(14.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                androidx.compose.material3.Icon(
+                                    imageVector = when (ext) {
+                                        "mp4", "webm", "ogg", "mov", "avi", "mkv" -> androidx.compose.material.icons.Icons.Default.PlayArrow
+                                        "mp3", "wav", "m4a", "aac", "flac" -> androidx.compose.material.icons.Icons.Default.VolumeUp
+                                        "pdf" -> androidx.compose.material.icons.Icons.Default.PictureAsPdf
+                                        else -> androidx.compose.material.icons.Icons.Default.AttachFile
+                                    },
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(28.dp)
+                                )
+                                Spacer(modifier = Modifier.width(12.dp))
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = path.substringAfterLast("/"),
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        fontWeight = FontWeight.SemiBold
+                                    )
+                                    Text(
+                                        text = "Tap to open/download ${ext.uppercase()} file",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+                        }
+                    }
+
                     if (!block.caption.isNullOrBlank()) {
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(

@@ -1,5 +1,6 @@
 package tech.potluri.blog.data.remote
 
+import tech.potluri.blog.data.model.ArticlesResponse
 import tech.potluri.blog.data.model.AuthorResponse
 import tech.potluri.blog.data.model.AuthResponse
 import tech.potluri.blog.data.model.CreatePostRequest
@@ -7,16 +8,21 @@ import tech.potluri.blog.data.model.CreatePostResponse
 import tech.potluri.blog.data.model.LoginRequest
 import tech.potluri.blog.data.model.CommentResponse
 import tech.potluri.blog.data.model.CommentsResponse
+import tech.potluri.blog.data.model.MediaUploadResponse
 import tech.potluri.blog.data.model.PostResponse
 import tech.potluri.blog.data.model.PostsResponse
 import tech.potluri.blog.data.model.ReactionResponse
 import tech.potluri.blog.data.model.ShareResponse
+import tech.potluri.blog.data.model.SyndicationPlatformsResponse
 import tech.potluri.blog.data.model.TagsResponse
+import okhttp3.MultipartBody
 import retrofit2.http.Field
 import retrofit2.http.Body
 import retrofit2.http.FormUrlEncoded
 import retrofit2.http.GET
+import retrofit2.http.Multipart
 import retrofit2.http.POST
+import retrofit2.http.Part
 import retrofit2.http.Path
 import retrofit2.http.Query
 import retrofit2.Response
@@ -33,6 +39,16 @@ interface BlogApiService {
 
     @POST("api/v1/posts")
     suspend fun createPost(@Body request: CreatePostRequest): Response<CreatePostResponse>
+
+    @Multipart
+    @POST("api/v1/media")
+    suspend fun uploadMedia(@Part file: MultipartBody.Part): Response<MediaUploadResponse>
+
+    @GET("api/v1/syndication/platforms")
+    suspend fun getSyndicationPlatforms(@Query("kind") kind: String = "post"): SyndicationPlatformsResponse
+
+    @GET("api/v1/articles")
+    suspend fun getArticles(): ArticlesResponse
 
     @GET("api/v1/posts")
     suspend fun getPosts(

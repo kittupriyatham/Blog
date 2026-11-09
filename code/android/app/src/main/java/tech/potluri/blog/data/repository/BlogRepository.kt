@@ -14,6 +14,9 @@ import tech.potluri.blog.data.model.TagItem
 import tech.potluri.blog.data.remote.BlogApiService
 import tech.potluri.blog.data.remote.NetworkModule
 
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
+import okhttp3.RequestBody.Companion.toRequestBody
+
 class BlogRepository(
     private val api: BlogApiService = NetworkModule.api
 ) {
@@ -36,13 +39,17 @@ class BlogRepository(
         content: String,
         title: String? = null,
         type: String = "post",
-        tags: List<String> = emptyList()
+        tags: List<String> = emptyList(),
+        mediaPaths: List<String> = emptyList(),
+        platforms: List<String> = emptyList()
     ): Result<Post> = requestResponse {
         api.createPost(tech.potluri.blog.data.model.CreatePostRequest(
             content = content,
             title = title,
             type = type,
-            tags = tags
+            tags = tags,
+            media_paths = mediaPaths,
+            platforms = platforms
         ))
     }.fold(
         onSuccess = { response ->
@@ -51,6 +58,23 @@ class BlogRepository(
         },
         onFailure = { Result.failure(it) }
     )
+
+    suspend fun fetchSyndicationPlatforms(kind: String = "post"): Result<List<tech.potluri.blog.data.model.SyndicationPlatform>> =
+        request { api.getSyndicationPlatforms(kind).platforms }
+
+    suspend fun fetchArticles(): Result<List<Post>> =
+        request { api.getArticles().articles }
+
+    suspend fun uploadMedia(
+        fileName: String,
+        mimeType: String,
+        bytes: ByteArray
+    ): Result<tech.potluri.blog.data.model.MediaUploadResponse> = requestResponse {
+        val mediaType = mimeType.toMediaTypeOrNull() ?: "application/octet-stream".toMediaTypeOrNull()
+        val requestBody = bytes.toRequestBody(mediaType)
+        val part = okhttp3.MultipartBody.Part.createFormData("file", fileName, requestBody)
+        api.uploadMedia(part)
+    }
 
     suspend fun fetchPosts(
         page: Int,
