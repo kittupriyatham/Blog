@@ -91,3 +91,14 @@ If you are running the backend locally on your computer:
 
 ### 3. Run the App
 Select an Android Virtual Device (API 24+) or connect a physical device via USB, then click **Run 'app'** (`Shift + F10`).
+
+## 📦 Download a CI Build
+
+Push a tag matching `android-v*` to build the debug APK and publish it as a downloadable asset on a GitHub Release:
+
+```bash
+git tag android-v1.0.0
+git push origin android-v1.0.0
+```
+
+The APK will be attached to the corresponding release under the repository's **Releases** page.
