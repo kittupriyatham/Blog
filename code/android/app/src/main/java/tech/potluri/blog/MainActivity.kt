@@ -6,12 +6,14 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AdminPanelSettings
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.RssFeed
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
@@ -26,6 +28,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import tech.potluri.blog.ui.author.AuthorScreen
 import tech.potluri.blog.ui.author.AuthorViewModel
@@ -103,52 +106,108 @@ fun BlogApp(
     Scaffold(
         bottomBar = {
             if (showBottomBar) {
-                NavigationBar(
-                    containerColor = MaterialTheme.colorScheme.surface,
-                    contentColor = MaterialTheme.colorScheme.primary
-                ) {
-                    NavigationBarItem(
-                        selected = currentTab == Screen.Feed.route,
-                        onClick = {
-                            selectedPostId = null
-                            currentTab = Screen.Feed.route
-                        },
-                        icon = { Icon(Icons.Default.RssFeed, contentDescription = "Feed") },
-                        label = { Text("Feed") },
-                        colors = NavigationBarItemDefaults.colors(
-                            selectedIconColor = MaterialTheme.colorScheme.primary,
-                            indicatorColor = MaterialTheme.colorScheme.primaryContainer
-                        )
+                val navItemColors = NavigationBarItemDefaults.colors(
+                    selectedIconColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                    selectedTextColor = MaterialTheme.colorScheme.primary,
+                    indicatorColor = MaterialTheme.colorScheme.primaryContainer,
+                    unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                    unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Column {
+                    HorizontalDivider(
+                        thickness = 1.dp,
+                        color = MaterialTheme.colorScheme.surfaceVariant
                     )
+                    NavigationBar(
+                        containerColor = MaterialTheme.colorScheme.surface,
+                        contentColor = MaterialTheme.colorScheme.onSurface,
+                        tonalElevation = 0.dp
+                    ) {
+                        NavigationBarItem(
+                            selected = currentTab == Screen.Feed.route,
+                            onClick = {
+                                selectedPostId = null
+                                currentTab = Screen.Feed.route
+                            },
+                            icon = {
+                                Icon(
+                                    imageVector = Icons.Default.RssFeed,
+                                    contentDescription = "Feed",
+                                    tint = if (currentTab == Screen.Feed.route)
+                                        MaterialTheme.colorScheme.onPrimaryContainer
+                                    else
+                                        MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            },
+                            label = {
+                                Text(
+                                    "Feed",
+                                    color = if (currentTab == Screen.Feed.route)
+                                        MaterialTheme.colorScheme.primary
+                                    else
+                                        MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            },
+                            colors = navItemColors
+                        )
 
-                    NavigationBarItem(
-                        selected = currentTab == Screen.Admin.route,
-                        onClick = {
-                            selectedPostId = null
-                            currentTab = Screen.Admin.route
-                        },
-                        icon = { Icon(Icons.Default.AdminPanelSettings, contentDescription = "Admin") },
-                        label = { Text("Admin") },
-                        colors = NavigationBarItemDefaults.colors(
-                            selectedIconColor = MaterialTheme.colorScheme.primary,
-                            indicatorColor = MaterialTheme.colorScheme.primaryContainer
+                        NavigationBarItem(
+                            selected = currentTab == Screen.Admin.route,
+                            onClick = {
+                                selectedPostId = null
+                                currentTab = Screen.Admin.route
+                            },
+                            icon = {
+                                Icon(
+                                    imageVector = Icons.Default.AdminPanelSettings,
+                                    contentDescription = "Admin",
+                                    tint = if (currentTab == Screen.Admin.route)
+                                        MaterialTheme.colorScheme.onPrimaryContainer
+                                    else
+                                        MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            },
+                            label = {
+                                Text(
+                                    "Admin",
+                                    color = if (currentTab == Screen.Admin.route)
+                                        MaterialTheme.colorScheme.primary
+                                    else
+                                        MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            },
+                            colors = navItemColors
                         )
-                    )
 
-                    NavigationBarItem(
-                        selected = currentTab == Screen.Author.route,
-                        onClick = {
-                            selectedPostId = null
-                            authorViewModel.ensureLoaded()
-                            currentTab = Screen.Author.route
-                        },
-                        icon = { Icon(Icons.Default.Person, contentDescription = "About") },
-                        label = { Text("About") },
-                        colors = NavigationBarItemDefaults.colors(
-                            selectedIconColor = MaterialTheme.colorScheme.primary,
-                            indicatorColor = MaterialTheme.colorScheme.primaryContainer
+                        NavigationBarItem(
+                            selected = currentTab == Screen.Author.route,
+                            onClick = {
+                                selectedPostId = null
+                                authorViewModel.ensureLoaded()
+                                currentTab = Screen.Author.route
+                            },
+                            icon = {
+                                Icon(
+                                    imageVector = Icons.Default.Person,
+                                    contentDescription = "About",
+                                    tint = if (currentTab == Screen.Author.route)
+                                        MaterialTheme.colorScheme.onPrimaryContainer
+                                    else
+                                        MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            },
+                            label = {
+                                Text(
+                                    "About",
+                                    color = if (currentTab == Screen.Author.route)
+                                        MaterialTheme.colorScheme.primary
+                                    else
+                                        MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            },
+                            colors = navItemColors
                         )
-                    )
+                    }
                 }
             }
         }

@@ -1,5 +1,7 @@
 package tech.potluri.blog
 
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
@@ -207,8 +209,20 @@ class NavigationTest {
         val authorVm = AuthorViewModel(repo)
 
         composeTestRule.setContent {
-            BlogTheme {
+            var mode by androidx.compose.runtime.remember {
+                androidx.compose.runtime.mutableStateOf(tech.potluri.blog.ui.theme.AppThemeMode.DARK)
+            }
+            BlogTheme(themeMode = mode) {
                 BlogApp(
+                    currentThemeMode = mode,
+                    onThemeModeChanged = { mode = it },
+                    onToggleTheme = {
+                        mode = when (mode) {
+                            tech.potluri.blog.ui.theme.AppThemeMode.LIGHT -> tech.potluri.blog.ui.theme.AppThemeMode.DARK
+                            tech.potluri.blog.ui.theme.AppThemeMode.DARK -> tech.potluri.blog.ui.theme.AppThemeMode.NIGHT
+                            tech.potluri.blog.ui.theme.AppThemeMode.NIGHT -> tech.potluri.blog.ui.theme.AppThemeMode.LIGHT
+                        }
+                    },
                     feedViewModel = feedVm,
                     authViewModel = authVm,
                     authorViewModel = authorVm
@@ -277,12 +291,30 @@ class NavigationTest {
         composeTestRule.onNodeWithText("About Author").assertIsDisplayed()
         composeTestRule.onNodeWithText("Potluri Krishna Priyatham").assertIsDisplayed()
 
-        // 7. Test Theme Appearance switching (Light, Dark, Night) in About screen
+        // 7. Test Theme Appearance switching (Light, Dark, Night) in About screen & verify icons in Night Mode
         composeTestRule.onNodeWithText("Appearance & Theme").assertIsDisplayed()
         composeTestRule.onNodeWithText("Light").performClick()
         composeTestRule.waitForIdle()
         composeTestRule.onNodeWithText("Night").performClick()
         composeTestRule.waitForIdle()
+
+        // Verify Feed, Admin, and About bottom navigation icons are displayed in Night Mode
+        composeTestRule.onNodeWithContentDescription("Feed", useUnmergedTree = true).assertIsDisplayed()
+        composeTestRule.onNodeWithContentDescription("Admin", useUnmergedTree = true).assertIsDisplayed()
+        composeTestRule.onNodeWithContentDescription("About", useUnmergedTree = true).assertIsDisplayed()
+
+        // Navigate across tabs in Night Mode and assert icons remain displayed
+        clickBottomTab("Feed")
+        composeTestRule.onNodeWithContentDescription("Feed", useUnmergedTree = true).assertIsDisplayed()
+        composeTestRule.onNodeWithContentDescription("Admin", useUnmergedTree = true).assertIsDisplayed()
+        composeTestRule.onNodeWithContentDescription("About", useUnmergedTree = true).assertIsDisplayed()
+
+        clickBottomTab("Admin")
+        composeTestRule.onNodeWithContentDescription("Feed", useUnmergedTree = true).assertIsDisplayed()
+        composeTestRule.onNodeWithContentDescription("Admin", useUnmergedTree = true).assertIsDisplayed()
+        composeTestRule.onNodeWithContentDescription("About", useUnmergedTree = true).assertIsDisplayed()
+
+        clickBottomTab("About")
         composeTestRule.onNodeWithText("Dark").performClick()
         composeTestRule.waitForIdle()
 

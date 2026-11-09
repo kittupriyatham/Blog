@@ -373,7 +373,12 @@ fun AuthScreen(
                                     )
                                 },
                                 leadingIcon = {
-                                    Icon(Icons.Default.AttachFile, contentDescription = null, modifier = Modifier.size(16.dp))
+                                    Icon(
+                                        Icons.Default.AttachFile,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.size(16.dp)
+                                    )
                                 },
                                 label = { Text("Upload File") }
                             )
@@ -386,7 +391,12 @@ fun AuthScreen(
                                     showArticlePicker = true
                                 },
                                 leadingIcon = {
-                                    Icon(Icons.Default.Article, contentDescription = null, modifier = Modifier.size(16.dp))
+                                    Icon(
+                                        Icons.Default.Article,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.size(16.dp)
+                                    )
                                 },
                                 label = { Text("Attach Article") }
                             )
@@ -396,7 +406,12 @@ fun AuthScreen(
                                 selected = false,
                                 onClick = { showPostPicker = true },
                                 leadingIcon = {
-                                    Icon(Icons.Default.DynamicFeed, contentDescription = null, modifier = Modifier.size(16.dp))
+                                    Icon(
+                                        Icons.Default.DynamicFeed,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.size(16.dp)
+                                    )
                                 },
                                 label = { Text("Attach Post") }
                             )
@@ -406,7 +421,12 @@ fun AuthScreen(
                                 selected = false,
                                 onClick = { viewModel.appendSnippet("```\n\n```") },
                                 leadingIcon = {
-                                    Icon(Icons.Default.Code, contentDescription = null, modifier = Modifier.size(16.dp))
+                                    Icon(
+                                        Icons.Default.Code,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.size(16.dp)
+                                    )
                                 },
                                 label = { Text("Code") }
                             )
@@ -416,7 +436,12 @@ fun AuthScreen(
                                 selected = false,
                                 onClick = { showBlocksSheet = true },
                                 leadingIcon = {
-                                    Icon(Icons.Default.Widgets, contentDescription = null, modifier = Modifier.size(16.dp))
+                                    Icon(
+                                        Icons.Default.Widgets,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.size(16.dp)
+                                    )
                                 },
                                 label = { Text("Insert Block") }
                             )
@@ -478,7 +503,12 @@ fun AuthScreen(
                                                 onClick = { viewModel.removeAttachedMedia(item.url) },
                                                 modifier = Modifier.size(24.dp)
                                             ) {
-                                                Icon(Icons.Default.Close, contentDescription = "Remove", modifier = Modifier.size(16.dp))
+                                                Icon(
+                                                    Icons.Default.Close,
+                                                    contentDescription = "Remove",
+                                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                    modifier = Modifier.size(16.dp)
+                                                )
                                             }
                                         }
                                     }

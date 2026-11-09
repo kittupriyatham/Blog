@@ -98,7 +98,11 @@ fun FeedScreen(
                                 viewModel.onSearchQueryChanged("")
                                 viewModel.onSearchSubmitted()
                             }) {
-                                Icon(imageVector = Icons.Default.Close, contentDescription = "Clear")
+                                Icon(
+                                    imageVector = Icons.Default.Close,
+                                    contentDescription = "Clear",
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
                             }
                         } else {
                             IconButton(onClick = { viewModel.loadFeed(refresh = true) }) {

@@ -42,19 +42,22 @@ private val DarkColorScheme = darkColorScheme(
     onSurfaceVariant = Slate200
 )
 
-// 3. Night Mode: Pure OLED/AMOLED Pitch Black (True black #000000 background & surface)
+// 3. Night Mode: Pure OLED/AMOLED Pitch Black (True black #000000 background & high-contrast icons)
 private val NightColorScheme = darkColorScheme(
     primary = Brand400,
     onPrimary = Color.White,
-    primaryContainer = Color(0xFF1E1B4B),
-    onPrimaryContainer = Brand100,
+    primaryContainer = Brand700,
+    onPrimaryContainer = Color.White,
     secondary = Brand400,
+    onSecondary = Color.White,
+    secondaryContainer = Color(0xFF1E293B),
+    onSecondaryContainer = Color(0xFFF1F5F9),
     background = Color(0xFF000000),
     surface = Color(0xFF0A0A0A),
-    surfaceVariant = Color(0xFF171717),
-    onBackground = Color(0xFFF5F5F5),
-    onSurface = Color(0xFFF5F5F5),
-    onSurfaceVariant = Color(0xFFA3A3A3)
+    surfaceVariant = Color(0xFF1E293B),
+    onBackground = Color(0xFFF8FAFC),
+    onSurface = Color(0xFFF8FAFC),
+    onSurfaceVariant = Color(0xFFE2E8F0)
 )
 
 @Composable
