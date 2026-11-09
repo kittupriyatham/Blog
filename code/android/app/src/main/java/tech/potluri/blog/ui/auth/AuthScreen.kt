@@ -34,8 +34,25 @@ fun AuthScreen(
     var username by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
 
-    if (state.user != null) {
-        LaunchedEffect(state.user) { onSignedIn() }
+    LaunchedEffect(state.loginSucceeded) {
+        if (state.loginSucceeded) {
+            viewModel.consumeLoginSuccess()
+            onSignedIn()
+        }
+    }
+
+    state.user?.let { user ->
+        Column(
+            modifier = Modifier.fillMaxSize().padding(24.dp),
+            verticalArrangement = Arrangement.Center
+        ) {
+            Text("Signed in as ${user.username}", style = MaterialTheme.typography.headlineMedium)
+            Text(if (user.is_demo) "Publisher demo" else "Admin")
+            Button(onClick = { viewModel.logout() }, enabled = !state.isLoading) {
+                Text("Sign out")
+            }
+            state.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+        }
         return
     }
 

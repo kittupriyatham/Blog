@@ -282,6 +282,7 @@ fun DetailScreen(
                     isLoading = uiState.isCommentsLoading,
                     error = uiState.commentsError,
                     onDismiss = { showCommentSheet = false },
+                    onRetry = { viewModel.loadComments(postId) },
                     onSubmitComment = { name, body ->
                         viewModel.addComment(postId, name, body)
                     }

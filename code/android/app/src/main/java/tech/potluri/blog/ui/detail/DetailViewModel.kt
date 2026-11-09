@@ -26,7 +26,10 @@ class DetailViewModel(
     private val _uiState = MutableStateFlow(DetailUiState())
     val uiState: StateFlow<DetailUiState> = _uiState.asStateFlow()
 
+    private var reactionRequest = 0L
+
     fun loadPost(postId: String) {
+        reactionRequest++
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
             repository.fetchPostDetail(postId).fold(
@@ -81,9 +84,12 @@ class DetailViewModel(
 
     fun react(reactionType: String) {
         val postId = _uiState.value.post?.post_id ?: return
+        val request = ++reactionRequest
         viewModelScope.launch {
             repository.submitReaction(postId, reactionType).onSuccess { response ->
-                _uiState.value.post?.let { currentPost ->
+                _uiState.value.post?.takeIf {
+                    it.post_id == postId && request == reactionRequest
+                }?.let { currentPost ->
                     _uiState.value = _uiState.value.copy(
                         post = currentPost.copy(
                             reactions = response.reactions,

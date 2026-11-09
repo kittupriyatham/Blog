@@ -48,6 +48,7 @@ fun CommentSheet(
     isLoading: Boolean,
     error: String?,
     onDismiss: () -> Unit,
+    onRetry: () -> Unit,
     onSubmitComment: suspend (name: String, body: String) -> Boolean
 ) {
     var name by remember { mutableStateOf("") }
@@ -83,20 +84,23 @@ fun CommentSheet(
                 ) {
                     CircularProgressIndicator(modifier = Modifier.width(32.dp))
                 }
-            } else if (error != null) {
+            }
+            if (error != null) {
                 Text(
-                    text = error,
+                    text = "$error The full comment list may not have loaded.",
                     color = MaterialTheme.colorScheme.error,
                     modifier = Modifier.padding(vertical = 24.dp)
                 )
-            } else if (comments.isEmpty()) {
+                Button(onClick = onRetry, enabled = !isLoading) { Text("Retry") }
+            }
+            if (!isLoading && error == null && comments.isEmpty()) {
                 Text(
                     text = "No comments yet. Be the first to share your thoughts!",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(vertical = 24.dp)
                 )
-            } else {
+            } else if (comments.isNotEmpty()) {
                 LazyColumn(
                     modifier = Modifier
                         .fillMaxWidth()
