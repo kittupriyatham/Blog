@@ -20,7 +20,7 @@ class BlogRepository(
         requestResponse { api.login(LoginRequest(username, password)) }
 
     suspend fun logout(): Result<Unit> =
-        requestResponse { api.logout() }
+        requestResponse { api.logout() }.map { Unit }
 
     suspend fun fetchPosts(
         page: Int,
