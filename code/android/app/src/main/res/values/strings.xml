@@ -12,4 +12,11 @@
     <string name="no_posts">No posts found</string>
     <string name="retry">Retry</string>
     <string name="error_loading">Unable to load content. Please check your connection.</string>
+    <string name="asset_statements" translatable="false">[{
+        \"relation\": [\"delegate_permission/common.handle_all_urls\", \"delegate_permission/common.get_login_creds\"],
+        \"target\": {
+            \"namespace\": \"web\",
+            \"site\": \"https://blog.potluri-krishna-priyatham.tech\"
+        }
+    }]</string>
 </resources>

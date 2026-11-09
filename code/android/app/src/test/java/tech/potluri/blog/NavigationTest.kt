@@ -256,11 +256,16 @@ class NavigationTest {
         clickBottomTab("About")
         composeTestRule.onNodeWithText("About Author").assertIsDisplayed()
 
-        // 5. About -> Admin -> Sign in with real account credentials
+        // 5. About -> Admin -> Sign in with real account credentials & save password
         clickBottomTab("Admin")
         composeTestRule.onNodeWithText("Username").performTextInput("kittu")
         composeTestRule.onNodeWithText("Password").performTextInput("secret")
-        composeTestRule.onNodeWithText("Sign In").performClick()
+        // Verify show/hide password toggle works
+        composeTestRule.onNodeWithContentDescription("Show password").performClick()
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithContentDescription("Hide password").performClick()
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithText("Sign In & Save Password").performClick()
         composeTestRule.waitForIdle()
 
         composeTestRule.onNodeWithText("Publisher Studio").assertIsDisplayed()
@@ -271,6 +276,15 @@ class NavigationTest {
         composeTestRule.onNodeWithText("Insert Block").assertIsDisplayed()
         composeTestRule.onNodeWithText("Syndicate to (POSSE)").assertIsDisplayed()
         composeTestRule.onNodeWithText("LinkedIn (3000ch)").assertIsDisplayed()
+
+        // 5b. Sign out and verify saved password appears and works via "Use Google Passwords (kittu)"
+        composeTestRule.onNodeWithText("Sign out").performClick()
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithText("Use Google Passwords (kittu)").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Sign in as kittu").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Use Google Passwords (kittu)").performClick()
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithText("Publisher Studio").assertIsDisplayed()
 
         // Select syndication platform
         composeTestRule.onNodeWithText("LinkedIn (3000ch)").performClick()
@@ -323,7 +337,7 @@ class NavigationTest {
         composeTestRule.waitForIdle()
         composeTestRule.onNodeWithText("Search posts & articles…").assertIsDisplayed()
 
-        // 8. Publish the post from Admin with embedded article and verify it appears on Feed
+        // 9. Publish the post from Admin with embedded article and verify it appears on Feed
         clickBottomTab("Admin")
         composeTestRule.onNodeWithText("Publish").performScrollTo().performClick()
         composeTestRule.waitForIdle()

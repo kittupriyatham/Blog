@@ -1,6 +1,8 @@
 package tech.potluri.blog.ui.auth
 
 import android.app.Activity
+import android.content.Context
+import android.content.ContextWrapper
 import android.net.Uri
 import android.provider.OpenableColumns
 import android.widget.Toast
@@ -43,6 +45,8 @@ import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PostAdd
 import androidx.compose.material.icons.filled.RssFeed
 import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material.icons.filled.Widgets
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -78,13 +82,21 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.autofill.AutofillNode
 import androidx.compose.ui.autofill.AutofillType
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.boundsInWindow
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.platform.LocalAutofill
+import androidx.compose.ui.platform.LocalAutofillTree
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -100,6 +112,12 @@ import coil.compose.AsyncImage
 import kotlinx.coroutines.launch
 import tech.potluri.blog.BuildConfig
 import tech.potluri.blog.data.model.Post
+
+private tailrec fun Context.findActivity(): Activity? = when (this) {
+    is Activity -> this
+    is ContextWrapper -> baseContext.findActivity()
+    else -> null
+}
 
 // 14 Rich Text Block Snippets matching static/js/blocks.js and templates/_rich_blocks_menu.html
 val RICH_TEXT_BLOCKS = listOf(
@@ -134,9 +152,11 @@ fun AuthScreen(
     val state by viewModel.uiState.collectAsState()
     var username by rememberSaveable { mutableStateOf("") }
     var password by rememberSaveable { mutableStateOf("") }
+    var passwordVisible by rememberSaveable { mutableStateOf(false) }
     var pendingPasswordToSave by remember { mutableStateOf<Pair<String, String>?>(null) }
+    var savedVaultAccounts by remember { mutableStateOf(CredentialVault.getSavedCredentials(context)) }
+    var showSavedCredentialsDialog by remember { mutableStateOf(false) }
 
-    val postTitle = state.draftTitle
     val postContent = state.draftContent
     val postTags = state.draftTags
 
@@ -146,6 +166,18 @@ fun AuthScreen(
     var showPostPicker by remember { mutableStateOf(false) }
 
     val blocksSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+
+    // Refresh vault accounts whenever user logs out / returns to unauthenticated state
+    LaunchedEffect(state.user) {
+        if (state.user == null) {
+            val accounts = CredentialVault.getSavedCredentials(context)
+            savedVaultAccounts = accounts
+            if (username.isBlank() && password.isBlank() && accounts.size == 1) {
+                username = accounts.first().username
+                password = accounts.first().password
+            }
+        }
+    }
 
     // File picker launcher for all supported attachment types
     val filePickerLauncher = rememberLauncherForActivityResult(
@@ -171,21 +203,29 @@ fun AuthScreen(
         }
     }
 
-    // Google Password Manager: Save password prompt after successful login
+    // Google Password Manager + Encrypted Vault: Save password after successful login
     LaunchedEffect(state.loginSucceeded) {
         if (state.loginSucceeded) {
-            val creds = pendingPasswordToSave
-            if (creds != null && creds.first.isNotBlank() && creds.second.isNotBlank() && creds.first != "demo") {
-                if (context is Activity) {
+            val creds = pendingPasswordToSave ?: Pair(username.trim(), password)
+            if (creds.first.isNotBlank() && creds.second.isNotBlank() && !creds.first.equals("demo", ignoreCase = true)) {
+                // 1. Always persist to hardware-backed EncryptedSharedPreferences vault so it is immediately available
+                CredentialVault.saveCredential(context, creds.first, creds.second)
+                savedVaultAccounts = CredentialVault.getSavedCredentials(context)
+
+                // 2. Also prompt Google Password Manager via Android CredentialManager
+                val activity = context.findActivity()
+                if (activity != null) {
                     try {
                         val saveRequest = CreatePasswordRequest(id = creds.first, password = creds.second)
-                        credentialManager.createCredential(context, saveRequest)
+                        credentialManager.createCredential(activity, saveRequest)
                     } catch (e: CreateCredentialException) {
-                        // User cancelled or saving not available
+                        // User dismissed or Google Play Services deferred to EncryptedVault
+                    } catch (e: Exception) {
+                        // Ignore unexpected provider errors
                     }
                 }
-                pendingPasswordToSave = null
             }
+            pendingPasswordToSave = null
             viewModel.consumeLoginSuccess()
             onSignedIn()
         }
@@ -700,7 +740,24 @@ fun AuthScreen(
                     }
                 }
             } else {
-                // --- Unauthenticated Sign-in Card with Google Password Manager ---
+                // --- Unauthenticated Sign-in Card with Google Password Manager & Encrypted Vault ---
+                val autofill = LocalAutofill.current
+                val autofillTree = LocalAutofillTree.current
+                val usernameAutofillNode = remember {
+                    AutofillNode(
+                        autofillTypes = listOf(AutofillType.Username, AutofillType.EmailAddress),
+                        onFill = { username = it }
+                    )
+                }
+                val passwordAutofillNode = remember {
+                    AutofillNode(
+                        autofillTypes = listOf(AutofillType.Password),
+                        onFill = { password = it }
+                    )
+                }
+                autofillTree += usernameAutofillNode
+                autofillTree += passwordAutofillNode
+
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     colors = CardDefaults.cardColors(
@@ -734,26 +791,49 @@ fun AuthScreen(
 
                         Spacer(Modifier.height(20.dp))
 
-                        // Google Password Manager Retrieve Button
+                        // Google Password Manager + Saved Vault Retrieve Button
                         Button(
                             onClick = {
-                                if (context is Activity) {
-                                    coroutineScope.launch {
+                                coroutineScope.launch {
+                                    var handledByGoogle = false
+                                    val activity = context.findActivity()
+                                    if (activity != null) {
                                         try {
                                             val getRequest = GetCredentialRequest(listOf(GetPasswordOption()))
-                                            val result = credentialManager.getCredential(context, getRequest)
+                                            val result = credentialManager.getCredential(activity, getRequest)
                                             val credential = result.credential
                                             if (credential is PasswordCredential) {
+                                                handledByGoogle = true
                                                 username = credential.id
                                                 password = credential.password
                                                 pendingPasswordToSave = Pair(credential.id, credential.password)
+                                                CredentialVault.saveCredential(context, credential.id, credential.password)
+                                                savedVaultAccounts = CredentialVault.getSavedCredentials(context)
                                                 viewModel.login(credential.id, credential.password)
                                             }
                                         } catch (e: GetCredentialException) {
+                                            // Fall through to Encrypted CredentialVault if Google Play Services has no matching cert/domain entry
+                                        } catch (e: Exception) {
+                                            // Fall through to Encrypted CredentialVault
+                                        }
+                                    }
+
+                                    if (!handledByGoogle) {
+                                        val vaultAccounts = CredentialVault.getSavedCredentials(context)
+                                        savedVaultAccounts = vaultAccounts
+                                        if (vaultAccounts.size == 1) {
+                                            val acc = vaultAccounts.first()
+                                            username = acc.username
+                                            password = acc.password
+                                            pendingPasswordToSave = Pair(acc.username, acc.password)
+                                            viewModel.login(acc.username, acc.password)
+                                        } else if (vaultAccounts.size > 1) {
+                                            showSavedCredentialsDialog = true
+                                        } else {
                                             Toast.makeText(
                                                 context,
-                                                "No saved Google password selected",
-                                                Toast.LENGTH_SHORT
+                                                "No saved password found yet. Sign in once below and your password will be saved automatically!",
+                                                Toast.LENGTH_LONG
                                             ).show()
                                         }
                                     }
@@ -764,7 +844,43 @@ fun AuthScreen(
                         ) {
                             Icon(Icons.Default.Key, contentDescription = null, modifier = Modifier.size(18.dp))
                             Spacer(Modifier.width(8.dp))
-                            Text("Use Google Passwords")
+                            Text(
+                                if (savedVaultAccounts.isNotEmpty())
+                                    "Use Google Passwords (${savedVaultAccounts.first().username})"
+                                else
+                                    "Use Google Passwords"
+                            )
+                        }
+
+                        // Saved accounts quick chips when available
+                        if (savedVaultAccounts.isNotEmpty()) {
+                            Spacer(Modifier.height(10.dp))
+                            FlowRow(
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                verticalArrangement = Arrangement.spacedBy(6.dp),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                savedVaultAccounts.forEach { acc ->
+                                    FilterChip(
+                                        selected = username == acc.username && password == acc.password,
+                                        onClick = {
+                                            username = acc.username
+                                            password = acc.password
+                                            pendingPasswordToSave = Pair(acc.username, acc.password)
+                                            viewModel.login(acc.username, acc.password)
+                                        },
+                                        leadingIcon = {
+                                            Icon(
+                                                Icons.Default.Key,
+                                                contentDescription = null,
+                                                tint = MaterialTheme.colorScheme.primary,
+                                                modifier = Modifier.size(16.dp)
+                                            )
+                                        },
+                                        label = { Text("Sign in as ${acc.username}") }
+                                    )
+                                }
+                            }
                         }
 
                         Spacer(Modifier.height(16.dp))
@@ -790,30 +906,70 @@ fun AuthScreen(
                             onValueChange = { username = it },
                             label = { Text("Username") },
                             singleLine = true,
-                            modifier = Modifier.fillMaxWidth(),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .onGloballyPositioned { usernameAutofillNode.boundingBox = it.boundsInWindow() }
+                                .onFocusChanged { focusState ->
+                                    autofill?.run {
+                                        if (focusState.isFocused) {
+                                            requestAutofillForNode(usernameAutofillNode)
+                                        } else {
+                                            cancelAutofillForNode(usernameAutofillNode)
+                                        }
+                                    }
+                                },
                             shape = RoundedCornerShape(12.dp)
                         )
 
                         Spacer(Modifier.height(12.dp))
 
-                        // Autofill-enabled Password
+                        // Autofill-enabled Password with Show/Hide toggle
                         OutlinedTextField(
                             value = password,
                             onValueChange = { password = it },
                             label = { Text("Password") },
-                            visualTransformation = PasswordVisualTransformation(),
+                            visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                            trailingIcon = {
+                                IconButton(onClick = { passwordVisible = !passwordVisible }) {
+                                    Icon(
+                                        imageVector = if (passwordVisible) Icons.Default.VisibilityOff else Icons.Default.Visibility,
+                                        contentDescription = if (passwordVisible) "Hide password" else "Show password",
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            },
                             singleLine = true,
-                            modifier = Modifier.fillMaxWidth(),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .onGloballyPositioned { passwordAutofillNode.boundingBox = it.boundsInWindow() }
+                                .onFocusChanged { focusState ->
+                                    autofill?.run {
+                                        if (focusState.isFocused) {
+                                            requestAutofillForNode(passwordAutofillNode)
+                                        } else {
+                                            cancelAutofillForNode(passwordAutofillNode)
+                                        }
+                                    }
+                                },
                             shape = RoundedCornerShape(12.dp),
-                            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done)
+                            keyboardOptions = KeyboardOptions(
+                                keyboardType = KeyboardType.Password,
+                                imeAction = ImeAction.Done
+                            )
                         )
 
                         Spacer(Modifier.height(20.dp))
 
                         Button(
                             onClick = {
-                                pendingPasswordToSave = Pair(username.trim(), password)
-                                viewModel.login(username, password)
+                                val cleanUser = username.trim()
+                                pendingPasswordToSave = Pair(cleanUser, password)
+                                if (cleanUser.isNotBlank() && password.isNotBlank() && !cleanUser.equals("demo", ignoreCase = true)) {
+                                    // Pre-save to encrypted vault on login attempt so even if the user navigates away immediately after login, it is stored
+                                    CredentialVault.saveCredential(context, cleanUser, password)
+                                    savedVaultAccounts = CredentialVault.getSavedCredentials(context)
+                                }
+                                viewModel.login(cleanUser, password)
                             },
                             enabled = !state.isLoading,
                             modifier = Modifier.fillMaxWidth(),
@@ -828,7 +984,7 @@ fun AuthScreen(
                                 Spacer(Modifier.width(8.dp))
                                 Text("Signing in...")
                             } else {
-                                Text("Sign In")
+                                Text("Sign In & Save Password")
                             }
                         }
 
@@ -851,6 +1007,85 @@ fun AuthScreen(
                 }
             }
         }
+    }
+
+    // --- Saved Passwords Picker Dialog (when multiple accounts are saved) ---
+    if (showSavedCredentialsDialog) {
+        AlertDialog(
+            onDismissRequest = { showSavedCredentialsDialog = false },
+            title = {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        Icons.Default.Key,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(22.dp)
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Text("Saved Passwords", fontWeight = FontWeight.Bold)
+                }
+            },
+            text = {
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    savedVaultAccounts.forEach { acc ->
+                        Card(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    username = acc.username
+                                    password = acc.password
+                                    pendingPasswordToSave = Pair(acc.username, acc.password)
+                                    showSavedCredentialsDialog = false
+                                    viewModel.login(acc.username, acc.password)
+                                },
+                            colors = CardDefaults.cardColors(
+                                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                            ),
+                            shape = RoundedCornerShape(10.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(12.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(acc.username, fontWeight = FontWeight.SemiBold)
+                                    Text(
+                                        "••••••••",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                                IconButton(
+                                    onClick = {
+                                        CredentialVault.removeCredential(context, acc.username)
+                                        savedVaultAccounts = CredentialVault.getSavedCredentials(context)
+                                        if (savedVaultAccounts.isEmpty()) {
+                                            showSavedCredentialsDialog = false
+                                        }
+                                    }
+                                ) {
+                                    Icon(
+                                        Icons.Default.Close,
+                                        contentDescription = "Remove saved password",
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showSavedCredentialsDialog = false }) {
+                    Text("Close")
+                }
+            }
+        )
     }
 
     // --- Article Picker Dialog (Shows all published articles to embed) ---

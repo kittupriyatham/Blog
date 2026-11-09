@@ -2243,6 +2243,38 @@ def analytics_refresh_social():
                         "configured": configured, "errors": errors[:10]})
     return redirect(url_for("analytics_dashboard"))
 
+@app.route("/.well-known/assetlinks.json", methods=["GET"])
+def well_known_assetlinks():
+    """Serve Digital Asset Links so Google Password Manager & Android Autofill
+    associate saved web credentials for blog.potluri-krishna-priyatham.tech with
+    the tech.potluri.blog Android application."""
+    return jsonify([
+        {
+            "relation": [
+                "delegate_permission/common.handle_all_urls",
+                "delegate_permission/common.get_login_creds"
+            ],
+            "target": {
+                "namespace": "web",
+                "site": "https://blog.potluri-krishna-priyatham.tech"
+            }
+        },
+        {
+            "relation": [
+                "delegate_permission/common.handle_all_urls",
+                "delegate_permission/common.get_login_creds"
+            ],
+            "target": {
+                "namespace": "android_app",
+                "package_name": "tech.potluri.blog",
+                "sha256_cert_fingerprints": [
+                    "A6:5E:B3:19:60:F6:FD:15:A8:8B:A6:21:A0:F6:EE:34:87:BF:5A:16:96:52:A0:3A:1D:CD:79:4E:5C:F3:E9:69"
+                ]
+            }
+        }
+    ])
+
+
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", os.environ.get("FLASK_RUN_PORT", 5000)))
     app.run(host="127.0.0.1", port=port, debug=os.environ.get("FLASK_DEBUG", "0") == "1")

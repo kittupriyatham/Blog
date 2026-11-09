@@ -23,8 +23,18 @@ android {
         buildConfigField("String", "BASE_URL", "\"https://blog.potluri-krishna-priyatham.tech/\"")
     }
 
+    signingConfigs {
+        getByName("debug") {
+            storeFile = file("blog-signing.jks")
+            storePassword = "android"
+            keyAlias = "androiddebugkey"
+            keyPassword = "android"
+        }
+    }
+
     buildTypes {
         release {
+            signingConfig = signingConfigs.getByName("debug")
             isMinifyEnabled = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
@@ -32,6 +42,7 @@ android {
             )
         }
         debug {
+            signingConfig = signingConfigs.getByName("debug")
             // Can be configured for local testing against 10.0.2.2 (Android Emulator loopback)
             buildConfigField("String", "BASE_URL", "\"https://blog.potluri-krishna-priyatham.tech/\"")
         }
@@ -106,9 +117,10 @@ dependencies {
     // Coroutines
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
 
-    // Google Password Manager / Android Credential Manager
+    // Google Password Manager / Android Credential Manager & Encrypted Vault
     implementation("androidx.credentials:credentials:1.2.2")
     implementation("androidx.credentials:credentials-play-services-auth:1.2.2")
+    implementation("androidx.security:security-crypto:1.1.0-alpha06")
 
     // Testing
     testImplementation("junit:junit:4.13.2")
