@@ -2,6 +2,8 @@ package tech.potluri.blog.data.remote
 
 import tech.potluri.blog.data.model.AuthorResponse
 import tech.potluri.blog.data.model.AuthResponse
+import tech.potluri.blog.data.model.CreatePostRequest
+import tech.potluri.blog.data.model.CreatePostResponse
 import tech.potluri.blog.data.model.LoginRequest
 import tech.potluri.blog.data.model.CommentResponse
 import tech.potluri.blog.data.model.CommentsResponse
@@ -28,6 +30,9 @@ interface BlogApiService {
 
     @GET("api/v1/auth/me")
     suspend fun currentUser(): Response<AuthResponse>
+
+    @POST("api/v1/posts")
+    suspend fun createPost(@Body request: CreatePostRequest): Response<CreatePostResponse>
 
     @GET("api/v1/posts")
     suspend fun getPosts(

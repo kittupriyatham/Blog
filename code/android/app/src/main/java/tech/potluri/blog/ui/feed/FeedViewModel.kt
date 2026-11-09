@@ -90,8 +90,8 @@ class FeedViewModel(
     fun onTabSelected(index: Int) {
         if (_uiState.value.selectedTab != index) {
             _uiState.value = _uiState.value.copy(selectedTab = index)
-            loadFeed(refresh = true)
         }
+        loadFeed(refresh = true)
     }
 
     fun onTagSelected(tag: String?) {

@@ -281,3 +281,45 @@ def test_existing_web_routes_regression(client):
     res_author = client.get("/author")
     assert res_author.status_code == 200
     assert b"Potluri Krishna Priyatham" in res_author.data
+
+
+def test_create_post_unauthorized(client):
+    """Test POST /api/v1/posts rejects unauthenticated callers."""
+    res = client.post("/api/v1/posts", json={"content": "Hello unauth world"})
+    assert res.status_code == 401
+    assert res.get_json()["status"] == "error"
+
+
+def test_create_post_success(client):
+    """Test POST /api/v1/posts successfully creates a post when logged in."""
+    with client.session_transaction() as sess:
+        sess["logged_in"] = True
+        sess["username"] = "admin"
+        sess["is_demo"] = False
+
+    res = client.post("/api/v1/posts", json={
+        "title": "Mobile Announcement",
+        "content": "Posted straight from the Android app!",
+        "tags": ["mobile", "android"],
+        "type": "post"
+    })
+    assert res.status_code == 201
+    data = res.get_json()
+    assert data["status"] == "success"
+    assert data["post"]["title"] == "Mobile Announcement"
+    assert "Android app" in data["post"]["content"]
+    assert "mobile" in data["post"]["tags"]
+    assert data["post"]["type"] == "post"
+
+
+def test_create_post_empty_content(client):
+    """Test POST /api/v1/posts rejects empty content."""
+    with client.session_transaction() as sess:
+        sess["logged_in"] = True
+        sess["username"] = "admin"
+        sess["is_demo"] = False
+
+    res = client.post("/api/v1/posts", json={"content": "  "})
+    assert res.status_code == 400
+    assert res.get_json()["status"] == "error"
+
