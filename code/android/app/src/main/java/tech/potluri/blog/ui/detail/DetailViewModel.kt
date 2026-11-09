@@ -15,6 +15,7 @@ data class DetailUiState(
     val post: Post? = null,
     val comments: List<Comment> = emptyList(),
     val isCommentsLoading: Boolean = false,
+    val commentsError: String? = null,
     val error: String? = null
 )
 
@@ -45,18 +46,19 @@ class DetailViewModel(
 
     fun loadComments(postId: String) {
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isCommentsLoading = true)
+            _uiState.value = _uiState.value.copy(isCommentsLoading = true, commentsError = null)
             repository.fetchComments(postId).fold(
                 onSuccess = { comments ->
                     _uiState.value = _uiState.value.copy(
                         comments = comments,
-                        isCommentsLoading = false
+                        isCommentsLoading = false,
+                        commentsError = null
                     )
                 },
                 onFailure = { error ->
                     _uiState.value = _uiState.value.copy(
                         isCommentsLoading = false,
-                        error = error.localizedMessage ?: "Failed to load comments"
+                        commentsError = error.localizedMessage ?: "Failed to load comments"
                     )
                 }
             )

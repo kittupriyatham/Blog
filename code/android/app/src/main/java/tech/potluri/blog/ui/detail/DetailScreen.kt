@@ -280,6 +280,7 @@ fun DetailScreen(
                     sheetState = sheetState,
                     comments = uiState.comments,
                     isLoading = uiState.isCommentsLoading,
+                    error = uiState.commentsError,
                     onDismiss = { showCommentSheet = false },
                     onSubmitComment = { name, body ->
                         viewModel.addComment(postId, name, body)

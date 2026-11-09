@@ -6,6 +6,7 @@ import okhttp3.Cookie
 import okhttp3.CookieJar
 import okhttp3.HttpUrl
 import okhttp3.OkHttpClient
+import okhttp3.Interceptor
 import retrofit2.Retrofit
 import com.jakewharton.retrofit2.converter.kotlinx.serialization.asConverterFactory
 import tech.potluri.blog.BuildConfig
@@ -34,10 +35,23 @@ object NetworkModule {
         coerceInputValues = true
     }
 
+    private val mobileClientInterceptor = Interceptor { chain ->
+        chain.proceed(
+            chain.request().newBuilder()
+                .header("X-Mobile-Client", "blog-android")
+                .build()
+        )
+    }
+
     val api: BlogApiService by lazy {
         Retrofit.Builder()
             .baseUrl(BuildConfig.BASE_URL)
-            .client(OkHttpClient.Builder().cookieJar(sessionCookieJar).build())
+            .client(
+                OkHttpClient.Builder()
+                    .cookieJar(sessionCookieJar)
+                    .addInterceptor(mobileClientInterceptor)
+                    .build()
+            )
             .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
             .build()
             .create(BlogApiService::class.java)

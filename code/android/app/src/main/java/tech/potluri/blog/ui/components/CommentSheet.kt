@@ -46,6 +46,7 @@ fun CommentSheet(
     sheetState: SheetState,
     comments: List<Comment>,
     isLoading: Boolean,
+    error: String?,
     onDismiss: () -> Unit,
     onSubmitComment: suspend (name: String, body: String) -> Boolean
 ) {
@@ -82,6 +83,12 @@ fun CommentSheet(
                 ) {
                     CircularProgressIndicator(modifier = Modifier.width(32.dp))
                 }
+            } else if (error != null) {
+                Text(
+                    text = error,
+                    color = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.padding(vertical = 24.dp)
+                )
             } else if (comments.isEmpty()) {
                 Text(
                     text = "No comments yet. Be the first to share your thoughts!",

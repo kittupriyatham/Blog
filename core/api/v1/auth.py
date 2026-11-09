@@ -7,12 +7,18 @@ from flask import Blueprint, jsonify, request, session
 from core.config import ADMIN_PASSWORD, ADMIN_USERNAME
 
 auth_bp = Blueprint("api_v1_auth", __name__)
+MOBILE_CLIENT_HEADER = "X-Mobile-Client"
+MOBILE_CLIENT_VALUE = "blog-android"
 
 
 def _credentials(data):
     username = str(data.get("username") or "").strip()
     password = str(data.get("password") or "").strip()
     return username, password
+
+
+def _mobile_request():
+    return request.headers.get(MOBILE_CLIENT_HEADER) == MOBILE_CLIENT_VALUE
 
 
 def _set_session(username, is_demo):
@@ -24,14 +30,18 @@ def _set_session(username, is_demo):
 
 @auth_bp.route("/auth/login", methods=["POST"])
 def login():
-    """Create the same session used by the web admin, accepting JSON or form data."""
-    data = request.get_json(silent=True) or request.form
+    """Create the same session used by the web admin for the native mobile client."""
+    if not _mobile_request() or not request.is_json:
+        return jsonify({"status": "error", "message": "Mobile JSON client required."}), 400
+    data = request.get_json(silent=True)
+    if not isinstance(data, dict):
+        return jsonify({"status": "error", "message": "Credentials must be a JSON object."}), 400
     username, password = _credentials(data)
 
     is_demo = username.lower() == "demo" and password.lower() == "demo"
     is_admin = bool(ADMIN_USERNAME and ADMIN_PASSWORD) and (
-        hmac.compare_digest(username, ADMIN_USERNAME)
-        and hmac.compare_digest(password, ADMIN_PASSWORD)
+        hmac.compare_digest(username.encode("utf-8"), ADMIN_USERNAME.encode("utf-8"))
+        and hmac.compare_digest(password.encode("utf-8"), ADMIN_PASSWORD.encode("utf-8"))
     )
 
     if not (is_demo or is_admin):
@@ -66,5 +76,7 @@ def current_user():
 
 @auth_bp.route("/auth/logout", methods=["POST"])
 def logout():
+    if not _mobile_request():
+        return jsonify({"status": "error", "message": "Mobile client required."}), 400
     session.clear()
     return jsonify({"status": "success"})
