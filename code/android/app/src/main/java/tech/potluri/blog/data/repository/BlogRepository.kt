@@ -24,10 +24,13 @@ class BlogRepository(
         requestResponse { api.logout() }.map { Unit }
 
     suspend fun currentUser(): Result<AuthUser> =
-        requestResponse { api.currentUser() }.flatMap { response ->
-            response.user?.let { Result.success(it) }
-                ?: Result.failure(IOException("Authenticated user missing from server response"))
-        }
+        requestResponse { api.currentUser() }.fold(
+            onSuccess = { response ->
+                response.user?.let { Result.success(it) }
+                    ?: Result.failure(IOException("Authenticated user missing from server response"))
+            },
+            onFailure = { Result.failure(it) }
+        )
 
     suspend fun fetchPosts(
         page: Int,
