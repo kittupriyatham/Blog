@@ -41,11 +41,12 @@ fun AuthScreen(
         modifier = Modifier.fillMaxSize().padding(24.dp),
         verticalArrangement = Arrangement.Center
     ) {
-        if (state.user != null) {
+        val user = state.user
+        if (user != null) {
             Text("Signed in", style = MaterialTheme.typography.headlineMedium)
             Spacer(Modifier.height(8.dp))
-            Text("Account: ${state.user.username}")
-            Text(if (state.user.is_demo) "Demo publisher" else "Administrator")
+            Text("Account: ${user.username}")
+            Text(if (user.is_demo) "Demo publisher" else "Administrator")
             Spacer(Modifier.height(24.dp))
             OutlinedButton(onClick = viewModel::logout, enabled = !state.isLoading) {
                 Text("Sign out")
