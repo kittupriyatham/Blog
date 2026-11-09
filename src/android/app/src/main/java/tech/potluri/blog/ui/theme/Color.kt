@@ -1,0 +1,26 @@
+package tech.potluri.blog.ui.theme
+
+import androidx.compose.ui.graphics.Color
+
+val Brand50 = Color(0xFFEEF2FF)
+val Brand100 = Color(0xFFE0E7FF)
+val Brand400 = Color(0xFF818CF8)
+val Brand500 = Color(0xFF6366F1)
+val Brand600 = Color(0xFF4F46E5)
+val Brand700 = Color(0xFF4338CA)
+
+val Slate50 = Color(0xFFF8FAFC)
+val Slate100 = Color(0xFFF1F5F9)
+val Slate200 = Color(0xFFE2E8F0)
+val Slate400 = Color(0xFF94A3B8)
+val Slate700 = Color(0xFF334155)
+val Slate800 = Color(0xFF1E293B)
+val Slate900 = Color(0xFF0F172A)
+val Slate950 = Color(0xFF020617)
+
+// Reaction accent colors
+val ReactionHeart = Color(0xFFEF4444)
+val ReactionFire = Color(0xFFF97316)
+val ReactionClap = Color(0xFFEAB308)
+val ReactionInsightful = Color(0xFF3B82F6)
+val ReactionLike = Color(0xFF6366F1)

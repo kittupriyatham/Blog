@@ -1,0 +1,6 @@
+<resources>
+    <style name="Theme.BlogAndroid" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:statusBarColor">@color/slate_900</item>
+        <item name="android:navigationBarColor">@color/slate_900</item>
+    </style>
+</resources>

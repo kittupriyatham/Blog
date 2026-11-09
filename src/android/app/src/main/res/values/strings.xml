@@ -1,0 +1,15 @@
+<resources>
+    <string name="app_name">Potluri Blog</string>
+    <string name="feed_title">Recent Feed</string>
+    <string name="articles_title">Articles</string>
+    <string name="author_title">About Author</string>
+    <string name="search_hint">Search posts &amp; articles…</string>
+    <string name="comments_title">Comments</string>
+    <string name="add_comment">Leave a comment</string>
+    <string name="name_hint">Your name</string>
+    <string name="comment_hint">Write your thoughts…</string>
+    <string name="post_comment">Submit</string>
+    <string name="no_posts">No posts found</string>
+    <string name="retry">Retry</string>
+    <string name="error_loading">Unable to load content. Please check your connection.</string>
+</resources>

@@ -42,4 +42,9 @@ pyproject.toml
 *.crt
 *.key
 *.p12
-*.pem
+*.pem
+
+# Android build outputs & keystores
+*.apk
+*.aab
+.cacerts
