@@ -6,6 +6,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import tech.potluri.blog.data.model.Post
 import tech.potluri.blog.data.model.TagItem
 import tech.potluri.blog.data.repository.BlogRepository
@@ -28,6 +30,7 @@ class FeedViewModel(
 
     private val _uiState = MutableStateFlow(FeedUiState())
     val uiState: StateFlow<FeedUiState> = _uiState.asStateFlow()
+    private val reactionMutex = Mutex()
 
     init {
         loadFeed()
@@ -107,14 +110,15 @@ class FeedViewModel(
 
     fun reactToPost(postId: String, reactionType: String) {
         viewModelScope.launch {
-            repository.submitReaction(postId, reactionType).onSuccess { response ->
-                val currentPosts = _uiState.value.posts.map { p ->
-                    if (p.post_id == postId) {
-                        p.copy(reactions = response.reactions, likes = response.likes)
-                    } else p
+            reactionMutex.withLock {
+                repository.submitReaction(postId, reactionType).onSuccess { response ->
+                    val currentPosts = _uiState.value.posts.map { p ->
+                        if (p.post_id == postId) {
+                            p.copy(reactions = response.reactions, likes = response.likes)
+                        } else p
+                    }
+                    _uiState.value = _uiState.value.copy(posts = currentPosts)
                 }
-                _uiState.value = _uiState.value.copy(posts = currentPosts)
-            }
         }
     }
 }

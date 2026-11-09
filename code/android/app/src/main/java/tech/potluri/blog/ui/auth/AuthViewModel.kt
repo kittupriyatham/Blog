@@ -10,7 +10,7 @@ import tech.potluri.blog.data.model.AuthUser
 import tech.potluri.blog.data.repository.BlogRepository
 
 data class AuthUiState(
-    val isLoading: Boolean = false,
+    val isLoading: Boolean = true,
     val user: AuthUser? = null,
     val error: String? = null
 )
@@ -20,6 +20,19 @@ class AuthViewModel(
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(AuthUiState())
     val uiState: StateFlow<AuthUiState> = _uiState.asStateFlow()
+
+    init {
+        loadSession()
+    }
+
+    private fun loadSession() {
+        viewModelScope.launch {
+            repository.currentUser().fold(
+                onSuccess = { user -> _uiState.value = AuthUiState(user = user) },
+                onFailure = { _uiState.value = AuthUiState() }
+            )
+        }
+    }
 
     fun login(username: String, password: String) {
         if (username.isBlank() || password.isBlank()) {
@@ -40,4 +53,14 @@ class AuthViewModel(
     }
 
     fun loginDemo() = login("demo", "demo")
+
+    fun logout() {
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isLoading = true, error = null)
+            repository.logout().fold(
+                onSuccess = { _uiState.value = AuthUiState() },
+                onFailure = { _uiState.value = _uiState.value.copy(isLoading = false, error = "Sign out failed.") }
+            )
+        }
+    }
 }

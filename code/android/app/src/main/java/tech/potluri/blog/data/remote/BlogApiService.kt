@@ -26,6 +26,9 @@ interface BlogApiService {
     @POST("api/v1/auth/logout")
     suspend fun logout(): Response<AuthResponse>
 
+    @GET("api/v1/auth/me")
+    suspend fun currentUser(): Response<AuthResponse>
+
     @GET("api/v1/posts")
     suspend fun getPosts(
         @Query("page") page: Int,

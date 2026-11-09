@@ -6,6 +6,7 @@ import tech.potluri.blog.data.model.AuthorResponse
 import tech.potluri.blog.data.model.AuthResponse
 import tech.potluri.blog.data.model.Comment
 import tech.potluri.blog.data.model.LoginRequest
+import tech.potluri.blog.data.model.AuthUser
 import tech.potluri.blog.data.model.Post
 import tech.potluri.blog.data.model.PostsResponse
 import tech.potluri.blog.data.model.ReactionResponse
@@ -21,6 +22,12 @@ class BlogRepository(
 
     suspend fun logout(): Result<Unit> =
         requestResponse { api.logout() }.map { Unit }
+
+    suspend fun currentUser(): Result<AuthUser> =
+        requestResponse { api.currentUser() }.flatMap { response ->
+            response.user?.let { Result.success(it) }
+                ?: Result.failure(IOException("Authenticated user missing from server response"))
+        }
 
     suspend fun fetchPosts(
         page: Int,

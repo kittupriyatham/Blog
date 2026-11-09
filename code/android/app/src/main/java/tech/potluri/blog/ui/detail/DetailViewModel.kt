@@ -6,6 +6,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import tech.potluri.blog.data.model.Comment
 import tech.potluri.blog.data.model.Post
 import tech.potluri.blog.data.repository.BlogRepository
@@ -25,6 +27,7 @@ class DetailViewModel(
 
     private val _uiState = MutableStateFlow(DetailUiState())
     val uiState: StateFlow<DetailUiState> = _uiState.asStateFlow()
+    private val reactionMutex = Mutex()
 
     fun loadPost(postId: String) {
         viewModelScope.launch {
@@ -69,7 +72,8 @@ class DetailViewModel(
         return repository.postComment(postId, name, body).fold(
             onSuccess = { newComment ->
                 _uiState.value = _uiState.value.copy(
-                    comments = _uiState.value.comments + newComment
+                    comments = _uiState.value.comments + newComment,
+                    commentsError = null
                 )
                 true
             },
@@ -82,14 +86,16 @@ class DetailViewModel(
     fun react(reactionType: String) {
         val postId = _uiState.value.post?.post_id ?: return
         viewModelScope.launch {
-            repository.submitReaction(postId, reactionType).onSuccess { response ->
-                _uiState.value.post?.let { currentPost ->
-                    _uiState.value = _uiState.value.copy(
-                        post = currentPost.copy(
-                            reactions = response.reactions,
-                            likes = response.likes
+            reactionMutex.withLock {
+                repository.submitReaction(postId, reactionType).onSuccess { response ->
+                    _uiState.value.post?.let { currentPost ->
+                        _uiState.value = _uiState.value.copy(
+                            post = currentPost.copy(
+                                reactions = response.reactions,
+                                likes = response.likes
+                            )
                         )
-                    )
+                    }
                 }
             }
         }
