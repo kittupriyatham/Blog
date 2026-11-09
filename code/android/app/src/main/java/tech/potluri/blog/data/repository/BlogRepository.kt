@@ -32,6 +32,26 @@ class BlogRepository(
             onFailure = { Result.failure(it) }
         )
 
+    suspend fun createPost(
+        content: String,
+        title: String? = null,
+        type: String = "post",
+        tags: List<String> = emptyList()
+    ): Result<Post> = requestResponse {
+        api.createPost(tech.potluri.blog.data.model.CreatePostRequest(
+            content = content,
+            title = title,
+            type = type,
+            tags = tags
+        ))
+    }.fold(
+        onSuccess = { response ->
+            response.post?.let { Result.success(it) }
+                ?: Result.failure(IllegalStateException(response.message ?: "Failed to create post"))
+        },
+        onFailure = { Result.failure(it) }
+    )
+
     suspend fun fetchPosts(
         page: Int,
         limit: Int,

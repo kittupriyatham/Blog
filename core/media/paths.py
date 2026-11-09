@@ -15,8 +15,9 @@ from core.db import Post
 from core.providers import ProviderKind, get
 
 
-def generate_post_id(length=8):
-    posts_collection = Post._get_collection()
+def generate_post_id(length=8, posts_collection=None):
+    if posts_collection is None:
+        posts_collection = Post._get_collection()
     while True:
         new_id = "".join(random.choices(string.ascii_letters + string.digits, k=length))
         if not posts_collection.find_one({"post_id": new_id}):

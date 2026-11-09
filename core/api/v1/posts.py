@@ -1,9 +1,10 @@
 """REST API endpoints for Posts, Articles, Comments, Reactions, and Tags."""
 
 import math
-from flask import Blueprint, jsonify, request, session
+from flask import Blueprint, current_app, jsonify, request, session
+from core.api.v1.auth import _mobile_request
 from core.db import Comment, Post
-from core import analytics, content
+from core import analytics, content, media
 from core.api.v1.serializers import serialize_comment, serialize_post
 
 api_v1 = Blueprint("api_v1", __name__)
@@ -70,6 +71,10 @@ def get_posts():
             }
 
     filters = [query]
+    admin_all = (request.args.get("status") == "all" and session.get("logged_in")
+                 and not session.get("is_demo"))
+    if not admin_all and not (session.get("logged_in") and session.get("is_demo")):
+        filters.append({"is_demo": {"$ne": True}})
 
     if post_type:
         filters.append({"type": post_type})
@@ -109,6 +114,99 @@ def get_posts():
         "has_next": page < total_pages,
         "has_prev": page > 1,
     })
+
+
+@api_v1.route("/posts", methods=["POST"])
+def create_post():
+    """Create a new post or article via mobile app or API.
+
+    Requires an authenticated session (admin or demo).
+    JSON payload:
+      - title: string (required for published articles)
+      - content: string (required)
+      - type: 'post' | 'article' (default: 'post')
+      - tags: list[str] or comma-separated string
+      - status: 'published' | 'draft' (default: 'published')
+    """
+    if not session.get("logged_in"):
+        return jsonify({"status": "error", "message": "Authentication required."}), 401
+
+    # Only sessions established by native login can use the mobile JSON path.
+    # Browser requests must supply the usual Flask-WTF CSRF token.
+    if not (session.get("mobile_authenticated") and _mobile_request() and request.is_json):
+        current_app.extensions["csrf"].protect()
+
+    data = request.get_json(silent=True) if request.is_json else request.form
+    if not isinstance(data, dict):
+        return jsonify({"status": "error", "message": "Request data must be an object."}), 400
+    for field in ("content", "body", "title", "type", "status"):
+        if field in data and not isinstance(data[field], str):
+            return jsonify({"status": "error", "message": f"{field} must be a string."}), 400
+    content_body = (data.get("content") or data.get("body") or "").strip()
+    if not content_body:
+        return jsonify({"status": "error", "message": "Content is required."}), 400
+
+    title = (data.get("title") or "").strip()
+    post_type = (data.get("type") or "post").strip().lower()
+    if post_type not in ("post", "article"):
+        post_type = "post"
+
+    tags_raw = data.get("tags") or []
+    if isinstance(tags_raw, str):
+        tags = [t.strip() for t in tags_raw.split(",") if t.strip()]
+    elif isinstance(tags_raw, list):
+        tags = [str(t).strip() for t in tags_raw if str(t).strip()]
+    else:
+        tags = []
+
+    post_status = (data.get("status") or "published").strip().lower()
+    if post_status not in ("published", "draft"):
+        post_status = "published"
+    if post_type == "article" and post_status == "published" and not title:
+        return jsonify({"status": "error", "message": "Article title is required to publish."}), 400
+
+    col = _posts_collection()
+    post_id = media.generate_post_id(posts_collection=col)
+    now = content.now_str()
+
+    blocks = [{"type": "text", "content": content_body}]
+
+    is_demo = bool(session.get("is_demo"))
+    author = "Demo Publisher" if is_demo else (session.get("username") or "Kittu Priyatham")
+
+    new_post = {
+        "post_id": post_id,
+        "type": post_type,
+        "title": title,
+        "content": content_body,
+        "blocks": blocks,
+        "tags": tags,
+        "timestamp": now,
+        "status": post_status,
+        "likes": 0,
+        "views": 0,
+        "shares": 0,
+        "reactions": {"like": 0, "heart": 0, "fire": 0, "clap": 0, "insightful": 0},
+        "is_demo": is_demo,
+        "author": author,
+    }
+
+    res = col.insert_one(new_post)
+    new_post["_id"] = res.inserted_id
+
+    analytics.record_analytics({
+        "event": "create_post",
+        "post_id": post_id,
+        "type": post_type,
+        "is_demo": is_demo,
+    })
+
+    serialized = serialize_post(new_post, resolve_embedded=False)
+    return jsonify({
+        "status": "success",
+        "message": "Post created successfully",
+        "post": serialized,
+    }), 201
 
 
 @api_v1.route("/posts/<post_id>", methods=["GET"])

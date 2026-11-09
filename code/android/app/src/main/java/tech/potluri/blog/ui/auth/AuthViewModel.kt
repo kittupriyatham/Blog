@@ -15,7 +15,10 @@ data class AuthUiState(
     val isLoading: Boolean = false,
     val user: AuthUser? = null,
     val error: String? = null,
-    val loginSucceeded: Boolean = false
+    val loginSucceeded: Boolean = false,
+    val isPosting: Boolean = false,
+    val postCreated: Boolean = false,
+    val postError: String? = null
 )
 
 class AuthViewModel(
@@ -79,4 +82,46 @@ class AuthViewModel(
     }
 
     fun loginDemo() = login("demo", "demo")
+
+    fun createPost(
+        content: String,
+        title: String? = null,
+        type: String = "post",
+        tags: List<String> = emptyList(),
+        onCreated: () -> Unit = {}
+    ) {
+        if (_uiState.value.isPosting) return
+        if (content.isBlank()) {
+            _uiState.value = _uiState.value.copy(postError = "Post content cannot be empty.")
+            return
+        }
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isPosting = true, postError = null, postCreated = false)
+            repository.createPost(
+                content = content.trim(),
+                title = title?.trim()?.ifBlank { null },
+                type = type,
+                tags = tags
+            ).fold(
+                onSuccess = {
+                    _uiState.value = _uiState.value.copy(isPosting = false, postCreated = true, postError = null)
+                    onCreated()
+                },
+                onFailure = { err ->
+                    _uiState.value = _uiState.value.copy(
+                        isPosting = false,
+                        postError = if (err is HttpException && err.code() == 401) {
+                            "Your session expired. Sign out and sign in again to publish."
+                        } else {
+                            err.localizedMessage ?: "Failed to publish post. Try again."
+                        }
+                    )
+                }
+            )
+        }
+    }
+
+    fun resetPostState() {
+        _uiState.value = _uiState.value.copy(postCreated = false, postError = null)
+    }
 }

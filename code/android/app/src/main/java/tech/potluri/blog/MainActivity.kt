@@ -7,7 +7,6 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Article
 import androidx.compose.material.icons.filled.AdminPanelSettings
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.RssFeed
@@ -61,6 +60,17 @@ fun BlogApp() {
 
     val showBottomBar = currentRoute in listOf(Screen.Feed.route, Screen.Author.route, Screen.Admin.route)
 
+    fun navigateToTab(route: String) {
+        if (currentRoute == route) return
+        navController.navigate(route) {
+            popUpTo(navController.graph.findStartDestination().id) {
+                saveState = true
+            }
+            launchSingleTop = true
+            restoreState = true
+        }
+    }
+
     Scaffold(
         bottomBar = {
             if (showBottomBar) {
@@ -70,15 +80,7 @@ fun BlogApp() {
                 ) {
                     NavigationBarItem(
                         selected = currentRoute == Screen.Feed.route,
-                        onClick = {
-                            navController.navigate(Screen.Feed.route) {
-                                popUpTo(navController.graph.findStartDestination().id) {
-                                    saveState = true
-                                }
-                                launchSingleTop = true
-                                restoreState = true
-                            }
-                        },
+                        onClick = { navigateToTab(Screen.Feed.route) },
                         icon = { Icon(Icons.Default.RssFeed, contentDescription = "Feed") },
                         label = { Text("Feed") },
                         colors = NavigationBarItemDefaults.colors(
@@ -89,11 +91,7 @@ fun BlogApp() {
 
                     NavigationBarItem(
                         selected = currentRoute == Screen.Admin.route,
-                        onClick = {
-                            navController.navigate(Screen.Admin.route) {
-                                launchSingleTop = true
-                            }
-                        },
+                        onClick = { navigateToTab(Screen.Admin.route) },
                         icon = { Icon(Icons.Default.AdminPanelSettings, contentDescription = "Admin") },
                         label = { Text("Admin") },
                         colors = NavigationBarItemDefaults.colors(
@@ -104,16 +102,8 @@ fun BlogApp() {
 
                     NavigationBarItem(
                         selected = currentRoute == Screen.Author.route,
-                        onClick = {
-                            navController.navigate(Screen.Author.route) {
-                                popUpTo(navController.graph.findStartDestination().id) {
-                                    saveState = true
-                                }
-                                launchSingleTop = true
-                                restoreState = true
-                            }
-                        },
-                        icon = { Icon(Icons.Default.Person, contentDescription = "Author") },
+                        onClick = { navigateToTab(Screen.Author.route) },
+                        icon = { Icon(Icons.Default.Person, contentDescription = "About") },
                         label = { Text("About") },
                         colors = NavigationBarItemDefaults.colors(
                             selectedIconColor = MaterialTheme.colorScheme.primary,
@@ -133,6 +123,9 @@ fun BlogApp() {
                 FeedScreen(
                     onPostClick = { postId ->
                         navController.navigate(Screen.Detail.createRoute(postId))
+                    },
+                    onNavigateToAdmin = {
+                        navigateToTab(Screen.Admin.route)
                     }
                 )
             }
@@ -156,11 +149,15 @@ fun BlogApp() {
 
             composable(Screen.Admin.route) {
                 AuthScreen(
-                    onSignedIn = {
-                        navController.navigate(Screen.Feed.route) {
-                            popUpTo(Screen.Admin.route) { inclusive = true }
-                            launchSingleTop = true
-                        }
+                    onPublished = {
+                        val feedEntry = navController.getBackStackEntry(Screen.Feed.route)
+                        val feedViewModel = androidx.lifecycle.ViewModelProvider(feedEntry)[
+                            tech.potluri.blog.ui.feed.FeedViewModel::class.java
+                        ]
+                        feedViewModel.refresh()
+                    },
+                    onNavigateToFeed = {
+                        navigateToTab(Screen.Feed.route)
                     }
                 )
             }

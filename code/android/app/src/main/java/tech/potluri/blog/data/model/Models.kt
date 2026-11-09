@@ -154,3 +154,20 @@ data class AuthResponse(
     val user: AuthUser? = null,
     val message: String? = null
 )
+
+@Serializable
+data class CreatePostRequest(
+    val content: String,
+    val title: String? = null,
+    val type: String = "post",
+    val tags: List<String> = emptyList(),
+    val status: String = "published"
+)
+
+@Serializable
+data class CreatePostResponse(
+    val status: String = "",
+    val message: String? = null,
+    val post: Post? = null
+)
+
