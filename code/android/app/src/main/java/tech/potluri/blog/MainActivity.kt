@@ -85,20 +85,20 @@ fun BlogApp() {
                             selectedIconColor = MaterialTheme.colorScheme.primary,
                             indicatorColor = MaterialTheme.colorScheme.primaryContainer
                         )
+                    )
 
-                        NavigationBarItem(
-                            selected = currentRoute == Screen.Admin.route,
-                            onClick = {
-                                navController.navigate(Screen.Admin.route) {
-                                    launchSingleTop = true
-                                }
-                            },
-                            icon = { Icon(Icons.Default.AdminPanelSettings, contentDescription = "Admin") },
-                            label = { Text("Admin") },
-                            colors = NavigationBarItemDefaults.colors(
-                                selectedIconColor = MaterialTheme.colorScheme.primary,
-                                indicatorColor = MaterialTheme.colorScheme.primaryContainer
-                            )
+                    NavigationBarItem(
+                        selected = currentRoute == Screen.Admin.route,
+                        onClick = {
+                            navController.navigate(Screen.Admin.route) {
+                                launchSingleTop = true
+                            }
+                        },
+                        icon = { Icon(Icons.Default.AdminPanelSettings, contentDescription = "Admin") },
+                        label = { Text("Admin") },
+                        colors = NavigationBarItemDefaults.colors(
+                            selectedIconColor = MaterialTheme.colorScheme.primary,
+                            indicatorColor = MaterialTheme.colorScheme.primaryContainer
                         )
                     )
 
