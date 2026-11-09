@@ -42,6 +42,7 @@ src="https://www.facebook.com/tr?id=2092273818327635&ev=PageView&noscript=1"
     };
   </script>
   <style>
+    html, body { max-width: 100%; overflow-x: hidden; }
     body { font-family: 'Inter', ui-sans-serif, system-ui, sans-serif; }
     .tab-content { transition: opacity 0.3s ease-in-out; }
     .hidden-tab { display: none; opacity: 0; }
@@ -52,18 +53,18 @@ src="https://www.facebook.com/tr?id=2092273818327635&ev=PageView&noscript=1"
   </script>
   <link rel="alternate" type="application/rss+xml" title="Kittu Priyatham &bull; RSS Feed" href="{{ url_for('rss_feed', _external=True) }}">
 </head>
-<body class="bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-200 min-h-screen antialiased">
+<body class="bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-200 min-h-screen antialiased overflow-x-hidden">
 
   <nav class="sticky top-0 z-50 bg-white/80 dark:bg-slate-900/80 backdrop-blur-lg border-b border-slate-200/70 dark:border-slate-800/70">
-    <div class="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
-      <a href="{{ url_for('index') }}" class="flex items-center gap-2.5 group">
+    <div class="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between gap-2">
+      <a href="{{ url_for('index') }}" class="flex items-center gap-2.5 group flex-shrink-0">
         <div class="w-8 h-8 rounded-xl bg-gradient-to-br from-brand-500 to-blue-600 flex items-center justify-center shadow-soft group-hover:scale-105 transition-transform">
           <span class="text-white font-extrabold text-sm">B</span>
         </div>
-        <span class="font-bold text-slate-900 dark:text-white text-lg tracking-tight">My Blog</span>
+        <span class="font-bold text-slate-900 dark:text-white text-lg tracking-tight whitespace-nowrap">My Blog</span>
       </a>
-      <div class="flex items-center gap-3">
-        <div class="hidden sm:flex items-center gap-1 text-sm font-medium">
+      <div class="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
+        <div class="hidden md:flex items-center gap-1 text-sm font-medium">
           <a href="{{ url_for('index') }}" class="px-3 py-1.5 rounded-full text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition">Feed</a>
           <a href="{{ url_for('posts_dashboard') }}" class="px-3 py-1.5 rounded-full text-brand-600 dark:text-brand-400 bg-brand-50 dark:bg-brand-950/50 transition">Posts</a>
           <a href="{{ url_for('articles_dashboard') }}" class="px-3 py-1.5 rounded-full text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition">Articles</a>
@@ -74,37 +75,73 @@ src="https://www.facebook.com/tr?id=2092273818327635&ev=PageView&noscript=1"
           </a>
         </div>
         {% if session.get('logged_in') %}
-        <a href="{{ url_for('ai_studio', mode='post') }}" class="text-xs sm:text-sm font-semibold px-2.5 py-1.5 rounded-full text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/50 transition flex items-center gap-1">
-          <svg class="w-3.5 h-3.5 text-indigo-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z"></path></svg>
-          <span>AI Studio</span>
-        </a>
-        <a href="{{ url_for('create_post') }}" class="bg-gradient-to-r from-brand-600 to-blue-600 hover:from-brand-700 hover:to-blue-700 text-white font-medium px-4 py-1.5 rounded-full text-sm shadow-sm hover:shadow-md transition flex items-center gap-2">
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"></path></svg>
-          <span class="hidden sm:inline">New Post</span>
-        </a>
-        <a href="{{ url_for('analytics_dashboard') }}" class="text-xs sm:text-sm font-medium px-2.5 py-1.5 rounded-full text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition">Analytics</a>
-        <span class="text-slate-300 dark:text-slate-700 text-sm select-none">|</span>
-        <form method="POST" action="{{ url_for('logout') }}">
-          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-          <button type="submit" class="text-sm text-red-500 hover:text-red-600 font-medium transition">Sign Out</button>
-        </form>
+        <div class="hidden md:flex items-center gap-2">
+          <a href="{{ url_for('ai_studio', mode='post') }}" class="text-xs sm:text-sm font-semibold px-2.5 py-1.5 rounded-full text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/50 transition flex items-center gap-1">
+            <svg class="w-3.5 h-3.5 text-indigo-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z"></path></svg>
+            <span>AI Studio</span>
+          </a>
+          <a href="{{ url_for('create_post') }}" class="bg-gradient-to-r from-brand-600 to-blue-600 hover:from-brand-700 hover:to-blue-700 text-white font-medium px-4 py-1.5 rounded-full text-sm shadow-sm hover:shadow-md transition flex items-center gap-2">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"></path></svg>
+            <span class="hidden sm:inline">New Post</span>
+          </a>
+          <a href="{{ url_for('analytics_dashboard') }}" class="text-xs sm:text-sm font-medium px-2.5 py-1.5 rounded-full text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition">Analytics</a>
+          <span class="text-slate-300 dark:text-slate-700 text-sm select-none">|</span>
+          <form method="POST" action="{{ url_for('logout') }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" class="text-sm text-red-500 hover:text-red-600 font-medium transition">Sign Out</button>
+          </form>
+        </div>
         {% endif %}
-                <a href="{{ url_for('about') }}" class="p-1 rounded-full ring-2 ring-brand-500/30 hover:ring-brand-500 transition ml-1" title="About the Author">
+        <div class="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800/70 border border-slate-200 dark:border-slate-700/60 hover:border-cyan-500 dark:hover:border-cyan-400 hover:text-cyan-600 dark:hover:text-cyan-300 transition cursor-pointer" onclick="window.openCommandPalette && window.openCommandPalette()" title="Press Ctrl+K to search">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+          <span>Search</span>
+          <kbd class="px-1 py-0.5 text-[10px] bg-slate-200 dark:bg-slate-700 rounded font-mono">Ctrl+K</kbd>
+        </div>
+        <button type="button" class="sm:hidden p-2 rounded-full text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition" onclick="window.openCommandPalette && window.openCommandPalette()" title="Search" aria-label="Search">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+        </button>
+        <a href="{{ url_for('about') }}" class="p-1 rounded-full ring-2 ring-brand-500/30 hover:ring-brand-500 transition ml-0.5 flex-shrink-0" title="About the Author">
           <img src="{{ url_for('static', filename='images/avatar_thumb.webp') }}" alt="Kittu Priyatham" class="w-7 h-7 rounded-full object-cover">
         </a>
-        <a href="{{ url_for('rss_feed') }}" target="_blank" rel="noopener" class="p-2 rounded-full text-slate-500 dark:text-slate-400 hover:text-amber-500 dark:hover:text-amber-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition" title="RSS Feed" aria-label="RSS Feed">
+        <a href="{{ url_for('rss_feed') }}" target="_blank" rel="noopener" class="hidden sm:inline-flex p-2 rounded-full text-slate-500 dark:text-slate-400 hover:text-amber-500 dark:hover:text-amber-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition" title="RSS Feed" aria-label="RSS Feed">
           <svg class="w-4 h-4 fill-current" viewBox="0 0 24 24" aria-hidden="true"><circle cx="6.18" cy="17.82" r="2.18"/><path d="M4 4.44v2.83c7.03 0 12.73 5.7 12.73 12.73h2.83c0-8.59-6.97-15.56-15.56-15.56zm0 5.66v2.83c3.9 0 7.07 3.17 7.07 7.07h2.83c0-5.47-4.43-9.9-9.9-9.9z"/></svg>
         </a>
-        <button type="button" data-theme-toggle onclick="toggleTheme()" class="p-2 rounded-full text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition" title="Toggle theme" aria-label="Toggle theme">
+        <button type="button" data-theme-toggle onclick="toggleTheme()" class="p-2 rounded-full text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition flex-shrink-0" title="Toggle theme" aria-label="Toggle theme">
           <svg data-icon-moon class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>
           <svg data-icon-sun class="w-5 h-5 hidden" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path stroke-linecap="round" d="M12 2v2m0 16v2M4.93 4.93l1.41 1.41m11.32 11.32l1.41 1.41M2 12h2m16 0h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
         </button>
+        <button type="button" onclick="document.getElementById('blog-mobile-menu').classList.toggle('hidden')" class="md:hidden inline-flex items-center justify-center w-9 h-9 rounded-xl border border-indigo-500/25 dark:border-cyan-500/50 bg-indigo-500/10 dark:bg-cyan-500/10 text-slate-700 dark:text-cyan-400 hover:bg-indigo-500/20 dark:hover:bg-cyan-500/20 transition flex-shrink-0" aria-label="Toggle navigation menu" title="Menu">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6" stroke-linecap="round"/><line x1="3" y1="12" x2="21" y2="12" stroke-linecap="round"/><line x1="3" y1="18" x2="21" y2="18" stroke-linecap="round"/></svg>
+        </button>
       </div>
+    </div>
+    <!-- Mobile Navigation Drawer -->
+    <div id="blog-mobile-menu" class="hidden md:hidden border-t border-slate-200/70 dark:border-slate-800/80 bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl px-4 py-3 space-y-1 text-sm font-medium">
+      <a href="{{ url_for('index') }}" class="block px-3 py-2 rounded-xl text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800">Feed</a>
+      <a href="{{ url_for('posts_dashboard') }}" class="block px-3 py-2 rounded-xl text-brand-600 dark:text-brand-400 bg-brand-50 dark:bg-brand-950/50 font-semibold">Posts</a>
+      <a href="{{ url_for('articles_dashboard') }}" class="block px-3 py-2 rounded-xl text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800">Articles</a>
+      <a href="{{ url_for('about') }}" class="block px-3 py-2 rounded-xl text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800">About</a>
+      <a href="https://potluri-krishna-priyatham.tech" target="_blank" rel="noopener" class="flex items-center justify-between px-3 py-2 rounded-xl text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800">
+        <span>Portfolio</span>
+        <span class="text-xs opacity-70">↗</span>
+      </a>
+      <a href="{{ url_for('rss_feed') }}" target="_blank" rel="noopener" class="block px-3 py-2 rounded-xl text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800">RSS Feed</a>
+      {% if session.get('logged_in') %}
+        <div class="pt-2 mt-2 border-t border-slate-200 dark:border-slate-800 flex flex-wrap items-center gap-2">
+          <a href="{{ url_for('ai_studio', mode='post') }}" class="px-3 py-1.5 rounded-full text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/50 font-semibold text-xs">✨ AI Studio</a>
+          <a href="{{ url_for('create_post') }}" class="px-3 py-1.5 rounded-full bg-brand-600 text-white font-semibold text-xs">+ New Post</a>
+          <a href="{{ url_for('analytics_dashboard') }}" class="px-3 py-1.5 rounded-full text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 text-xs">Analytics</a>
+          <form method="POST" action="{{ url_for('logout') }}" class="ml-auto">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" class="text-xs text-red-500 hover:text-red-600 font-semibold px-2 py-1">Sign Out</button>
+          </form>
+        </div>
+      {% endif %}
     </div>
   </nav>
 
-  <main class="max-w-5xl mx-auto px-4 py-10">
-    <div class="mb-8 flex items-end justify-between border-b border-slate-200 dark:border-slate-800 pb-4">
+  <main class="max-w-5xl mx-auto px-4 py-10 w-full">
+    <div class="mb-8 flex flex-wrap items-end justify-between gap-4 border-b border-slate-200 dark:border-slate-800 pb-4">
       <div>
         <h2 class="text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">Posts</h2>
         <p class="text-slate-500 dark:text-slate-400 mt-2 text-sm">{% if session.get('logged_in') %}Manage your published posts and drafts.{% else %}Browse all published posts.{% endif %}</p>

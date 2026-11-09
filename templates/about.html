@@ -40,12 +40,14 @@
     };
   </script>
   <style>
+    html, body { max-width: 100%; overflow-x: hidden; }
     body { font-family: 'Inter', ui-sans-serif, system-ui, sans-serif; }
     ::-webkit-scrollbar { width: 10px; height: 10px; }
     ::-webkit-scrollbar-track { background: transparent; }
     .quantum-stage {
       width: 280px;
       height: 280px;
+      max-width: calc(100vw - 4rem);
       position: relative;
       display: flex;
       align-items: center;
@@ -86,61 +88,97 @@
   </script>
   <link rel="alternate" type="application/rss+xml" title="Kittu Priyatham &bull; RSS Feed" href="{{ url_for('rss_feed', _external=True) }}">
 </head>
-<body class="bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-200 min-h-screen antialiased flex flex-col justify-between">
+<body class="bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-200 min-h-screen antialiased flex flex-col justify-between overflow-x-hidden">
 
   <!-- Main Navigation -->
   <nav class="bg-white/80 dark:bg-slate-900/80 backdrop-blur-lg border-b border-slate-200/70 dark:border-slate-800/70 sticky top-0 z-40">
-    <div class="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
-      <a href="{{ url_for('index') }}" class="flex items-center gap-2.5 group" title="Return to Home Feed">
+    <div class="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between gap-2">
+      <a href="{{ url_for('index') }}" class="flex items-center gap-2.5 group flex-shrink-0" title="Return to Home Feed">
         <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-brand-500 to-blue-600 flex items-center justify-center shadow-soft group-hover:scale-105 transition-transform">
           <span class="text-white font-extrabold text-sm">B</span>
         </div>
-        <span class="font-bold text-slate-900 dark:text-white text-lg tracking-tight">My Blog</span>
+        <span class="font-bold text-slate-900 dark:text-white text-lg tracking-tight whitespace-nowrap">My Blog</span>
       </a>
-      <div class="flex items-center gap-1 sm:gap-2 text-sm font-medium">
-        <a href="{{ url_for('index') }}" class="px-3 py-1.5 rounded-full text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition">Feed</a>
-        <a href="{{ url_for('posts_dashboard') }}" class="px-3 py-1.5 rounded-full text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition">Posts</a>
-        <a href="{{ url_for('articles_dashboard') }}" class="px-3 py-1.5 rounded-full text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition">Articles</a>
-        <a href="{{ url_for('about') }}" class="px-3 py-1.5 rounded-full text-brand-600 dark:text-brand-400 bg-brand-50 dark:bg-brand-950/50 font-semibold transition">About</a>
-        <a href="https://potluri-krishna-priyatham.tech" target="_blank" rel="noopener" class="px-3 py-1.5 rounded-full text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition flex items-center gap-1 group">
-          <span>Portfolio</span>
-          <svg class="w-3.5 h-3.5 opacity-60 group-hover:opacity-100 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
-        </a>
-
-        {% if session.get('logged_in') %}
-          <div class="hidden md:flex items-center gap-2 ml-2 pl-2 border-l border-slate-200 dark:border-slate-800">
-            <a href="{{ url_for('ai_studio') }}" class="px-2.5 py-1.5 rounded-full text-indigo-600 dark:text-indigo-400 font-semibold hover:bg-indigo-50 dark:hover:bg-indigo-950/50 transition flex items-center gap-1 text-xs">
-              <svg class="w-3.5 h-3.5 text-indigo-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z"></path></svg>
-              <span>AI Studio</span>
-            </a>
-            <a href="{{ url_for('analytics_dashboard') }}" class="px-2.5 py-1.5 rounded-full text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition text-xs">Analytics</a>
-            <form method="POST" action="{{ url_for('logout') }}">
-              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-              <button type="submit" class="text-xs text-red-500 hover:text-red-600 font-medium transition">Sign Out</button>
-            </form>
-          </div>
-        {% else %}
-          <a href="{{ url_for('login') }}" class="px-3 py-1.5 rounded-full text-xs font-semibold bg-brand-50 dark:bg-brand-950/60 text-brand-700 dark:text-brand-300 hover:bg-brand-100 dark:hover:bg-brand-900/60 border border-brand-200 dark:border-brand-800 transition flex items-center gap-1">
-            <span>🚀 Demo</span>
+      <div class="flex items-center gap-1.5 sm:gap-2 text-sm font-medium flex-shrink-0">
+        <div class="hidden md:flex items-center gap-1.5">
+          <a href="{{ url_for('index') }}" class="px-3 py-1.5 rounded-full text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition">Feed</a>
+          <a href="{{ url_for('posts_dashboard') }}" class="px-3 py-1.5 rounded-full text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition">Posts</a>
+          <a href="{{ url_for('articles_dashboard') }}" class="px-3 py-1.5 rounded-full text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition">Articles</a>
+          <a href="{{ url_for('about') }}" class="px-3 py-1.5 rounded-full text-brand-600 dark:text-brand-400 bg-brand-50 dark:bg-brand-950/50 font-semibold transition">About</a>
+          <a href="https://potluri-krishna-priyatham.tech" target="_blank" rel="noopener" class="px-3 py-1.5 rounded-full text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition flex items-center gap-1 group">
+            <span>Portfolio</span>
+            <svg class="w-3.5 h-3.5 opacity-60 group-hover:opacity-100 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
           </a>
-        {% endif %}
+
+          {% if session.get('logged_in') %}
+            <div class="flex items-center gap-2 ml-2 pl-2 border-l border-slate-200 dark:border-slate-800">
+              <a href="{{ url_for('ai_studio') }}" class="px-2.5 py-1.5 rounded-full text-indigo-600 dark:text-indigo-400 font-semibold hover:bg-indigo-50 dark:hover:bg-indigo-950/50 transition flex items-center gap-1 text-xs">
+                <svg class="w-3.5 h-3.5 text-indigo-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z"></path></svg>
+                <span>AI Studio</span>
+              </a>
+              <a href="{{ url_for('analytics_dashboard') }}" class="px-2.5 py-1.5 rounded-full text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition text-xs">Analytics</a>
+              <form method="POST" action="{{ url_for('logout') }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="text-xs text-red-500 hover:text-red-600 font-medium transition">Sign Out</button>
+              </form>
+            </div>
+          {% else %}
+            <a href="{{ url_for('login') }}" class="px-3 py-1.5 rounded-full text-xs font-semibold bg-brand-50 dark:bg-brand-950/60 text-brand-700 dark:text-brand-300 hover:bg-brand-100 dark:hover:bg-brand-900/60 border border-brand-200 dark:border-brand-800 transition flex items-center gap-1">
+              <span>🚀 Demo</span>
+            </a>
+          {% endif %}
+        </div>
 
         <div class="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800/70 border border-slate-200 dark:border-slate-700/60 hover:border-cyan-500 dark:hover:border-cyan-400 hover:text-cyan-600 dark:hover:text-cyan-300 transition cursor-pointer" onclick="window.openCommandPalette && window.openCommandPalette()" title="Press Ctrl+K to search">
           <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
           <span>Search</span>
           <kbd class="px-1 py-0.5 text-[10px] bg-slate-200 dark:bg-slate-700 rounded font-mono">Ctrl+K</kbd>
         </div>
-        <a href="{{ url_for('about') }}" class="p-1 rounded-full ring-2 ring-brand-500/30 hover:ring-brand-500 transition ml-1" title="About the Author">
+        <button type="button" class="sm:hidden p-2 rounded-full text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition" onclick="window.openCommandPalette && window.openCommandPalette()" title="Search" aria-label="Search">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+        </button>
+        <a href="{{ url_for('about') }}" class="p-1 rounded-full ring-2 ring-brand-500/30 hover:ring-brand-500 transition ml-0.5 flex-shrink-0" title="About the Author">
           <img src="{{ url_for('static', filename='images/avatar_thumb.webp') }}" alt="Kittu Priyatham" class="w-7 h-7 rounded-full object-cover">
         </a>
-        <a href="{{ url_for('rss_feed') }}" target="_blank" rel="noopener" class="p-2 rounded-full text-slate-500 dark:text-slate-400 hover:text-amber-500 dark:hover:text-amber-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition" title="RSS Feed">
+        <a href="{{ url_for('rss_feed') }}" target="_blank" rel="noopener" class="hidden sm:inline-flex p-2 rounded-full text-slate-500 dark:text-slate-400 hover:text-amber-500 dark:hover:text-amber-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition" title="RSS Feed">
           <svg class="w-4 h-4 fill-current" viewBox="0 0 24 24" aria-hidden="true"><circle cx="6.18" cy="17.82" r="2.18"/><path d="M4 4.44v2.83c7.03 0 12.73 5.7 12.73 12.73h2.83c0-8.59-6.97-15.56-15.56-15.56zm0 5.66v2.83c3.9 0 7.07 3.17 7.07 7.07h2.83c0-5.47-4.43-9.9-9.9-9.9z"/></svg>
         </a>
-        <button type="button" data-theme-toggle onclick="toggleTheme()" class="p-2 rounded-full text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition" title="Toggle theme">
+        <button type="button" data-theme-toggle onclick="toggleTheme()" class="p-2 rounded-full text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition flex-shrink-0" title="Toggle theme">
           <svg data-icon-moon class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>
           <svg data-icon-sun class="w-5 h-5 hidden" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path stroke-linecap="round" d="M12 2v2m0 16v2M4.93 4.93l1.41 1.41m11.32 11.32l1.41 1.41M2 12h2m16 0h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
         </button>
+        <button type="button" onclick="document.getElementById('blog-mobile-menu').classList.toggle('hidden')" class="md:hidden inline-flex items-center justify-center w-9 h-9 rounded-xl border border-indigo-500/25 dark:border-cyan-500/50 bg-indigo-500/10 dark:bg-cyan-500/10 text-slate-700 dark:text-cyan-400 hover:bg-indigo-500/20 dark:hover:bg-cyan-500/20 transition flex-shrink-0" aria-label="Toggle navigation menu" title="Menu">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6" stroke-linecap="round"/><line x1="3" y1="12" x2="21" y2="12" stroke-linecap="round"/><line x1="3" y1="18" x2="21" y2="18" stroke-linecap="round"/></svg>
+        </button>
       </div>
+    </div>
+    <!-- Mobile Navigation Drawer -->
+    <div id="blog-mobile-menu" class="hidden md:hidden border-t border-slate-200/70 dark:border-slate-800/80 bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl px-4 py-3 space-y-1 text-sm font-medium">
+      <a href="{{ url_for('index') }}" class="block px-3 py-2 rounded-xl text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800">Feed</a>
+      <a href="{{ url_for('posts_dashboard') }}" class="block px-3 py-2 rounded-xl text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800">Posts</a>
+      <a href="{{ url_for('articles_dashboard') }}" class="block px-3 py-2 rounded-xl text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800">Articles</a>
+      <a href="{{ url_for('about') }}" class="block px-3 py-2 rounded-xl text-brand-600 dark:text-brand-400 bg-brand-50 dark:bg-brand-950/50 font-semibold">About</a>
+      <a href="https://potluri-krishna-priyatham.tech" target="_blank" rel="noopener" class="flex items-center justify-between px-3 py-2 rounded-xl text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800">
+        <span>Portfolio</span>
+        <span class="text-xs opacity-70">↗</span>
+      </a>
+      <a href="{{ url_for('rss_feed') }}" target="_blank" rel="noopener" class="block px-3 py-2 rounded-xl text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800">RSS Feed</a>
+      {% if session.get('logged_in') %}
+        <div class="pt-2 mt-2 border-t border-slate-200 dark:border-slate-800 flex flex-wrap items-center gap-2">
+          <a href="{{ url_for('ai_studio') }}" class="px-3 py-1.5 rounded-full text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/50 font-semibold text-xs">✨ AI Studio</a>
+          <a href="{{ url_for('analytics_dashboard') }}" class="px-3 py-1.5 rounded-full text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 text-xs">Analytics</a>
+          <form method="POST" action="{{ url_for('logout') }}" class="ml-auto">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" class="text-xs text-red-500 hover:text-red-600 font-semibold px-2 py-1">Sign Out</button>
+          </form>
+        </div>
+      {% else %}
+        <div class="pt-1">
+          <a href="{{ url_for('login') }}" class="inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-semibold bg-brand-50 dark:bg-brand-950/60 text-brand-700 dark:text-brand-300 border border-brand-200 dark:border-brand-800">
+            <span>🚀 Try Publisher Demo</span>
+          </a>
+        </div>
+      {% endif %}
     </div>
   </nav>
 
@@ -179,7 +217,7 @@
         </div>
 
         <!-- Bio & Heading Column -->
-        <div class="flex-1 text-center lg:text-left">
+        <div class="flex-1 min-w-0 max-w-full text-center lg:text-left">
           <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-brand-50 dark:bg-brand-950/60 text-brand-600 dark:text-brand-300 text-xs font-semibold border border-brand-200/70 dark:border-brand-800/60 mb-3">
             <span>🔬 PhD Scholar</span>
             <span>&bull;</span>
