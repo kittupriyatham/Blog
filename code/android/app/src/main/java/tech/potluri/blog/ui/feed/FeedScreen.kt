@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
@@ -19,7 +20,10 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Brightness2
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.DarkMode
+import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Button
@@ -50,6 +54,8 @@ import tech.potluri.blog.ui.components.TagChipRow
 fun FeedScreen(
     onPostClick: (String) -> Unit,
     onNavigateToAdmin: () -> Unit = {},
+    currentThemeMode: tech.potluri.blog.ui.theme.AppThemeMode = tech.potluri.blog.ui.theme.AppThemeMode.DARK,
+    onToggleTheme: () -> Unit = {},
     modifier: Modifier = Modifier,
     viewModel: FeedViewModel = viewModel()
 ) {
@@ -86,19 +92,33 @@ fun FeedScreen(
                     )
                 },
                 trailingIcon = {
-                    if (uiState.searchQuery.isNotEmpty()) {
-                        IconButton(onClick = {
-                            viewModel.onSearchQueryChanged("")
-                            viewModel.onSearchSubmitted()
-                        }) {
-                            Icon(imageVector = Icons.Default.Close, contentDescription = "Clear")
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        if (uiState.searchQuery.isNotEmpty()) {
+                            IconButton(onClick = {
+                                viewModel.onSearchQueryChanged("")
+                                viewModel.onSearchSubmitted()
+                            }) {
+                                Icon(imageVector = Icons.Default.Close, contentDescription = "Clear")
+                            }
+                        } else {
+                            IconButton(onClick = { viewModel.loadFeed(refresh = true) }) {
+                                Icon(
+                                    imageVector = Icons.Default.Refresh,
+                                    contentDescription = "Refresh Feed",
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
                         }
-                    } else {
-                        IconButton(onClick = { viewModel.loadFeed(refresh = true) }) {
+                        // Quick theme toggle button: cycles Light -> Dark -> Night -> Light
+                        IconButton(onClick = onToggleTheme) {
                             Icon(
-                                imageVector = Icons.Default.Refresh,
-                                contentDescription = "Refresh Feed",
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                imageVector = when (currentThemeMode) {
+                                    tech.potluri.blog.ui.theme.AppThemeMode.LIGHT -> androidx.compose.material.icons.Icons.Default.LightMode
+                                    tech.potluri.blog.ui.theme.AppThemeMode.DARK -> androidx.compose.material.icons.Icons.Default.DarkMode
+                                    tech.potluri.blog.ui.theme.AppThemeMode.NIGHT -> androidx.compose.material.icons.Icons.Default.Brightness2
+                                },
+                                contentDescription = "Toggle Theme (Light/Dark/Night)",
+                                tint = MaterialTheme.colorScheme.primary
                             )
                         }
                     }

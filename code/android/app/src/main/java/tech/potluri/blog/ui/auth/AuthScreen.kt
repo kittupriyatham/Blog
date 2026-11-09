@@ -324,18 +324,6 @@ fun AuthScreen(
 
                         Spacer(Modifier.height(16.dp))
 
-                        // Title field (optional for posts)
-                        OutlinedTextField(
-                            value = postTitle,
-                            onValueChange = { viewModel.updateDraftTitle(it) },
-                            label = { Text("Title (optional)") },
-                            singleLine = true,
-                            modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(12.dp)
-                        )
-
-                        Spacer(Modifier.height(12.dp))
-
                         // Content field
                         OutlinedTextField(
                             value = postContent,
@@ -644,7 +632,7 @@ fun AuthScreen(
                                         .filter { it.isNotEmpty() }
                                     viewModel.createPost(
                                         content = postContent,
-                                        title = postTitle,
+                                        title = null,
                                         tags = tagsList,
                                         onCreated = onPublished
                                     )

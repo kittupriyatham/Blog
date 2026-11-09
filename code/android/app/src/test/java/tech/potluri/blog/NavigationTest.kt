@@ -277,7 +277,16 @@ class NavigationTest {
         composeTestRule.onNodeWithText("About Author").assertIsDisplayed()
         composeTestRule.onNodeWithText("Potluri Krishna Priyatham").assertIsDisplayed()
 
-        // 7. About Back arrow -> Feed
+        // 7. Test Theme Appearance switching (Light, Dark, Night) in About screen
+        composeTestRule.onNodeWithText("Appearance & Theme").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Light").performClick()
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithText("Night").performClick()
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithText("Dark").performClick()
+        composeTestRule.waitForIdle()
+
+        // 8. About Back arrow -> Feed
         composeTestRule.onNodeWithContentDescription("Back").performClick()
         composeTestRule.waitForIdle()
         composeTestRule.onNodeWithText("Search posts & articles…").assertIsDisplayed()

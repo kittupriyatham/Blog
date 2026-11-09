@@ -35,6 +35,8 @@ import tech.potluri.blog.ui.detail.DetailScreen
 import tech.potluri.blog.ui.feed.FeedScreen
 import tech.potluri.blog.ui.feed.FeedViewModel
 import tech.potluri.blog.ui.navigation.Screen
+import android.content.Context
+import tech.potluri.blog.ui.theme.AppThemeMode
 import tech.potluri.blog.ui.theme.BlogTheme
 
 class MainActivity : ComponentActivity() {
@@ -42,12 +44,34 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            BlogTheme {
+            val prefs = getSharedPreferences("blog_prefs", Context.MODE_PRIVATE)
+            val savedMode = prefs.getString("theme_mode", AppThemeMode.DARK.name) ?: AppThemeMode.DARK.name
+            var currentThemeMode by rememberSaveable {
+                mutableStateOf(try { AppThemeMode.valueOf(savedMode) } catch (e: Exception) { AppThemeMode.DARK })
+            }
+
+            fun updateThemeMode(mode: AppThemeMode) {
+                currentThemeMode = mode
+                prefs.edit().putString("theme_mode", mode.name).apply()
+            }
+
+            BlogTheme(themeMode = currentThemeMode) {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    BlogApp()
+                    BlogApp(
+                        currentThemeMode = currentThemeMode,
+                        onThemeModeChanged = ::updateThemeMode,
+                        onToggleTheme = {
+                            val nextMode = when (currentThemeMode) {
+                                AppThemeMode.LIGHT -> AppThemeMode.DARK
+                                AppThemeMode.DARK -> AppThemeMode.NIGHT
+                                AppThemeMode.NIGHT -> AppThemeMode.LIGHT
+                            }
+                            updateThemeMode(nextMode)
+                        }
+                    )
                 }
             }
         }
@@ -56,6 +80,9 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun BlogApp(
+    currentThemeMode: AppThemeMode = AppThemeMode.DARK,
+    onThemeModeChanged: (AppThemeMode) -> Unit = {},
+    onToggleTheme: () -> Unit = {},
     feedViewModel: FeedViewModel = viewModel(),
     authViewModel: AuthViewModel = viewModel(),
     authorViewModel: AuthorViewModel = viewModel()
@@ -153,6 +180,8 @@ fun BlogApp(
                     Screen.Author.route -> {
                         AuthorScreen(
                             viewModel = authorViewModel,
+                            currentThemeMode = currentThemeMode,
+                            onThemeModeChanged = onThemeModeChanged,
                             onBack = {
                                 currentTab = Screen.Feed.route
                             }
@@ -161,6 +190,8 @@ fun BlogApp(
                     else -> {
                         FeedScreen(
                             viewModel = feedViewModel,
+                            currentThemeMode = currentThemeMode,
+                            onToggleTheme = onToggleTheme,
                             onPostClick = { postId ->
                                 selectedPostId = postId
                             },

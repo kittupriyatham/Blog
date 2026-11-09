@@ -56,6 +56,8 @@ import tech.potluri.blog.BuildConfig
 fun AuthorScreen(
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
+    currentThemeMode: tech.potluri.blog.ui.theme.AppThemeMode = tech.potluri.blog.ui.theme.AppThemeMode.DARK,
+    onThemeModeChanged: (tech.potluri.blog.ui.theme.AppThemeMode) -> Unit = {},
     viewModel: AuthorViewModel = viewModel()
 ) {
     val context = LocalContext.current
@@ -223,6 +225,56 @@ fun AuthorScreen(
                                 }
                                 Spacer(modifier = Modifier.height(16.dp))
                             }
+                        }
+
+                        // Appearance & Theme Section
+                        item {
+                            Card(
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RoundedCornerShape(16.dp),
+                                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+                            ) {
+                                Column(modifier = Modifier.padding(16.dp)) {
+                                    Text(
+                                        text = "Appearance & Theme",
+                                        style = MaterialTheme.typography.titleLarge,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                    Spacer(modifier = Modifier.height(4.dp))
+                                    Text(
+                                        text = "Switch between Light, Dark (Slate), and Night (AMOLED Pitch Black).",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                    Spacer(modifier = Modifier.height(14.dp))
+
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                    ) {
+                                        androidx.compose.material3.FilterChip(
+                                            selected = currentThemeMode == tech.potluri.blog.ui.theme.AppThemeMode.LIGHT,
+                                            onClick = { onThemeModeChanged(tech.potluri.blog.ui.theme.AppThemeMode.LIGHT) },
+                                            label = { Text("Light") },
+                                            modifier = Modifier.weight(1f)
+                                        )
+                                        androidx.compose.material3.FilterChip(
+                                            selected = currentThemeMode == tech.potluri.blog.ui.theme.AppThemeMode.DARK,
+                                            onClick = { onThemeModeChanged(tech.potluri.blog.ui.theme.AppThemeMode.DARK) },
+                                            label = { Text("Dark") },
+                                            modifier = Modifier.weight(1f)
+                                        )
+                                        androidx.compose.material3.FilterChip(
+                                            selected = currentThemeMode == tech.potluri.blog.ui.theme.AppThemeMode.NIGHT,
+                                            onClick = { onThemeModeChanged(tech.potluri.blog.ui.theme.AppThemeMode.NIGHT) },
+                                            label = { Text("Night") },
+                                            modifier = Modifier.weight(1f)
+                                        )
+                                    }
+                                }
+                            }
+                            Spacer(modifier = Modifier.height(16.dp))
                         }
 
                         // External Links & Profiles
