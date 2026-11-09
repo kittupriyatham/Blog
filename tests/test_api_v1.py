@@ -167,12 +167,33 @@ def test_add_comment(client):
 
 def test_react_to_post(client):
     """Test POST /api/v1/posts/<post_id>/react."""
-    res = client.post("/api/v1/posts/test_post_1/react", json={"type": "heart"})
+    with patch.object(posts_module.analytics, "record_analytics") as record_analytics:
+        res = client.post("/api/v1/posts/test_post_1/react", json={"type": "heart"})
+
     assert res.status_code == 200
     data = res.get_json()
     assert data["status"] == "success"
     assert data["reactions"]["heart"] == 3
     assert data["likes"] == 6
+    record_analytics.assert_called_once_with({
+        "event": "likes",
+        "post_id": "test_post_1",
+        "reaction": "heart",
+    })
+
+
+def test_share_post_records_dashboard_event(client):
+    """Share analytics use the event shape consumed by dashboard aggregation."""
+    with patch.object(posts_module.analytics, "record_analytics") as record_analytics:
+        res = client.post("/api/v1/posts/test_post_1/share", json={"platform": "whatsapp"})
+
+    assert res.status_code == 200
+    assert res.get_json()["shares"] == 1
+    record_analytics.assert_called_once_with({
+        "event": "shares",
+        "post_id": "test_post_1",
+        "method": "whatsapp",
+    })
 
 
 def test_get_articles(client):

@@ -209,7 +209,7 @@ def react_to_post(post_id):
         return jsonify({"status": "error", "message": "Post not found"}), 404
 
     analytics.record_analytics({
-        "event": "like",
+        "event": "likes",
         "post_id": post_id,
         "reaction": reaction,
     })
@@ -240,9 +240,9 @@ def share_post(post_id):
         return jsonify({"status": "error", "message": "Post not found"}), 404
 
     analytics.record_analytics({
-        "event": "share",
+        "event": "shares",
         "post_id": post_id,
-        "platform": platform,
+        "method": platform,
     })
 
     return jsonify({
