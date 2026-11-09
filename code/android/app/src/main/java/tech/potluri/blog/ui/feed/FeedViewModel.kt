@@ -30,7 +30,6 @@ class FeedViewModel(
 
     private val _uiState = MutableStateFlow(FeedUiState())
     val uiState: StateFlow<FeedUiState> = _uiState.asStateFlow()
-    private val reactionMutex = Mutex()
 
     init {
         loadFeed()
@@ -108,9 +107,11 @@ class FeedViewModel(
         loadFeed(refresh = true)
     }
 
+    private val reactionLocks = mutableMapOf<String, Mutex>()
+
     fun reactToPost(postId: String, reactionType: String) {
         viewModelScope.launch {
-            reactionMutex.withLock {
+            reactionLocks.getOrPut(postId) { Mutex() }.withLock {
                 repository.submitReaction(postId, reactionType).onSuccess { response ->
                     val currentPosts = _uiState.value.posts.map { p ->
                         if (p.post_id == postId) {
@@ -119,7 +120,7 @@ class FeedViewModel(
                     }
                     _uiState.value = _uiState.value.copy(posts = currentPosts)
                 }
+            }
         }
-    }
     }
 }

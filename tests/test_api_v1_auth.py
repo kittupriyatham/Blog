@@ -10,6 +10,7 @@ MOBILE_HEADERS = {"X-Mobile-Client": "blog-android"}
 def test_mobile_demo_login_creates_demo_session():
     app.config["TESTING"] = True
     with app.test_client() as client:
+        assert client.get("/api/v1/auth/me").status_code == 401
         response = client.post(
             "/api/v1/auth/login",
             json={"username": "demo", "password": "demo"},
@@ -25,6 +26,8 @@ def test_mobile_demo_login_creates_demo_session():
         me = client.get("/api/v1/auth/me")
         assert me.status_code == 200
         assert me.get_json()["user"]["is_demo"] is True
+        assert client.post("/api/v1/auth/logout", headers=MOBILE_HEADERS).status_code == 200
+        assert client.get("/api/v1/auth/me").status_code == 401
 
 
 def test_mobile_admin_login_creates_admin_session():
@@ -39,6 +42,9 @@ def test_mobile_admin_login_creates_admin_session():
             )
             assert response.status_code == 200
             assert response.get_json()["user"]["is_admin"] is True
+            me = client.get("/api/v1/auth/me")
+            assert me.status_code == 200
+            assert me.get_json()["user"]["is_admin"] is True
 
 
 def test_mobile_login_rejects_invalid_credentials():
@@ -60,6 +66,23 @@ def test_mobile_auth_rejects_browser_form_submissions():
             data={"username": "demo", "password": "demo"},
         )
         assert response.status_code == 400
+
+
+def test_mobile_auth_rejects_json_without_mobile_header():
+    with app.test_client() as client:
+        response = client.post(
+            "/api/v1/auth/login", json={"username": "demo", "password": "demo"}
+        )
+        assert response.status_code == 400
+        assert client.get("/api/v1/auth/me").status_code == 401
+
+
+def test_mobile_session_without_role_requires_reauthentication():
+    with app.test_client() as client:
+        with client.session_transaction() as session:
+            session["logged_in"] = True
+            session["username"] = "admin"
+        assert client.get("/api/v1/auth/me").status_code == 401
 
 
 def test_mobile_auth_rejects_non_object_json():

@@ -62,7 +62,7 @@ def login():
 @auth_bp.route("/auth/me", methods=["GET"])
 def current_user():
     """Return the authenticated mobile session, if one exists."""
-    if not session.get("logged_in"):
+    if not session.get("logged_in") or "is_demo" not in session:
         return jsonify({"status": "error", "message": "Not authenticated."}), 401
     return jsonify({
         "status": "success",

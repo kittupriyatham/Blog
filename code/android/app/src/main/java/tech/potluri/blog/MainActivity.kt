@@ -155,7 +155,14 @@ fun BlogApp() {
             }
 
             composable(Screen.Admin.route) {
-                AuthScreen()
+                AuthScreen(
+                    onSignedIn = {
+                        navController.navigate(Screen.Feed.route) {
+                            popUpTo(Screen.Admin.route) { inclusive = true }
+                            launchSingleTop = true
+                        }
+                    }
+                )
             }
         }
     }

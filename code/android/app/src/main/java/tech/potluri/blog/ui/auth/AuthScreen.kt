@@ -13,6 +13,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -26,11 +27,19 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 
 @Composable
 fun AuthScreen(
+    onSignedIn: () -> Unit,
     viewModel: AuthViewModel = viewModel()
 ) {
     val state by viewModel.uiState.collectAsState()
     var username by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
+
+    LaunchedEffect(state.loginSucceeded) {
+        if (state.loginSucceeded) {
+            viewModel.consumeLoginSuccess()
+            onSignedIn()
+        }
+    }
 
     if (state.isLoading && state.user == null) {
         CircularProgressIndicator()
@@ -85,7 +94,14 @@ fun AuthScreen(
                 enabled = !state.isLoading,
                 modifier = Modifier.fillMaxWidth()
             ) {
-                if (state.isLoading) CircularProgressIndicator()
+                LaunchedEffect(state.loginSucceeded) {
+        if (state.loginSucceeded) {
+            viewModel.consumeLoginSuccess()
+            onSignedIn()
+        }
+    }
+
+    if (state.isLoading) CircularProgressIndicator()
                 else Text("Sign in")
             }
             Spacer(Modifier.height(10.dp))

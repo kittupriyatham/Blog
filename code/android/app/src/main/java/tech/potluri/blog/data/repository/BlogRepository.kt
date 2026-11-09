@@ -77,9 +77,9 @@ class BlogRepository(
             val response = block()
             if (response.isSuccessful) {
                 response.body()?.let { Result.success(it) }
-                    ?: Result.failure(IOException("Empty server response"))
+                    ?: Result.failure(IllegalStateException("Empty server response"))
             } else {
-                Result.failure(IOException(response.errorBody()?.string() ?: "Request failed (${response.code()})"))
+                Result.failure(HttpException(response))
             }
         } catch (error: IOException) {
             Result.failure(error)
