@@ -94,11 +94,6 @@ Select an Android Virtual Device (API 24+) or connect a physical device via USB,
 
 ## 📦 Download a CI Build
 
-Push a tag matching `android-v*` to build the debug APK and publish it as a downloadable asset on a GitHub Release:
+Every push to `main` or `feature/mobile-api` that changes `src/android/**` builds the debug APK, increments the app version using the Actions run number, and publishes a new GitHub Release. The APK is attached to the corresponding release under the repository's **Releases** page.
 
-```bash
-git tag android-v1.0.0
-git push origin android-v1.0.0
-```
-
-The APK will be attached to the corresponding release under the repository's **Releases** page.
+You do not need to create a tag manually. Releases use tags such as `android-v1.0.42`.
