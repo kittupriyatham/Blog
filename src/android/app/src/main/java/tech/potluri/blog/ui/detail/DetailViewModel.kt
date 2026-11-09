@@ -46,12 +46,20 @@ class DetailViewModel(
     fun loadComments(postId: String) {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isCommentsLoading = true)
-            repository.fetchComments(postId).onSuccess { comments ->
-                _uiState.value = _uiState.value.copy(
-                    comments = comments,
-                    isCommentsLoading = false
-                )
-            }
+            repository.fetchComments(postId).fold(
+                onSuccess = { comments ->
+                    _uiState.value = _uiState.value.copy(
+                        comments = comments,
+                        isCommentsLoading = false
+                    )
+                },
+                onFailure = { error ->
+                    _uiState.value = _uiState.value.copy(
+                        isCommentsLoading = false,
+                        error = error.localizedMessage ?: "Failed to load comments"
+                    )
+                }
+            )
         }
     }
 
@@ -70,15 +78,17 @@ class DetailViewModel(
     }
 
     fun react(reactionType: String) {
-        val currentPost = _uiState.value.post ?: return
+        val postId = _uiState.value.post?.post_id ?: return
         viewModelScope.launch {
-            repository.submitReaction(currentPost.post_id, reactionType).onSuccess { updatedReactions ->
-                _uiState.value = _uiState.value.copy(
-                    post = currentPost.copy(
-                        reactions = updatedReactions,
-                        likes = currentPost.likes + 1
+            repository.submitReaction(postId, reactionType).onSuccess { response ->
+                _uiState.value.post?.let { currentPost ->
+                    _uiState.value = _uiState.value.copy(
+                        post = currentPost.copy(
+                            reactions = response.reactions,
+                            likes = response.likes
+                        )
                     )
-                )
+                }
             }
         }
     }

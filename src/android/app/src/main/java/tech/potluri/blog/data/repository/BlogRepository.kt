@@ -6,7 +6,7 @@ import tech.potluri.blog.data.model.AuthorResponse
 import tech.potluri.blog.data.model.Comment
 import tech.potluri.blog.data.model.Post
 import tech.potluri.blog.data.model.PostsResponse
-import tech.potluri.blog.data.model.ReactionCounts
+import tech.potluri.blog.data.model.ReactionResponse
 import tech.potluri.blog.data.model.TagItem
 import tech.potluri.blog.data.remote.BlogApiService
 import tech.potluri.blog.data.remote.NetworkModule
@@ -31,8 +31,8 @@ class BlogRepository(
     suspend fun postComment(postId: String, name: String, body: String): Result<Comment> =
         request { api.addComment(postId, name, body).comment }
 
-    suspend fun submitReaction(postId: String, type: String): Result<ReactionCounts> =
-        request { api.react(postId, type).reactions }
+    suspend fun submitReaction(postId: String, type: String): Result<ReactionResponse> =
+        request { api.react(postId, type) }
 
     suspend fun recordShare(postId: String): Result<Int> =
         request { api.share(postId).shares }

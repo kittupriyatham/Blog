@@ -107,10 +107,10 @@ class FeedViewModel(
 
     fun reactToPost(postId: String, reactionType: String) {
         viewModelScope.launch {
-            repository.submitReaction(postId, reactionType).onSuccess { updatedReactions ->
+            repository.submitReaction(postId, reactionType).onSuccess { response ->
                 val currentPosts = _uiState.value.posts.map { p ->
                     if (p.post_id == postId) {
-                        p.copy(reactions = updatedReactions, likes = p.likes + 1)
+                        p.copy(reactions = response.reactions, likes = response.likes)
                     } else p
                 }
                 _uiState.value = _uiState.value.copy(posts = currentPosts)
