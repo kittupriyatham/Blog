@@ -21,14 +21,18 @@ data class AuthUiState(
 class AuthViewModel(
     private val repository: BlogRepository = BlogRepository()
 ) : ViewModel() {
-    private val _uiState = MutableStateFlow(AuthUiState())
+    private val _uiState = MutableStateFlow(AuthUiState(isLoading = true))
     val uiState: StateFlow<AuthUiState> = _uiState.asStateFlow()
 
     init {
+        loadSession()
+    }
+
+    private fun loadSession() {
         viewModelScope.launch {
             _uiState.value = AuthUiState(isLoading = true)
             repository.currentUser().fold(
-                onSuccess = { _uiState.value = AuthUiState(user = it.user) },
+                onSuccess = { _uiState.value = AuthUiState(user = it) },
                 onFailure = { _uiState.value = AuthUiState() }
             )
         }

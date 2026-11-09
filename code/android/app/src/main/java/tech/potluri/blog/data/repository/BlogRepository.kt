@@ -6,6 +6,7 @@ import tech.potluri.blog.data.model.AuthorResponse
 import tech.potluri.blog.data.model.AuthResponse
 import tech.potluri.blog.data.model.Comment
 import tech.potluri.blog.data.model.LoginRequest
+import tech.potluri.blog.data.model.AuthUser
 import tech.potluri.blog.data.model.Post
 import tech.potluri.blog.data.model.PostsResponse
 import tech.potluri.blog.data.model.ReactionResponse
@@ -19,11 +20,17 @@ class BlogRepository(
     suspend fun login(username: String, password: String): Result<AuthResponse> =
         requestResponse { api.login(LoginRequest(username, password)) }
 
-    suspend fun currentUser(): Result<AuthResponse> =
-        requestResponse { api.currentUser() }
-
     suspend fun logout(): Result<Unit> =
         requestResponse { api.logout() }.map { Unit }
+
+    suspend fun currentUser(): Result<AuthUser> =
+        requestResponse { api.currentUser() }.fold(
+            onSuccess = { response ->
+                response.user?.let { Result.success(it) }
+                    ?: Result.failure(IOException("Authenticated user missing from server response"))
+            },
+            onFailure = { Result.failure(it) }
+        )
 
     suspend fun fetchPosts(
         page: Int,
