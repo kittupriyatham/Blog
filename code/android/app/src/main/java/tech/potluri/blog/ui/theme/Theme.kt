@@ -12,52 +12,67 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
 
-// 1. Light Mode: Clean crisp slate/indigo palette
+// 1. Light Mode: Editorial Alabaster & Crisp Indigo
 private val LightColorScheme = lightColorScheme(
     primary = Brand600,
     onPrimary = Color.White,
     primaryContainer = Brand100,
-    onPrimaryContainer = Brand700,
-    secondary = Brand500,
+    onPrimaryContainer = Brand800,
+    secondary = AccentViolet,
+    onSecondary = Color.White,
+    secondaryContainer = Brand50,
+    onSecondaryContainer = Brand700,
+    tertiary = AccentCyan,
     background = Slate50,
     surface = Color.White,
     surfaceVariant = Slate100,
     onBackground = Slate900,
     onSurface = Slate900,
-    onSurfaceVariant = Slate700
+    onSurfaceVariant = Slate600,
+    outline = Slate200,
+    outlineVariant = Slate200
 )
 
-// 2. Dark Mode: Deep Obsidian Slate (slate-900 / slate-800)
+// 2. Dark Mode: Deep Obsidian Slate (slate-950 / slate-900 / slate-800)
 private val DarkColorScheme = darkColorScheme(
     primary = Brand400,
     onPrimary = Color.White,
     primaryContainer = Brand700,
-    onPrimaryContainer = Brand100,
-    secondary = Brand500,
-    background = Slate900,
-    surface = Slate800,
-    surfaceVariant = Slate700,
+    onPrimaryContainer = Color.White,
+    secondary = AccentViolet,
+    onSecondary = Color.White,
+    secondaryContainer = Slate800,
+    onSecondaryContainer = Slate100,
+    tertiary = AccentCyan,
+    background = Slate950,
+    surface = Slate900,
+    surfaceVariant = Slate800,
     onBackground = Slate50,
     onSurface = Slate50,
-    onSurfaceVariant = Slate200
+    onSurfaceVariant = Slate300,
+    outline = Slate700,
+    outlineVariant = Slate800
 )
 
-// 3. Night Mode: Pure OLED/AMOLED Pitch Black (True black #000000 background & high-contrast icons)
+// 3. Night Mode: Pure OLED/AMOLED Pitch Black (#000000 background & high-contrast icons/borders)
 private val NightColorScheme = darkColorScheme(
     primary = Brand400,
     onPrimary = Color.White,
     primaryContainer = Brand700,
     onPrimaryContainer = Color.White,
-    secondary = Brand400,
+    secondary = AccentViolet,
     onSecondary = Color.White,
     secondaryContainer = Color(0xFF1E293B),
     onSecondaryContainer = Color(0xFFF1F5F9),
+    tertiary = AccentCyan,
     background = Color(0xFF000000),
-    surface = Color(0xFF0A0A0A),
+    surface = Color(0xFF0A0A0C),
     surfaceVariant = Color(0xFF1E293B),
     onBackground = Color(0xFFF8FAFC),
     onSurface = Color(0xFFF8FAFC),
-    onSurfaceVariant = Color(0xFFE2E8F0)
+    onSurfaceVariant = Color(0xFFE2E8F0),
+    outline = Color(0xFF334155),
+    outlineVariant = Color(0xFF1E293B)
 )
 
 @Composable
@@ -75,9 +90,15 @@ fun BlogTheme(
     if (!view.isInEditMode) {
         val isLight = themeMode == AppThemeMode.LIGHT
         SideEffect {
-            val window = (view.context as Activity).window
-            window.statusBarColor = colorScheme.background.toArgb()
-            WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = isLight
+            val context = view.context
+            if (context is Activity) {
+                val window = context.window
+                window.statusBarColor = colorScheme.background.toArgb()
+                window.navigationBarColor = colorScheme.surface.toArgb()
+                val controller = WindowCompat.getInsetsController(window, view)
+                controller.isAppearanceLightStatusBars = isLight
+                controller.isAppearanceLightNavigationBars = isLight
+            }
         }
     }
 

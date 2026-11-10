@@ -1,10 +1,13 @@
 package tech.potluri.blog
 
+import android.content.Context
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.animation.Crossfade
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -28,17 +31,17 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import tech.potluri.blog.ui.author.AuthorScreen
-import tech.potluri.blog.ui.author.AuthorViewModel
 import tech.potluri.blog.ui.auth.AuthScreen
 import tech.potluri.blog.ui.auth.AuthViewModel
+import tech.potluri.blog.ui.author.AuthorScreen
+import tech.potluri.blog.ui.author.AuthorViewModel
 import tech.potluri.blog.ui.detail.DetailScreen
 import tech.potluri.blog.ui.feed.FeedScreen
 import tech.potluri.blog.ui.feed.FeedViewModel
 import tech.potluri.blog.ui.navigation.Screen
-import android.content.Context
 import tech.potluri.blog.ui.theme.AppThemeMode
 import tech.potluri.blog.ui.theme.BlogTheme
 
@@ -116,7 +119,7 @@ fun BlogApp(
                 Column {
                     HorizontalDivider(
                         thickness = 1.dp,
-                        color = MaterialTheme.colorScheme.surfaceVariant
+                        color = MaterialTheme.colorScheme.outlineVariant
                     )
                     NavigationBar(
                         containerColor = MaterialTheme.colorScheme.surface,
@@ -142,6 +145,7 @@ fun BlogApp(
                             label = {
                                 Text(
                                     "Feed",
+                                    fontWeight = if (currentTab == Screen.Feed.route) FontWeight.ExtraBold else FontWeight.Medium,
                                     color = if (currentTab == Screen.Feed.route)
                                         MaterialTheme.colorScheme.primary
                                     else
@@ -170,6 +174,7 @@ fun BlogApp(
                             label = {
                                 Text(
                                     "Admin",
+                                    fontWeight = if (currentTab == Screen.Admin.route) FontWeight.ExtraBold else FontWeight.Medium,
                                     color = if (currentTab == Screen.Admin.route)
                                         MaterialTheme.colorScheme.primary
                                     else
@@ -199,6 +204,7 @@ fun BlogApp(
                             label = {
                                 Text(
                                     "About",
+                                    fontWeight = if (currentTab == Screen.Author.route) FontWeight.ExtraBold else FontWeight.Medium,
                                     color = if (currentTab == Screen.Author.route)
                                         MaterialTheme.colorScheme.primary
                                     else
@@ -224,40 +230,46 @@ fun BlogApp(
                     onBack = { selectedPostId = null }
                 )
             } else {
-                when (currentTab) {
-                    Screen.Admin.route -> {
-                        AuthScreen(
-                            viewModel = authViewModel,
-                            onPublished = {
-                                feedViewModel.refresh()
-                            },
-                            onNavigateToFeed = {
-                                currentTab = Screen.Feed.route
-                            }
-                        )
-                    }
-                    Screen.Author.route -> {
-                        AuthorScreen(
-                            viewModel = authorViewModel,
-                            currentThemeMode = currentThemeMode,
-                            onThemeModeChanged = onThemeModeChanged,
-                            onBack = {
-                                currentTab = Screen.Feed.route
-                            }
-                        )
-                    }
-                    else -> {
-                        FeedScreen(
-                            viewModel = feedViewModel,
-                            currentThemeMode = currentThemeMode,
-                            onToggleTheme = onToggleTheme,
-                            onPostClick = { postId ->
-                                selectedPostId = postId
-                            },
-                            onNavigateToAdmin = {
-                                currentTab = Screen.Admin.route
-                            }
-                        )
+                Crossfade(
+                    targetState = currentTab,
+                    animationSpec = tween(durationMillis = 180),
+                    label = "tab_crossfade"
+                ) { tab ->
+                    when (tab) {
+                        Screen.Admin.route -> {
+                            AuthScreen(
+                                viewModel = authViewModel,
+                                onPublished = {
+                                    feedViewModel.refresh()
+                                },
+                                onNavigateToFeed = {
+                                    currentTab = Screen.Feed.route
+                                }
+                            )
+                        }
+                        Screen.Author.route -> {
+                            AuthorScreen(
+                                viewModel = authorViewModel,
+                                currentThemeMode = currentThemeMode,
+                                onThemeModeChanged = onThemeModeChanged,
+                                onBack = {
+                                    currentTab = Screen.Feed.route
+                                }
+                            )
+                        }
+                        else -> {
+                            FeedScreen(
+                                viewModel = feedViewModel,
+                                currentThemeMode = currentThemeMode,
+                                onToggleTheme = onToggleTheme,
+                                onPostClick = { postId ->
+                                    selectedPostId = postId
+                                },
+                                onNavigateToAdmin = {
+                                    currentTab = Screen.Admin.route
+                                }
+                            )
+                        }
                     }
                 }
             }

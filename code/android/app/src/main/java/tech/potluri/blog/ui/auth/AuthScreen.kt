@@ -238,20 +238,27 @@ fun AuthScreen(
                 title = {
                     Text(
                         if (state.user != null) "Publisher Studio" else "Admin Access",
-                        fontWeight = FontWeight.SemiBold
+                        fontWeight = FontWeight.ExtraBold
                     )
                 },
                 actions = {
-                    Text(
-                        text = "v${BuildConfig.VERSION_NAME}",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    androidx.compose.material3.Surface(
+                        shape = RoundedCornerShape(50),
+                        color = MaterialTheme.colorScheme.surfaceVariant,
                         modifier = Modifier.padding(end = 16.dp)
-                    )
+                    ) {
+                        Text(
+                            text = "v${BuildConfig.VERSION_NAME}",
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                        )
+                    }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface,
-                    titleContentColor = MaterialTheme.colorScheme.onSurface
+                    containerColor = MaterialTheme.colorScheme.background,
+                    titleContentColor = MaterialTheme.colorScheme.onBackground
                 )
             )
         }
@@ -272,6 +279,7 @@ fun AuthScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
+                .background(MaterialTheme.colorScheme.background)
                 .verticalScroll(rememberScrollState())
                 .padding(16.dp),
             verticalArrangement = Arrangement.Top
@@ -282,53 +290,70 @@ fun AuthScreen(
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                        containerColor = MaterialTheme.colorScheme.surface
                     ),
-                    shape = RoundedCornerShape(16.dp)
+                    border = androidx.compose.foundation.BorderStroke(
+                        1.dp,
+                        MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.7f)
+                    ),
+                    shape = RoundedCornerShape(22.dp)
                 ) {
-                    Column(modifier = Modifier.padding(16.dp)) {
+                    Column(modifier = Modifier.padding(18.dp)) {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(
-                                    imageVector = if (user.is_admin) Icons.Default.AdminPanelSettings else Icons.Default.Person,
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.primary,
-                                    modifier = Modifier.size(32.dp)
-                                )
+                                Box(
+                                    modifier = Modifier
+                                        .size(44.dp)
+                                        .clip(RoundedCornerShape(14.dp))
+                                        .background(MaterialTheme.colorScheme.primaryContainer),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = if (user.is_admin) Icons.Default.AdminPanelSettings else Icons.Default.Person,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                                        modifier = Modifier.size(24.dp)
+                                    )
+                                }
                                 Spacer(Modifier.width(12.dp))
                                 Column {
                                     Text(
                                         user.username,
                                         style = MaterialTheme.typography.titleMedium,
-                                        fontWeight = FontWeight.Bold
+                                        fontWeight = FontWeight.ExtraBold
                                     )
-                                    SuggestionChip(
-                                        onClick = {},
-                                        label = {
-                                            Text(
-                                                if (user.is_admin) "Administrator" else "Demo Publisher",
-                                                style = MaterialTheme.typography.labelSmall
-                                            )
-                                        },
-                                        colors = SuggestionChipDefaults.suggestionChipColors(
-                                            containerColor = if (user.is_admin)
-                                                MaterialTheme.colorScheme.primaryContainer
+                                    Spacer(Modifier.height(2.dp))
+                                    androidx.compose.material3.Surface(
+                                        shape = RoundedCornerShape(50),
+                                        color = if (user.is_admin)
+                                            MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.75f)
+                                        else
+                                            MaterialTheme.colorScheme.secondaryContainer
+                                    ) {
+                                        Text(
+                                            if (user.is_admin) "Administrator" else "Demo Publisher",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            fontWeight = FontWeight.Bold,
+                                            color = if (user.is_admin)
+                                                MaterialTheme.colorScheme.onPrimaryContainer
                                             else
-                                                MaterialTheme.colorScheme.secondaryContainer
+                                                MaterialTheme.colorScheme.onSecondaryContainer,
+                                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 3.dp)
                                         )
-                                    )
+                                    }
                                 }
                             }
 
                             OutlinedButton(
                                 onClick = viewModel::logout,
-                                enabled = !state.isLoading && !state.isPosting
+                                enabled = !state.isLoading && !state.isPosting,
+                                shape = RoundedCornerShape(12.dp)
                             ) {
-                                Text("Sign out")
+                                Text("Sign out", fontWeight = FontWeight.SemiBold)
                             }
                         }
 
@@ -339,7 +364,7 @@ fun AuthScreen(
                     }
                 }
 
-                Spacer(Modifier.height(20.dp))
+                Spacer(Modifier.height(18.dp))
 
                 // --- Mobile Post Composer (No Article Creation) ---
                 Card(
@@ -347,20 +372,46 @@ fun AuthScreen(
                     colors = CardDefaults.cardColors(
                         containerColor = MaterialTheme.colorScheme.surface
                     ),
+                    border = androidx.compose.foundation.BorderStroke(
+                        1.dp,
+                        MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.7f)
+                    ),
                     elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-                    shape = RoundedCornerShape(16.dp)
+                    shape = RoundedCornerShape(22.dp)
                 ) {
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        Text(
-                            "New Post",
-                            style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Text(
-                            "Publish directly to the blog feed from your mobile device.",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+                    Column(modifier = Modifier.padding(18.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column {
+                                Text(
+                                    "New Post",
+                                    style = MaterialTheme.typography.titleLarge,
+                                    fontWeight = FontWeight.ExtraBold
+                                )
+                                Text(
+                                    "Publish directly to the blog feed from your mobile device.",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                            if (postContent.isNotEmpty()) {
+                                androidx.compose.material3.Surface(
+                                    shape = RoundedCornerShape(50),
+                                    color = MaterialTheme.colorScheme.surfaceVariant
+                                ) {
+                                    Text(
+                                        "${postContent.length} ch",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        fontWeight = FontWeight.Bold,
+                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                                    )
+                                }
+                            }
+                        }
 
                         Spacer(Modifier.height(16.dp))
 
@@ -763,26 +814,38 @@ fun AuthScreen(
                     colors = CardDefaults.cardColors(
                         containerColor = MaterialTheme.colorScheme.surface
                     ),
+                    border = androidx.compose.foundation.BorderStroke(
+                        1.dp,
+                        MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.7f)
+                    ),
                     elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-                    shape = RoundedCornerShape(16.dp)
+                    shape = RoundedCornerShape(22.dp)
                 ) {
                     Column(modifier = Modifier.padding(24.dp)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(
-                                imageVector = Icons.Default.Lock,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(28.dp)
-                            )
-                            Spacer(Modifier.width(10.dp))
+                            Box(
+                                modifier = Modifier
+                                    .size(44.dp)
+                                    .clip(RoundedCornerShape(14.dp))
+                                    .background(MaterialTheme.colorScheme.primaryContainer),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Lock,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                                    modifier = Modifier.size(22.dp)
+                                )
+                            }
+                            Spacer(Modifier.width(12.dp))
                             Text(
                                 "Admin Sign In",
                                 style = MaterialTheme.typography.headlineSmall,
-                                fontWeight = FontWeight.Bold
+                                fontWeight = FontWeight.ExtraBold
                             )
                         }
 
-                        Spacer(Modifier.height(8.dp))
+                        Spacer(Modifier.height(10.dp))
                         Text(
                             "Sign in with your blog credentials to publish posts from your mobile device, use Google Password Manager, or explore with the demo account.",
                             color = MaterialTheme.colorScheme.onSurfaceVariant,

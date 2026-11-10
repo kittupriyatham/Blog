@@ -1,6 +1,7 @@
 package tech.potluri.blog.ui.detail
 
 import android.content.Intent
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -17,19 +18,20 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ChatBubbleOutline
+import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SuggestionChip
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
@@ -50,12 +52,14 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import tech.potluri.blog.ui.components.BlockRenderer
 import tech.potluri.blog.ui.components.CommentSheet
 import tech.potluri.blog.ui.components.ReactionRow
+import kotlin.math.max
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -77,11 +81,24 @@ fun DetailScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(uiState.post?.type?.uppercase() ?: "READER") },
+                title = {
+                    Surface(
+                        shape = RoundedCornerShape(8.dp),
+                        color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.8f)
+                    ) {
+                        Text(
+                            text = uiState.post?.type?.uppercase() ?: "READER",
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.ExtraBold,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer,
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                        )
+                    }
+                },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(
-                            imageVector = Icons.Default.ArrowBack,
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = "Back",
                             tint = MaterialTheme.colorScheme.onBackground
                         )
@@ -116,38 +133,51 @@ fun DetailScreen(
         },
         bottomBar = {
             uiState.post?.let { post ->
-                Surface(
-                    color = MaterialTheme.colorScheme.surface,
-                    tonalElevation = 8.dp,
-                    shadowElevation = 8.dp
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 10.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
+                Column {
+                    HorizontalDivider(
+                        thickness = 1.dp,
+                        color = MaterialTheme.colorScheme.outlineVariant
+                    )
+                    Surface(
+                        color = MaterialTheme.colorScheme.surface,
+                        tonalElevation = 4.dp
                     ) {
-                        ReactionRow(
-                            reactions = post.reactions,
-                            onReact = { reactionType ->
-                                viewModel.react(reactionType)
-                            }
-                        )
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 12.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            ReactionRow(
+                                reactions = post.reactions,
+                                onReact = { reactionType ->
+                                    viewModel.react(reactionType)
+                                }
+                            )
 
-                        IconButton(onClick = { showCommentSheet = true }) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(
-                                    imageVector = Icons.Default.ChatBubbleOutline,
-                                    contentDescription = "Comments",
-                                    tint = MaterialTheme.colorScheme.primary
-                                )
-                                if (uiState.comments.isNotEmpty()) {
-                                    Spacer(modifier = Modifier.width(4.dp))
+                            Surface(
+                                onClick = { showCommentSheet = true },
+                                shape = RoundedCornerShape(50),
+                                color = MaterialTheme.colorScheme.primaryContainer,
+                                contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.ChatBubbleOutline,
+                                        contentDescription = "Comments",
+                                        tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(6.dp))
                                     Text(
-                                        text = uiState.comments.size.toString(),
-                                        style = MaterialTheme.typography.labelSmall,
-                                        color = MaterialTheme.colorScheme.primary
+                                        text = if (uiState.comments.isNotEmpty()) "${uiState.comments.size}" else "Discuss",
+                                        style = MaterialTheme.typography.labelMedium,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.onPrimaryContainer
                                     )
                                 }
                             }
@@ -187,6 +217,9 @@ fun DetailScreen(
                 }
             } else {
                 uiState.post?.let { post ->
+                    val wordCount = post.content.split(Regex("\\s+")).count { it.isNotBlank() }
+                    val readTimeMin = max(1, wordCount / 180)
+
                     LazyColumn(
                         modifier = Modifier
                             .fillMaxSize()
@@ -205,10 +238,10 @@ fun DetailScreen(
                                     contentScale = ContentScale.Crop,
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .height(200.dp)
-                                        .clip(RoundedCornerShape(14.dp))
+                                        .height(210.dp)
+                                        .clip(RoundedCornerShape(18.dp))
                                 )
-                                Spacer(modifier = Modifier.height(16.dp))
+                                Spacer(modifier = Modifier.height(18.dp))
                             }
                         }
 
@@ -217,53 +250,88 @@ fun DetailScreen(
                             item {
                                 Text(
                                     text = post.title,
-                                    style = MaterialTheme.typography.headlineMedium,
-                                    fontWeight = FontWeight.Bold,
+                                    style = MaterialTheme.typography.headlineLarge,
+                                    fontWeight = FontWeight.ExtraBold,
                                     color = MaterialTheme.colorScheme.onBackground
                                 )
-                                Spacer(modifier = Modifier.height(8.dp))
+                                Spacer(modifier = Modifier.height(10.dp))
                             }
                         }
 
-                        // Metadata: Date & views
+                        // Metadata: Date, read time & views
                         item {
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                horizontalArrangement = Arrangement.spacedBy(10.dp)
                             ) {
                                 if (post.timestamp.isNotBlank()) {
                                     Text(
                                         text = post.timestamp.take(10),
-                                        style = MaterialTheme.typography.labelSmall,
+                                        style = MaterialTheme.typography.labelMedium,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                                Text(
+                                    text = "•",
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(
+                                        imageVector = Icons.Default.Schedule,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        modifier = Modifier.size(13.dp)
+                                    )
+                                    Spacer(Modifier.width(4.dp))
+                                    Text(
+                                        text = "$readTimeMin min read",
+                                        style = MaterialTheme.typography.labelMedium,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
                                 }
                                 Text(
                                     text = "•   ${post.views} views",
-                                    style = MaterialTheme.typography.labelSmall,
+                                    style = MaterialTheme.typography.labelMedium,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }
-                            Spacer(modifier = Modifier.height(16.dp))
+                            Spacer(modifier = Modifier.height(14.dp))
                         }
 
                         // Tags
                         if (post.tags.isNotEmpty()) {
                             item {
                                 Row(
-                                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
                                     modifier = Modifier.fillMaxWidth()
                                 ) {
                                     post.tags.forEach { tag ->
-                                        SuggestionChip(
-                                            onClick = {},
-                                            label = { Text("#$tag") },
-                                            modifier = Modifier.height(30.dp)
-                                        )
+                                        Surface(
+                                            shape = RoundedCornerShape(50),
+                                            color = MaterialTheme.colorScheme.surface,
+                                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+                                        ) {
+                                            Text(
+                                                text = "#$tag",
+                                                style = MaterialTheme.typography.labelSmall,
+                                                color = MaterialTheme.colorScheme.primary,
+                                                fontWeight = FontWeight.Bold,
+                                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 5.dp)
+                                            )
+                                        }
                                     }
                                 }
                                 Spacer(modifier = Modifier.height(16.dp))
                             }
+                        }
+
+                        item {
+                            HorizontalDivider(
+                                thickness = 0.5.dp,
+                                color = MaterialTheme.colorScheme.outlineVariant
+                            )
+                            Spacer(modifier = Modifier.height(16.dp))
                         }
 
                         // Embedded Article or Post preview card
@@ -271,12 +339,13 @@ fun DetailScreen(
                             item {
                                 Card(
                                     colors = CardDefaults.cardColors(
-                                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                                        containerColor = MaterialTheme.colorScheme.surface
                                     ),
-                                    shape = RoundedCornerShape(12.dp),
+                                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.35f)),
+                                    shape = RoundedCornerShape(16.dp),
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .padding(bottom = 16.dp)
+                                        .padding(bottom = 18.dp)
                                 ) {
                                     Row(
                                         modifier = Modifier.padding(14.dp),
@@ -289,7 +358,7 @@ fun DetailScreen(
                                                 contentScale = ContentScale.Crop,
                                                 modifier = Modifier
                                                     .size(56.dp)
-                                                    .clip(RoundedCornerShape(8.dp))
+                                                    .clip(RoundedCornerShape(10.dp))
                                             )
                                             Spacer(Modifier.width(12.dp))
                                         }
@@ -298,16 +367,18 @@ fun DetailScreen(
                                                 text = if (emb.type == "article") "ATTACHED ARTICLE" else "ATTACHED POST",
                                                 style = MaterialTheme.typography.labelSmall,
                                                 color = MaterialTheme.colorScheme.primary,
-                                                fontWeight = FontWeight.Bold
+                                                fontWeight = FontWeight.ExtraBold
                                             )
+                                            Spacer(Modifier.height(2.dp))
                                             Text(
                                                 text = emb.title,
                                                 style = MaterialTheme.typography.titleMedium,
-                                                fontWeight = FontWeight.SemiBold,
+                                                fontWeight = FontWeight.Bold,
                                                 maxLines = 2,
                                                 overflow = TextOverflow.Ellipsis
                                             )
                                             if (emb.content.isNotBlank()) {
+                                                Spacer(Modifier.height(2.dp))
                                                 Text(
                                                     text = emb.content,
                                                     style = MaterialTheme.typography.bodySmall,
@@ -332,13 +403,14 @@ fun DetailScreen(
                                 Text(
                                     text = post.content,
                                     style = MaterialTheme.typography.bodyLarge,
-                                    color = MaterialTheme.colorScheme.onBackground
+                                    color = MaterialTheme.colorScheme.onBackground,
+                                    lineHeight = 26.sp
                                 )
                             }
                         }
 
                         item {
-                            Spacer(modifier = Modifier.height(32.dp))
+                            Spacer(modifier = Modifier.height(36.dp))
                         }
                     }
                 }
