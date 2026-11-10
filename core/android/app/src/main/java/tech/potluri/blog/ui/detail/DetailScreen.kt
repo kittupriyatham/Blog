@@ -59,6 +59,7 @@ import coil.request.ImageRequest
 import tech.potluri.blog.ui.components.BlockRenderer
 import tech.potluri.blog.ui.components.CommentSheet
 import tech.potluri.blog.ui.components.ReactionRow
+import tech.potluri.blog.ui.components.SyndicationSection
 import kotlin.math.max
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -406,6 +407,14 @@ fun DetailScreen(
                                     color = MaterialTheme.colorScheme.onBackground,
                                     lineHeight = 26.sp
                                 )
+                            }
+                        }
+
+                        // Syndicated links / Also published on
+                        if (post.syndications.any { !it.url.isNullOrBlank() && (it.status == null || it.status == "posted") }) {
+                            item {
+                                Spacer(modifier = Modifier.height(20.dp))
+                                SyndicationSection(syndications = post.syndications)
                             }
                         }
 

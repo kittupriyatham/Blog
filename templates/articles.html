@@ -201,7 +201,10 @@ src="https://www.facebook.com/tr?id=2092273818327635&ev=PageView&noscript=1"
                   {% endif %}
                 </div>
                 <h3 class="text-lg font-bold text-slate-900 dark:text-white group-hover:text-brand-600 dark:group-hover:text-brand-400 transition line-clamp-2 mb-2">{{ article.title }}</h3>
-                <p class="text-sm text-slate-500 dark:text-slate-400 mt-auto pt-4 border-t border-slate-100 dark:border-slate-800">{{ article.timestamp.split(' ')[0] }}</p>
+                <div class="text-sm text-slate-500 dark:text-slate-400 mt-auto pt-4 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between">
+                  <span>{{ article.timestamp.split(' ')[0] }}</span>
+                  <span class="inline-flex items-center gap-1 text-xs"><i class="far fa-eye text-[11px] opacity-80"></i> {{ article.views or 0 }} views</span>
+                </div>
               </div>
             </div>
           {% endfor %}

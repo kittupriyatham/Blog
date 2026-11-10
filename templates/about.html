@@ -551,6 +551,7 @@
                   {{ p.type | capitalize }}
                 </span>
                 <span class="text-[11px] text-slate-400">{{ p.timestamp[:10] if p.timestamp else '' }}</span>
+                <span class="text-[11px] text-slate-400 inline-flex items-center gap-1">&bull; <i class="far fa-eye text-[10px] opacity-80"></i> {{ p.views or 0 }} views</span>
               </div>
               <h4 class="font-semibold text-sm text-slate-900 dark:text-white group-hover:text-brand-600 dark:group-hover:text-brand-400 transition line-clamp-2">
                 {{ p.title or (p.content if p.content is defined and p.content else 'Explore Post')[:90] }}

@@ -4,11 +4,11 @@ on:
   push:
     branches: [ main, feature/mobile-api ]
     paths:
-      - 'code/android/**'
+      - 'core/android/**'
       - '.github/workflows/build-android.yml'
   pull_request:
     paths:
-      - 'code/android/**'
+      - 'core/android/**'
       - '.github/workflows/build-android.yml'
   workflow_dispatch:
 
@@ -39,15 +39,15 @@ jobs:
           packages: 'platform-tools'
 
       - name: Grant execute permission for gradlew
-        run: chmod +x code/android/gradlew
+        run: chmod +x core/android/gradlew
 
       - name: Build Debug APK
-        working-directory: code/android
+        working-directory: core/android
         run: ./gradlew assembleDebug --stacktrace -PversionCode=${{ github.run_number }} -PversionName=1.0.${{ github.run_number }}
 
       - name: Prepare APK Release Files
         run: |
-          APK_PATH=$(find code/android/app/build/outputs/apk/debug -name "*.apk" | head -n 1)
+          APK_PATH=$(find core/android/app/build/outputs/apk/debug -name "*.apk" | head -n 1)
           echo "Found generated APK: $APK_PATH"
           VERSION="v1.0.${{ github.run_number }}"
           cp "$APK_PATH" "Potluri-Blog-${VERSION}.apk"

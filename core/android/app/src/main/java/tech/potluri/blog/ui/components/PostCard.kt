@@ -280,6 +280,12 @@ fun PostCard(
                 }
             }
 
+            // Compact syndication links
+            if (post.syndications.any { !it.url.isNullOrBlank() && (it.status == null || it.status == "posted") }) {
+                Spacer(modifier = Modifier.height(10.dp))
+                SyndicationPills(syndications = post.syndications)
+            }
+
             Spacer(modifier = Modifier.height(14.dp))
             HorizontalDivider(
                 thickness = 0.5.dp,

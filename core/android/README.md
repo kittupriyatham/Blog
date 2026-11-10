@@ -49,7 +49,7 @@ Powered by the Flask REST API Blueprint (`/api/v1/posts` and `/api/v1/auth/*`) o
 ## 📂 Project Structure
 
 ```
-code/android/
+core/android/
 ├── app/
 │   ├── build.gradle.kts
 │   └── src/main/
@@ -63,7 +63,7 @@ code/android/
 │           │   └── repository/              # BlogRepository (data fetching & coroutines)
 │           └── ui/
 │               ├── theme/                   # Material 3 Color, Type, and Theme
-│               ├── components/              # PostCard, ReactionRow, BlockRenderer, CommentSheet, TagChipRow
+│               ├── components/              # PostCard, ReactionRow, BlockRenderer, CommentSheet, TagChipRow, SyndicationRow
 │               ├── navigation/              # Screen definitions
 │               ├── feed/                    # FeedScreen & FeedViewModel
 │               ├── detail/                  # DetailScreen & DetailViewModel
@@ -79,7 +79,7 @@ code/android/
 
 ### 1. Open in Android Studio
 1. Launch **Android Studio** (Hedgehog or newer recommended).
-2. Choose **Open** and select the `code/android` directory.
+2. Choose **Open** and select the `core/android` directory.
 3. Allow Gradle to sync dependencies.
 
 ### 2. Configure Backend URL
@@ -98,6 +98,6 @@ Select an Android Virtual Device (API 24+) or connect a physical device via USB,
 
 ## 📦 Download a CI Build
 
-Every push to `main` or `feature/mobile-api` that changes `code/android/**` builds the debug APK, increments the app version using the Actions run number, and publishes a new GitHub Release. The APK is attached to the corresponding release under the repository's **Releases** page.
+Every push to `main` or `feature/mobile-api` that changes `core/android/**` builds the debug APK, increments the app version using the Actions run number, and publishes a new GitHub Release. The APK is attached to the corresponding release under the repository's **Releases** page.
 
 You do not need to create a tag manually. Releases use tags such as `android-v1.0.42`.

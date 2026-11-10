@@ -179,6 +179,7 @@ def index():
     all_docs = list(posts_collection.find(query).sort("timestamp", -1))
 
     for doc in all_docs:
+        doc["views"] = int(doc.get("views") or 0)
         if "blocks" in doc:
             text_parts = []
             media_paths = []
@@ -253,6 +254,8 @@ def tag_view(tag):
 def about():
     query = {"status": "published", "is_demo": {"$ne": True}}
     recent = list(posts_collection.find(query).sort("timestamp", -1).limit(6))
+    for p in recent:
+        p["views"] = int(p.get("views") or 0)
     return render_template("about.html", recent_posts=recent)
 
 
@@ -282,6 +285,7 @@ def post_detail(post_id):
 
     if not session.get("logged_in"):
         posts_collection.update_one({"post_id": post_id}, {"$inc": {"views": 1}})
+        post["views"] = int(post.get("views") or 0) + 1
         analytics.record_analytics({"event": "view", "post_id": post_id, "type": post.get("type", "post"),
                                     "page": "post", "path": request.path})
         ref = request.referrer or ""
@@ -289,6 +293,8 @@ def post_detail(post_id):
             analytics.record_analytics({"event": "reach_in", "post_id": post_id})
         elif ref:
             analytics.record_analytics({"event": "post_opened", "post_id": post_id, "source": ref})
+    else:
+        post["views"] = int(post.get("views") or 0)
     comments = list(comments_collection.find({"post_id": post_id}).sort("timestamp", 1))
     return render_template("post.html", post=post, comments=comments)
 
@@ -325,6 +331,7 @@ def article_detail(article_id):
         abort(404)
     if not session.get("logged_in"):
         posts_collection.update_one({"post_id": article_id}, {"$inc": {"views": 1}})
+        article["views"] = int(article.get("views") or 0) + 1
         analytics.record_analytics({"event": "view", "post_id": article_id, "type": "article",
                                     "page": "article", "path": request.path})
         ref = request.referrer or ""
@@ -332,7 +339,36 @@ def article_detail(article_id):
             analytics.record_analytics({"event": "reach_in", "post_id": article_id})
         elif ref:
             analytics.record_analytics({"event": "post_opened", "post_id": article_id, "source": ref})
+    else:
+        article["views"] = int(article.get("views") or 0)
     return render_template("article.html", post=article)
+
+
+@csrf.exempt
+@app.route("/post/<post_id>/view", methods=["POST", "GET"])
+def record_post_view(post_id):
+    """Explicitly increment view count for a post or article from the client / feed."""
+    post = posts_collection.find_one({"post_id": post_id})
+    if not post:
+        return jsonify({"status": "error", "message": "Post not found"}), 404
+
+    if not session.get("logged_in"):
+        res = posts_collection.find_one_and_update(
+            {"post_id": post_id},
+            {"$inc": {"views": 1}},
+            return_document=True
+        )
+        current_views = int((res or {}).get("views") or 1)
+        analytics.record_analytics({
+            "event": "view",
+            "post_id": post_id,
+            "type": post.get("type", "post"),
+            "page": "card_view",
+            "path": request.path
+        })
+        return jsonify({"status": "success", "post_id": post_id, "views": current_views})
+
+    return jsonify({"status": "noop", "post_id": post_id, "views": int(post.get("views") or 0)})
 
 @csrf.exempt
 @app.route("/like/<post_id>", methods=["POST"])
@@ -976,9 +1012,13 @@ def api_save_post():
 @app.route("/articles")
 def articles_dashboard():
     published = list(posts_collection.find({"type": "article", "status": "published"}).sort("timestamp", -1))
+    for p in published:
+        p["views"] = int(p.get("views") or 0)
     drafts = []
     if session.get("logged_in"):
         drafts = list(posts_collection.find({"type": "article", "status": "draft"}).sort("timestamp", -1))
+        for p in drafts:
+            p["views"] = int(p.get("views") or 0)
     return render_template("articles.html", published=published, drafts=drafts)
 
 
@@ -991,6 +1031,7 @@ def posts_dashboard():
 
     pattern = re.compile(r"/(?:post|article)/([a-zA-Z0-9_.-]+)")
     for p in posts_list:
+        p["views"] = int(p.get("views") or 0)
         if "blocks" in p:
             text_parts = [b.get("content", "").strip() for b in p["blocks"] if b.get("type") == "text"]
             media_paths = []

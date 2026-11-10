@@ -247,7 +247,7 @@ src="https://www.facebook.com/tr?id=2092273818327635&ev=PageView&noscript=1"
     {% endif %}
 
     {% for post in posts %}
-    <article class="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden hover:shadow-md transition-shadow duration-300">
+    <article class="post-card bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden hover:shadow-md transition-shadow duration-300" data-post-id="{{ post.post_id }}">
       <div class="flex items-center gap-3 px-5 pt-4 pb-2">
         <a href="{{ url_for('about') }}" class="w-10 h-10 rounded-full p-0.5 bg-gradient-to-br from-brand-500 to-blue-600 flex items-center justify-center flex-shrink-0 shadow-sm hover:scale-105 transition-transform" title="About Kittu Priyatham">
           <img src="{{ url_for('static', filename='images/avatar_thumb.webp') }}" alt="Kittu Priyatham" class="w-full h-full rounded-full object-cover">
@@ -258,11 +258,15 @@ src="https://www.facebook.com/tr?id=2092273818327635&ev=PageView&noscript=1"
             <span class="inline-block text-xs bg-brand-50 dark:bg-brand-950/50 text-brand-600 dark:text-brand-400 font-medium px-2 py-0.5 rounded-full mr-1">{{ post.type | capitalize }}</span>
           {% endif %}
           <span class="text-xs text-slate-400 dark:text-slate-500">
-            <a href="{{ url_for('post_detail', post_id=post.post_id) }}" class="hover:underline" title="View Full Post">{{ post.timestamp }}</a>
+            {% if post.type == 'article' %}
+              <a href="{{ url_for('article_detail', article_id=post.post_id) }}" class="hover:underline" title="View Full Article">{{ post.timestamp }}</a>
+            {% else %}
+              <a href="{{ url_for('post_detail', post_id=post.post_id) }}" class="hover:underline" title="View Full Post">{{ post.timestamp }}</a>
+            {% endif %}
           </span>
-          {% if post.views %}
-            <span class="text-xs text-slate-400 dark:text-slate-500 ml-1">&bull; {{ post.views }} views</span>
-          {% endif %}
+          <span class="text-xs text-slate-400 dark:text-slate-500 ml-1 inline-flex items-center gap-1">
+            &bull; <i class="far fa-eye text-[11px] opacity-80"></i> <span id="views-{{ post.post_id }}">{{ post.views or 0 }}</span> views
+          </span>
         </div>
         {% if session.get('logged_in') %}
         <div class="relative z-20">
@@ -756,6 +760,38 @@ src="https://www.facebook.com/tr?id=2092273818327635&ev=PageView&noscript=1"
     for (var i = 0; i < sections.length; i++) {
       sections[i].style.display = sections[i].getAttribute('data-platform') === platform ? '' : 'none';
     }
+  })();
+
+  (function() {
+    if (!('IntersectionObserver' in window)) return;
+    var viewed = new Set();
+    var observer = new IntersectionObserver(function(entries) {
+      entries.forEach(function(entry) {
+        if (entry.isIntersecting) {
+          var el = entry.target;
+          var postId = el.getAttribute('data-post-id');
+          if (postId && !viewed.has(postId)) {
+            viewed.add(postId);
+            observer.unobserve(el);
+            fetch('/post/' + encodeURIComponent(postId) + '/view', {
+              method: 'POST',
+              headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            }).then(function(res) {
+              return res.json();
+            }).then(function(data) {
+              if (data && data.views !== undefined) {
+                var countSpan = document.getElementById('views-' + postId);
+                if (countSpan) countSpan.textContent = data.views;
+              }
+            }).catch(function() {});
+          }
+        }
+      });
+    }, { threshold: 0.5 });
+
+    document.querySelectorAll('.post-card[data-post-id]').forEach(function(card) {
+      observer.observe(card);
+    });
   })();
   </script>
 

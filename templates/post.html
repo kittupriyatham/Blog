@@ -123,7 +123,7 @@ src="https://www.facebook.com/tr?id=2092273818327635&ev=PageView&noscript=1"
           </a>
           <div>
             <a href="{{ url_for('about') }}" class="font-semibold text-slate-800 dark:text-slate-100 leading-tight hover:text-brand-600 dark:hover:text-brand-400 transition">Kittu Priyatham</a>
-            <span class="text-xs text-slate-400 dark:text-slate-500">{{ post.timestamp }} &bull; {{ post.views }} views</span>
+            <span class="text-xs text-slate-400 dark:text-slate-500 inline-flex items-center gap-1">{{ post.timestamp }} &bull; <i class="far fa-eye text-[11px] opacity-80"></i> {{ post.views or 0 }} views</span>
           </div>
         </div>
         {% if session.get('logged_in') %}

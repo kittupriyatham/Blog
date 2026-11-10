@@ -326,6 +326,7 @@ def get_post_detail(post_id):
     track_view = request.args.get("track_view", "true").lower() in ("1", "true")
     if track_view and not session.get("logged_in"):
         col.update_one({"post_id": post_id}, {"$inc": {"views": 1}})
+        doc["views"] = int(doc.get("views") or 0) + 1
         analytics.record_analytics({
             "event": "view",
             "post_id": post_id,
@@ -333,6 +334,8 @@ def get_post_detail(post_id):
             "page": "api_v1_post",
             "path": request.path,
         })
+    else:
+        doc["views"] = int(doc.get("views") or 0)
 
     post_data = serialize_post(doc, resolve_embedded=True, posts_collection=col)
     return jsonify({
