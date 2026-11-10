@@ -44,6 +44,7 @@ from flask import (
     session,
     url_for,
     jsonify,
+    send_file,
     send_from_directory,
 )
 from flask_wtf.csrf import CSRFProtect
@@ -180,9 +181,28 @@ def index():
         analytics.record_analytics({"event": "view", "page": "feed", "path": request.path})
         if request.referrer and analytics._is_external(request.referrer):
             analytics.record_analytics({"event": "reach_in", "page": "feed", "path": request.path})
+    apk_path = os.path.join(os.path.dirname(__file__), "static", "apks", "blog.apk")
+    apk_available = os.path.isfile(apk_path)
     return render_template("index.html", posts=page_posts, articles=articles_list, attach_posts=feed_posts[:20],
                            syndication_platforms=syndication.available_platforms(kind="post"),
-                           q=q, tag=tag, page=page, has_prev=page > 1, has_next=start + per_page < total, total=total)
+                           q=q, tag=tag, page=page, has_prev=page > 1, has_next=start + per_page < total, total=total,
+                           apk_available=apk_available)
+
+@app.route("/download/apk")
+def download_apk():
+    apk_path = os.path.join(os.path.dirname(__file__), "static", "apks", "blog.apk")
+    if not os.path.isfile(apk_path):
+        return render_template("index.html", apk_available=False), 200
+    response = send_file(
+        apk_path,
+        mimetype="application/vnd.android.package-archive",
+        as_attachment=True,
+        download_name="Blog.apk"
+    )
+    response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+    response.headers["Pragma"] = "no-cache"
+    response.headers["Expires"] = "0"
+    return response
 
 @app.route("/tag/<tag>")
 def tag_view(tag):

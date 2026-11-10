@@ -33,6 +33,10 @@ data/
 # README images are versioned (moved out of the repo root into static/images/readme/).
 !static/images/readme/
 !static/images/readme/*
+!static/images/app_logo.png
+!static/images/app_screenshot.png
+!static/apks/
+!static/apks/blog.apk
 
 tmp/*
 cmdc2
@@ -47,4 +51,5 @@ pyproject.toml
 # Android build outputs & keystores
 *.apk
 *.aab
-.cacerts
+.cacerts
+!static/apks/blog.apk

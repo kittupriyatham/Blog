@@ -10,6 +10,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/mobile-download.css') }}">
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="{{ url_for('static', filename='js/theme.js') }}"></script>
   <script src="{{ url_for('static', filename='js/ambient-canvas.js') }}"></script>
@@ -150,6 +152,9 @@ src="https://www.facebook.com/tr?id=2092273818327635&ev=PageView&noscript=1"
       {% endif %}
     </div>
   </nav>
+
+  <!-- Regular desktop content — hidden on mobile viewport (<768px) when Desktop site is OFF -->
+  <div class="desktop-content">
 
   {% if is_demo %}
     <div class="bg-gradient-to-r from-amber-500/10 via-brand-500/10 to-blue-500/10 border-b border-amber-200/60 dark:border-amber-800/40 text-amber-900 dark:text-amber-200 text-xs py-2 px-4 text-center font-medium">
@@ -663,6 +668,95 @@ src="https://www.facebook.com/tr?id=2092273818327635&ev=PageView&noscript=1"
       }
     });
 
+  </script>
+
+  </div><!-- end .desktop-content -->
+
+  <!-- Mobile-only full-screen download page — hidden on desktop/tablet or when Desktop site is ON -->
+  <div class="mobile-download-page">
+    <div class="mobile-dl-visual">
+      <img src="{{ url_for('static', filename='images/app_logo.png') }}" alt="Blog App Icon" class="app-logo-icon">
+      <div class="phone-mockup">
+        <div class="phone-screen">
+          <img src="{{ url_for('static', filename='images/app_screenshot.png') }}" alt="Blog App Screenshot" class="phone-screenshot">
+        </div>
+      </div>
+    </div>
+
+    <div class="mobile-dl-content">
+      <h1 class="mobile-dl-title">Get the Blog App</h1>
+      <p class="download-description">
+        Access this blog directly from your Android device for a faster, smoother experience.
+      </p>
+
+      {% if apk_available %}
+      <!-- Android: full download + install steps -->
+      <div class="platform-section" data-platform="android">
+        <div class="download-cta-group">
+          <a href="/download/apk" class="btn-download" download>
+            <i class="fas fa-download"></i> Download APK
+          </a>
+          <span class="download-meta"><i class="fas fa-shield-alt"></i> Safe &amp; Secure</span>
+        </div>
+        <p class="unknown-sources-note">
+          <i class="fas fa-info-circle"></i>
+          Your phone may ask you to allow installs from this browser &mdash; this is a one-time setting and takes just one tap.
+        </p>
+        <div class="install-steps">
+          <h3><i class="fas fa-list-ol"></i> How to Install</h3>
+          <ol>
+            <li><span class="step-number">1</span><span class="step-text">Tap <strong>Download APK</strong> above.</span></li>
+            <li><span class="step-number">2</span><span class="step-text">Open the file from notifications or file manager.</span></li>
+            <li><span class="step-number">3</span><span class="step-text">If prompted, tap <strong>Settings</strong> and allow <strong>Unknown Sources</strong>.</span></li>
+            <li><span class="step-number">4</span><span class="step-text">Go back, tap <strong>Install</strong>, and launch from your home screen.</span></li>
+          </ol>
+        </div>
+      </div>
+
+      <!-- iOS: web version suggestion -->
+      <div class="platform-section" data-platform="ios" style="display:none;">
+        <div class="platform-message">
+          <div class="platform-icon"><i class="fab fa-apple"></i></div>
+          <h3>The native app is available for Android</h3>
+          <p>You&rsquo;re already browsing the full web version &mdash; everything works great right here in your browser.</p>
+        </div>
+      </div>
+
+      <!-- Desktop: both options -->
+      <div class="platform-section" data-platform="desktop" style="display:none;">
+        <div class="download-cta-group">
+          <a href="/download/apk" class="btn-download" download>
+            <i class="fas fa-download"></i> Download APK
+          </a>
+          <span class="download-meta">Transfer to your Android phone to install</span>
+        </div>
+        <div class="platform-message">
+          <p><i class="fas fa-globe"></i> You&rsquo;re already on the full web version. Download the APK above to install on your Android device.</p>
+        </div>
+      </div>
+
+      {% else %}
+      <div class="download-cta-group">
+        <div class="btn-download btn-disabled" aria-disabled="true">
+          <i class="fas fa-hourglass-half"></i> APK Coming Soon
+        </div>
+        <span class="download-meta"><i class="fas fa-bell"></i> Check back soon</span>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <script>
+  (function() {
+    var ua = navigator.userAgent || '';
+    var platform = 'desktop';
+    if (/android/i.test(ua)) platform = 'android';
+    else if (/iPad|iPhone|iPod/.test(ua)) platform = 'ios';
+    var sections = document.querySelectorAll('.platform-section');
+    for (var i = 0; i < sections.length; i++) {
+      sections[i].style.display = sections[i].getAttribute('data-platform') === platform ? '' : 'none';
+    }
+  })();
   </script>
 
   {% include '_footer.html' %}

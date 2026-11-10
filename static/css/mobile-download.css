@@ -1,0 +1,490 @@
+/* ==========================================================================
+   Mobile Download App View - Blog
+   Shows full-screen download app view on mobile when Desktop Site is OFF (<768px).
+   Reveals full desktop feed when Desktop Site is ON or viewport >= 768px.
+   ========================================================================== */
+
+/* Hide regular desktop content on mobile screens by default */
+.desktop-content {
+  display: none;
+}
+
+.mobile-download-page {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: calc(100vh - 65px);
+  padding: 32px 20px 48px;
+  gap: 24px;
+  text-align: center;
+  flex: 1;
+  width: 100%;
+  max-width: 520px;
+  margin: 0 auto;
+}
+
+/* Visual area: App icon + phone mockup */
+.mobile-dl-visual {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+}
+
+.app-logo-icon {
+  width: 80px;
+  height: 80px;
+  object-fit: contain;
+  border-radius: 20px;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.12);
+}
+
+.dark .app-logo-icon,
+body.dark-mode .app-logo-icon {
+  box-shadow: 0 6px 24px rgba(99, 102, 241, 0.35);
+}
+
+.night .app-logo-icon,
+html.night .app-logo-icon,
+body.night-mode .app-logo-icon {
+  box-shadow: 0 6px 28px rgba(0, 230, 118, 0.3);
+}
+
+.phone-mockup {
+  width: 140px;
+  height: 260px;
+  border-radius: 26px;
+  border: 4px solid #1e293b;
+  background: linear-gradient(160deg, #0f172a, #1e1b4b);
+  position: relative;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.25);
+  overflow: hidden;
+}
+
+.dark .phone-mockup,
+body.dark-mode .phone-mockup {
+  border-color: #6366f1;
+  box-shadow: 0 20px 50px rgba(99, 102, 241, 0.25);
+}
+
+.night .phone-mockup,
+html.night .phone-mockup,
+body.night-mode .phone-mockup {
+  border-color: #00e676;
+  background: #000;
+  box-shadow: 0 20px 50px rgba(0, 230, 118, 0.25);
+}
+
+.phone-mockup::before {
+  content: "";
+  position: absolute;
+  top: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 36px;
+  height: 5px;
+  background: #334155;
+  border-radius: 10px;
+  z-index: 2;
+}
+
+.dark .phone-mockup::before,
+body.dark-mode .phone-mockup::before {
+  background: #475569;
+}
+
+.night .phone-mockup::before,
+html.night .phone-mockup::before {
+  background: #111;
+}
+
+.phone-screen {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  padding: 22px 6px 10px;
+  overflow: hidden;
+}
+
+.phone-screenshot {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 6px;
+}
+
+/* Content block */
+.mobile-dl-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  max-width: 420px;
+  width: 100%;
+}
+
+.mobile-dl-title {
+  font-size: clamp(22px, 6vw, 30px);
+  font-weight: 800;
+  color: #0f172a;
+  margin: 0;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+}
+
+.dark .mobile-dl-title,
+body.dark-mode .mobile-dl-title {
+  color: #f8fafc;
+}
+
+.night .mobile-dl-title,
+html.night .mobile-dl-title {
+  color: #ffffff;
+}
+
+.download-description {
+  font-size: 0.95rem;
+  color: #64748b;
+  line-height: 1.6;
+  margin: 0;
+  text-align: center;
+}
+
+.dark .download-description,
+body.dark-mode .download-description {
+  color: #94a3b8;
+}
+
+.night .download-description,
+html.night .download-description {
+  color: #a1a1aa;
+}
+
+/* Download CTA */
+.download-cta-group {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  margin-top: 4px;
+}
+
+.btn-download {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  padding: 15px 28px;
+  border-radius: 14px;
+  font-size: 16px;
+  font-weight: 700;
+  text-decoration: none;
+  border: none;
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  background: linear-gradient(135deg, #22c55e, #16a34a);
+  color: #ffffff;
+  box-shadow: 0 4px 16px rgba(34, 197, 94, 0.4);
+}
+
+.btn-download:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(34, 197, 94, 0.5);
+  color: #ffffff;
+}
+
+.dark .btn-download,
+body.dark-mode .btn-download {
+  background: linear-gradient(135deg, #22c55e, #06b6d4);
+  color: #0f172a;
+  box-shadow: 0 4px 18px rgba(6, 182, 212, 0.35);
+}
+
+.dark .btn-download:hover,
+body.dark-mode .btn-download:hover {
+  box-shadow: 0 8px 26px rgba(6, 182, 212, 0.5);
+  color: #0f172a;
+}
+
+.night .btn-download,
+html.night .btn-download,
+body.night-mode .btn-download {
+  background: linear-gradient(135deg, #00e676, #00b0ff);
+  color: #000000;
+  box-shadow: 0 4px 20px rgba(0, 230, 118, 0.45);
+}
+
+.night .btn-download:hover,
+html.night .btn-download:hover {
+  box-shadow: 0 8px 28px rgba(0, 230, 118, 0.6);
+  color: #000000;
+}
+
+.btn-disabled {
+  background: linear-gradient(135deg, #cbd5e1, #94a3b8);
+  color: #ffffff;
+  cursor: not-allowed;
+  box-shadow: none;
+  opacity: 0.85;
+}
+
+.btn-disabled:hover {
+  transform: none;
+  box-shadow: none;
+}
+
+.dark .btn-disabled,
+body.dark-mode .btn-disabled {
+  background: linear-gradient(135deg, #334155, #1e293b);
+  color: #64748b;
+  box-shadow: none;
+}
+
+.download-meta {
+  font-size: 13px;
+  font-weight: 500;
+  color: #64748b;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.dark .download-meta,
+body.dark-mode .download-meta {
+  color: #94a3b8;
+}
+
+.night .download-meta,
+html.night .download-meta {
+  color: #00e676;
+}
+
+/* Unknown Sources notice */
+.unknown-sources-note {
+  font-size: 13px;
+  color: #15803d;
+  line-height: 1.6;
+  margin: 4px 0 0;
+  padding: 12px 16px;
+  background: rgba(34, 197, 94, 0.08);
+  border: 1px solid rgba(34, 197, 94, 0.25);
+  border-radius: 12px;
+  width: 100%;
+  text-align: left;
+}
+
+.unknown-sources-note i {
+  color: #16a34a;
+  margin-right: 6px;
+}
+
+.dark .unknown-sources-note,
+body.dark-mode .unknown-sources-note {
+  color: #86efac;
+  background: rgba(34, 197, 94, 0.12);
+  border-color: rgba(34, 197, 94, 0.3);
+}
+
+.night .unknown-sources-note,
+html.night .unknown-sources-note {
+  color: #4ade80;
+  background: rgba(34, 197, 94, 0.1);
+  border-color: rgba(0, 230, 118, 0.35);
+}
+
+/* Install steps */
+.install-steps {
+  margin-top: 10px;
+  padding: 18px 20px;
+  background: rgba(15, 23, 42, 0.03);
+  border-radius: 16px;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  width: 100%;
+  text-align: left;
+}
+
+.dark .install-steps,
+body.dark-mode .install-steps {
+  background: rgba(99, 102, 241, 0.05);
+  border: 1px solid rgba(99, 102, 241, 0.2);
+}
+
+.night .install-steps,
+html.night .install-steps {
+  background: #050508;
+  border: 1px solid rgba(0, 230, 118, 0.25);
+}
+
+.install-steps h3 {
+  font-size: 15px;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0 0 14px 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.dark .install-steps h3,
+body.dark-mode .install-steps h3 {
+  color: #f1f5f9;
+}
+
+.night .install-steps h3,
+html.night .install-steps h3 {
+  color: #ffffff;
+}
+
+.install-steps ol {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.install-steps ol li {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  font-size: 13.5px;
+  color: #475569;
+  line-height: 1.6;
+}
+
+.dark .install-steps ol li,
+body.dark-mode .install-steps ol li {
+  color: #cbd5e1;
+}
+
+.night .install-steps ol li,
+html.night .install-steps ol li {
+  color: #e2e8f0;
+}
+
+.step-number {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  min-width: 26px;
+  border-radius: 50%;
+  background: #0f172a;
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 700;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.dark .step-number,
+body.dark-mode .step-number {
+  background: #6366f1;
+  color: #ffffff;
+}
+
+.night .step-number,
+html.night .step-number {
+  background: #00e676;
+  color: #000000;
+}
+
+.step-text {
+  flex: 1;
+}
+
+.step-text strong {
+  color: #0f172a;
+  font-weight: 700;
+}
+
+.dark .step-text strong,
+body.dark-mode .step-text strong {
+  color: #f8fafc;
+}
+
+.night .step-text strong,
+html.night .step-text strong {
+  color: #ffffff;
+}
+
+/* Platform Messages (iOS / Desktop) */
+.platform-message {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  margin-top: 6px;
+}
+
+.platform-message h3 {
+  font-size: 17px;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0;
+}
+
+.dark .platform-message h3,
+body.dark-mode .platform-message h3 {
+  color: #ffffff;
+}
+
+.night .platform-message h3,
+html.night .platform-message h3 {
+  color: #ffffff;
+}
+
+.platform-message p {
+  font-size: 14px;
+  color: #64748b;
+  line-height: 1.6;
+  margin: 0;
+}
+
+.dark .platform-message p,
+body.dark-mode .platform-message p {
+  color: #94a3b8;
+}
+
+.night .platform-message p,
+html.night .platform-message p {
+  color: #a1a1aa;
+}
+
+.platform-icon {
+  font-size: 36px;
+  color: #64748b;
+}
+
+.dark .platform-icon,
+body.dark-mode .platform-icon {
+  color: #94a3b8;
+}
+
+.night .platform-icon,
+html.night .platform-icon {
+  color: #00e676;
+}
+
+/* ==========================================================================
+   Responsive: Tablet / Desktop site (>= 768px)
+   When Desktop site is checked on mobile, browser viewport becomes >= 768px.
+   Regular desktop content is shown; mobile download page is hidden.
+   ========================================================================== */
+@media only screen and (min-width: 768px) {
+  .desktop-content {
+    display: block !important;
+  }
+
+  .mobile-download-page {
+    display: none !important;
+  }
+}
