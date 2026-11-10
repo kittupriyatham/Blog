@@ -344,6 +344,33 @@ def get_post_detail(post_id):
     })
 
 
+@api_v1.route("/posts/<post_id>/view", methods=["POST", "GET"])
+def record_post_view_v1(post_id):
+    """Explicitly increment view count for a post or article via REST API."""
+    col = _posts_collection()
+    doc = col.find_one({"post_id": post_id})
+    if not doc:
+        return jsonify({"status": "error", "message": "Post not found"}), 404
+
+    if not session.get("logged_in"):
+        res = col.find_one_and_update(
+            {"post_id": post_id},
+            {"$inc": {"views": 1}},
+            return_document=True
+        )
+        current_views = int((res or {}).get("views") or 1)
+        analytics.record_analytics({
+            "event": "view",
+            "post_id": post_id,
+            "type": doc.get("type", "post"),
+            "page": "api_v1_post_view",
+            "path": request.path
+        })
+        return jsonify({"status": "success", "post_id": post_id, "views": current_views})
+
+    return jsonify({"status": "noop", "post_id": post_id, "views": int(doc.get("views") or 0)})
+
+
 @api_v1.route("/posts/<post_id>/comments", methods=["GET"])
 def get_post_comments(post_id):
     """Retrieve comments for a specific post."""

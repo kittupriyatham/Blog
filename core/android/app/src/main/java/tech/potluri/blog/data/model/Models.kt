@@ -169,6 +169,13 @@ data class CommentResponse(val comment: Comment)
 data class ShareResponse(val shares: Int = 0)
 
 @Serializable
+data class RecordViewResponse(
+    val status: String = "",
+    val post_id: String = "",
+    val views: Int = 0
+)
+
+@Serializable
 data class LoginRequest(
     val username: String,
     val password: String

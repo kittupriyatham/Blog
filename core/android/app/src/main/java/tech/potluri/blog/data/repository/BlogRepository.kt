@@ -99,6 +99,9 @@ class BlogRepository(
     suspend fun recordShare(postId: String): Result<Int> =
         request { api.share(postId).shares }
 
+    suspend fun recordPostView(postId: String): Result<Int> =
+        request { api.recordView(postId).views }
+
     suspend fun fetchTags(): Result<List<TagItem>> =
         request { api.getTags().tags }
 

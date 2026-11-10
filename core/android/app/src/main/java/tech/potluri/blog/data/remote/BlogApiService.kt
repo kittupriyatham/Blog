@@ -12,6 +12,7 @@ import tech.potluri.blog.data.model.MediaUploadResponse
 import tech.potluri.blog.data.model.PostResponse
 import tech.potluri.blog.data.model.PostsResponse
 import tech.potluri.blog.data.model.ReactionResponse
+import tech.potluri.blog.data.model.RecordViewResponse
 import tech.potluri.blog.data.model.ShareResponse
 import tech.potluri.blog.data.model.SyndicationPlatformsResponse
 import tech.potluri.blog.data.model.TagsResponse
@@ -86,6 +87,9 @@ interface BlogApiService {
         @Path("postId") postId: String,
         @Field("platform") platform: String = "android"
     ): ShareResponse
+
+    @POST("api/v1/posts/{postId}/view")
+    suspend fun recordView(@Path("postId") postId: String): RecordViewResponse
 
     @GET("api/v1/tags")
     suspend fun getTags(): TagsResponse
