@@ -693,10 +693,10 @@ src="https://www.facebook.com/tr?id=2092273818327635&ev=PageView&noscript=1"
       <!-- Android: full download + install steps -->
       <div class="platform-section" data-platform="android">
         <div class="download-cta-group">
-          <a href="/download/apk" class="btn-download" download>
+          <a href="{{ apk_url or '/download/apk' }}" class="btn-download" download="{{ apk_name or 'Potluri-Blog.apk' }}">
             <i class="fas fa-download"></i> Download APK
           </a>
-          <span class="download-meta"><i class="fas fa-shield-alt"></i> Safe &amp; Secure</span>
+          <span class="download-meta"><i class="fas fa-shield-alt"></i> {{ apk_name or 'Potluri-Blog.apk' }} &bull; Safe &amp; Secure</span>
         </div>
         <p class="unknown-sources-note">
           <i class="fas fa-info-circle"></i>
@@ -725,10 +725,10 @@ src="https://www.facebook.com/tr?id=2092273818327635&ev=PageView&noscript=1"
       <!-- Desktop: both options -->
       <div class="platform-section" data-platform="desktop" style="display:none;">
         <div class="download-cta-group">
-          <a href="/download/apk" class="btn-download" download>
+          <a href="{{ apk_url or '/download/apk' }}" class="btn-download" download="{{ apk_name or 'Potluri-Blog.apk' }}">
             <i class="fas fa-download"></i> Download APK
           </a>
-          <span class="download-meta">Transfer to your Android phone to install</span>
+          <span class="download-meta">{{ apk_name or 'Potluri-Blog.apk' }} &bull; Transfer to your Android phone to install</span>
         </div>
         <div class="platform-message">
           <p><i class="fas fa-globe"></i> You&rsquo;re already on the full web version. Download the APK above to install on your Android device.</p>

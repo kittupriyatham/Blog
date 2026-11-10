@@ -24,7 +24,9 @@ import os
 import re
 import secrets
 import threading
+import time
 from typing import Any
+import urllib.request
 
 from dotenv import load_dotenv
 
@@ -130,6 +132,36 @@ def upload_media():
     return jsonify({"status": "success", "post_id": post_id,
                     "url": url, "name": url.rsplit("/", 1)[-1]})
 
+_latest_apk_cache = {"url": None, "name": None, "timestamp": 0}
+
+def get_latest_apk_info():
+    now = time.time()
+    # Cache lookup for 5 minutes
+    if _latest_apk_cache["url"] and (now - _latest_apk_cache["timestamp"] < 300):
+        return _latest_apk_cache["url"], _latest_apk_cache["name"]
+    try:
+        url = "https://api.github.com/repos/kittupriyatham/Blog/releases/tags/latest"
+        req = urllib.request.Request(url, headers={"User-Agent": "PotluriBlog-App"})
+        with urllib.request.urlopen(req, timeout=3) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+            assets = data.get("assets", [])
+            for asset in assets:
+                name = asset.get("name", "")
+                if name.startswith("Potluri-Blog-v") and name.endswith(".apk"):
+                    b_url = asset.get("browser_download_url")
+                    _latest_apk_cache.update({"url": b_url, "name": name, "timestamp": now})
+                    return b_url, name
+            for asset in assets:
+                name = asset.get("name", "")
+                if name.endswith(".apk"):
+                    b_url = asset.get("browser_download_url")
+                    _latest_apk_cache.update({"url": b_url, "name": name, "timestamp": now})
+                    return b_url, name
+    except Exception:
+        pass
+    fallback_url = "https://github.com/kittupriyatham/Blog/releases/download/latest/Potluri-Blog.apk"
+    return fallback_url, "Potluri-Blog.apk"
+
 @app.route("/")
 @app.route("/home")
 def index():
@@ -181,28 +213,36 @@ def index():
         analytics.record_analytics({"event": "view", "page": "feed", "path": request.path})
         if request.referrer and analytics._is_external(request.referrer):
             analytics.record_analytics({"event": "reach_in", "page": "feed", "path": request.path})
-    apk_path = os.path.join(os.path.dirname(__file__), "static", "apks", "blog.apk")
-    apk_available = os.path.isfile(apk_path)
+    apk_url, apk_name = get_latest_apk_info()
     return render_template("index.html", posts=page_posts, articles=articles_list, attach_posts=feed_posts[:20],
                            syndication_platforms=syndication.available_platforms(kind="post"),
                            q=q, tag=tag, page=page, has_prev=page > 1, has_next=start + per_page < total, total=total,
-                           apk_available=apk_available)
+                           apk_available=True, apk_url=apk_url, apk_name=apk_name)
+
 
 @app.route("/download/apk")
 def download_apk():
-    apk_path = os.path.join(os.path.dirname(__file__), "static", "apks", "blog.apk")
-    if not os.path.isfile(apk_path):
-        return render_template("index.html", apk_available=False), 200
-    response = send_file(
-        apk_path,
-        mimetype="application/vnd.android.package-archive",
-        as_attachment=True,
-        download_name="Blog.apk"
-    )
-    response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
-    response.headers["Pragma"] = "no-cache"
-    response.headers["Expires"] = "0"
-    return response
+    latest_url, apk_filename = get_latest_apk_info()
+    local_dir = os.path.join(os.path.dirname(__file__), "static", "apks")
+    local_candidates = [
+        os.path.join(local_dir, apk_filename),
+        os.path.join(local_dir, "Potluri-Blog.apk"),
+        os.path.join(local_dir, "Blog.apk"),
+        os.path.join(local_dir, "blog.apk"),
+    ]
+    for candidate in local_candidates:
+        if os.path.isfile(candidate):
+            response = send_file(
+                candidate,
+                mimetype="application/vnd.android.package-archive",
+                as_attachment=True,
+                download_name=apk_filename
+            )
+            response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+            response.headers["Pragma"] = "no-cache"
+            response.headers["Expires"] = "0"
+            return response
+    return redirect(latest_url)
 
 @app.route("/tag/<tag>")
 def tag_view(tag):

@@ -37,6 +37,7 @@ data/
 !static/images/app_screenshot.png
 !static/apks/
 !static/apks/blog.apk
+!code/android/app/src/main/res/**/*.png
 
 tmp/*
 cmdc2
