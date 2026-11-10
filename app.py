@@ -136,8 +136,8 @@ _latest_apk_cache = {"url": None, "name": None, "timestamp": 0}
 
 def get_latest_apk_info():
     now = time.time()
-    # Cache lookup for 5 minutes
-    if _latest_apk_cache["url"] and (now - _latest_apk_cache["timestamp"] < 300):
+    # Cache lookup for 60 seconds
+    if _latest_apk_cache["url"] and (now - _latest_apk_cache["timestamp"] < 60):
         return _latest_apk_cache["url"], _latest_apk_cache["name"]
     try:
         url = "https://api.github.com/repos/kittupriyatham/Blog/releases/tags/latest"
@@ -145,12 +145,20 @@ def get_latest_apk_info():
         with urllib.request.urlopen(req, timeout=3) as resp:
             data = json.loads(resp.read().decode("utf-8"))
             assets = data.get("assets", [])
+            # Prioritize versioned APK with highest version number
+            versioned = []
             for asset in assets:
                 name = asset.get("name", "")
                 if (name.startswith("Blog-v") or name.startswith("Potluri-Blog-v")) and name.endswith(".apk"):
-                    b_url = asset.get("browser_download_url")
-                    _latest_apk_cache.update({"url": b_url, "name": name, "timestamp": now})
-                    return b_url, name
+                    nums = [int(n) for n in re.findall(r"\d+", name)]
+                    versioned.append((nums, asset))
+            if versioned:
+                versioned.sort(key=lambda item: item[0], reverse=True)
+                top_asset = versioned[0][1]
+                b_url = top_asset.get("browser_download_url")
+                b_name = top_asset.get("name")
+                _latest_apk_cache.update({"url": b_url, "name": b_name, "timestamp": now})
+                return b_url, b_name
             for asset in assets:
                 name = asset.get("name", "")
                 if name.endswith(".apk"):
@@ -224,10 +232,11 @@ def index():
 @app.route("/download/apk")
 def download_apk():
     latest_url, apk_filename = get_latest_apk_info()
+    if latest_url:
+        return redirect(latest_url)
     local_dir = os.path.join(os.path.dirname(__file__), "static", "apks")
     local_candidates = [
         os.path.join(local_dir, apk_filename),
-        os.path.join(local_dir, "Potluri-Blog.apk"),
         os.path.join(local_dir, "Blog.apk"),
         os.path.join(local_dir, "blog.apk"),
     ]
@@ -243,7 +252,7 @@ def download_apk():
             response.headers["Pragma"] = "no-cache"
             response.headers["Expires"] = "0"
             return response
-    return redirect(latest_url)
+    return redirect("https://github.com/kittupriyatham/Blog/releases/tag/latest")
 
 @app.route("/tag/<tag>")
 def tag_view(tag):
