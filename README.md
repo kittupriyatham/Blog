@@ -251,19 +251,7 @@ The demo account is available in both clients with `demo / demo`; real admin acc
    python -m core.syndication.linkedin_token <copied_code>
    ```
 
-#### 2. Dev.to & Hashnode (Direct Official APIs)
-* **Dev.to**:
-  1. Go to **Dev.to -> Settings -> Extensions -> DEV Community API Keys**.
-  2. Generate a key and add it to `.env`: `DEVTO_API_KEY=your_devto_api_key`
-* **Hashnode**:
-  1. Go to **Hashnode -> Account Settings -> Developer -> Personal Access Token**.
-  2. Copy your token and Blog Publication ID, then add to `.env`:
-     ```env
-     HASHNODE_ACCESS_TOKEN=your_token
-     HASHNODE_PUBLICATION_ID=your_publication_id
-     ```
-
-#### 3. Medium POSSE Integration (via Violentmonkey Userscript)
+#### 2. Medium POSSE Integration (via Violentmonkey Userscript)
 Medium has no public write API and blocks headless editor saves via Cloudflare protection. We bypass this cleanly using a Violentmonkey userscript:
 
 1. **Install Violentmonkey**: Add the [Violentmonkey extension](https://violentmonkey.github.io/) to your browser (Chrome/Edge/Firefox).

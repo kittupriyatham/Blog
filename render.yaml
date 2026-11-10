@@ -83,14 +83,6 @@ services:
       - key: LINKEDIN_ORGANIZATION_URN
         value: "0"
 
-      # --- Dev.to & Hashnode POSSE Syndication ---
-      - key: DEVTO_API_KEY
-        sync: false
-      - key: HASHNODE_ACCESS_TOKEN
-        sync: false
-      - key: HASHNODE_PUBLICATION_ID
-        value: 6ad1e1aa1cddb0d5092b0796
-
       # --- SocialAPI, YouTube & AI Rewriter ---
       - key: SOCIALAPI_KEY
         sync: false

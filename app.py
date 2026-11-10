@@ -1955,7 +1955,7 @@ def api_disconnect_syndication():
 
 @app.route("/api/syndication/link_external", methods=["POST"])
 def api_link_external_syndication():
-    """Manually link or confirm a published syndication URL (e.g. Medium, LinkedIn, Dev.to).
+    """Manually link or confirm a published syndication URL (e.g. Medium, LinkedIn).
 
     Adds or updates `post.syndications` with status='posted' and the provided URL,
     lighting up the platform icon on the blog and enabling click tracking and analytics.

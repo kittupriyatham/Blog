@@ -29,12 +29,12 @@ else 'text-xs text-slate-500 dark:text-slate-400' %}
 {% endfor %}
 {% set _names = {'linkedin': 'LinkedIn', 'facebook': 'Facebook', 'instagram': 'Instagram',
 'youtube': 'YouTube', 'twitter': 'X', 'bluesky': 'Bluesky',
-'pinterest': 'Pinterest', 'medium': 'Medium', 'devto': 'Dev.to', 'hashnode': 'Hashnode'} %}
+'pinterest': 'Pinterest', 'medium': 'Medium'} %}
 
 <div class="{{ _sep }}  dark:border-slate-800">
   <div class="flex items-center {{ _gap }} flex-wrap">
     <span class="font-medium {{ _heading }}">{{ _intro }}</span>
-    {% for _pid in ['linkedin', 'facebook', 'instagram', 'youtube', 'twitter', 'bluesky', 'pinterest', 'medium', 'devto', 'hashnode'] %}
+    {% for _pid in ['linkedin', 'facebook', 'instagram', 'youtube', 'twitter', 'bluesky', 'pinterest', 'medium'] %}
     {% set _u = _urls.get(_pid) %}
     {% if _u %}
     <a href="{{ _u }}" target="_blank" rel="noopener" title="{{ _names[_pid] }}" data-platform="{{ _pid }}"
@@ -83,14 +83,6 @@ else 'text-xs text-slate-500 dark:text-slate-400' %}
         <svg class="{{ _icon }}" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
           <path
             d="M13.54 12a6.8 6.8 0 0 1-6.77 6.82A6.8 6.8 0 0 1 0 12a6.8 6.8 0 0 1 6.77-6.82A6.8 6.8 0 0 1 13.54 12zM20.96 12c0 3.54-1.51 6.42-3.38 6.42-1.87 0-3.39-2.88-3.39-6.42s1.52-6.42 3.39-6.42 3.38 2.88 3.38 6.42M24 12c0 3.17-.53 5.75-1.19 5.75-.66 0-1.19-2.58-1.19-5.75s.53-5.75 1.19-5.75S24 8.83 24 12z" />
-        </svg>
-        {% elif _pid == 'devto' %}
-        <svg class="{{ _icon }}" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-          <path d="M7.42 10.05c-.18-.12-.46-.23-.85-.23H4.72v4.36h1.85c.39 0 .67-.11.85-.23.24-.16.4-.49.4-.95v-2c0-.46-.16-.79-.4-.95zM0 0v24h24V0H0zm8.99 13.03c0 .87-.31 1.54-.88 1.95-.54.39-1.29.58-2.23.58H3.27V8.44h2.61c.94 0 1.69.19 2.23.58.57.41.88 1.08.88 1.95v2.06zm4.78 4.1h-4.32V8.44h4.32v1.51h-2.87v1.89h2.61v1.51h-2.61v1.97h2.87v1.81zm6.96-5.83l-2.06 7.34h-1.57l-2.06-7.34h1.63l1.22 4.96 1.22-4.96h1.62z"/>
-        </svg>
-        {% elif _pid == 'hashnode' %}
-        <svg class="{{ _icon }}" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-          <path d="M22.351 8.019l-6.37-6.37a5.63 5.63 0 0 0-7.962 0l-6.37 6.37a5.63 5.63 0 0 0 0 7.962l6.37 6.37a5.63 5.63 0 0 0 7.962 0l6.37-6.37a5.63 5.63 0 0 0 0-7.962zM12 15.6a3.6 3.6 0 1 1 0-7.2 3.6 3.6 0 0 1 0 7.2z"/>
         </svg>
         {% endif %}
         {% if _u %}</a>{% else %}</span>{% endif %}

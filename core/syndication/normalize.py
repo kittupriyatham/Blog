@@ -1,6 +1,6 @@
 """Asset and HTML/Markdown normalization utilities for multi-platform POSSE syndication.
 
-Prepares blog content for syndication to platforms such as Medium, Dev.to, and Hashnode.
+Prepares blog content for syndication to platforms such as Medium.
 Rewrites relative image URLs, hyperlinks, and media paths into fully qualified absolute URLs
 using the production domain or configured base URL, and provides markdown/HTML conversions
 with attribution links for canonical SEO syndication.
