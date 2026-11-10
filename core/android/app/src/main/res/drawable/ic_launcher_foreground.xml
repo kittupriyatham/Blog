@@ -1,15 +1,69 @@
 <?xml version="1.0" encoding="utf-8"?>
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
     android:width="108dp"
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
-    <!-- Drop shadow for 'B' -->
+
+    <!-- Ambient drop shadow for 3D depth -->
     <path
-        android:fillColor="#330F172A"
-        android:pathData="M40,29h16c6.6,0 12,5.4 12,12 0,4.2 -2.2,7.9 -5.5,10 4.6,2.1 7.5,6.8 7.5,12 0,7.2 -5.8,13 -13,13H40V29z" />
-    <!-- White 'B' Lettermark -->
+        android:fillColor="#38000000"
+        android:pathData="M 35,55 C 60,55 79,57 79,69 C 79,83 58,83 39,83 C 36,83 35,82 35,79 Z M 45,63 C 56,63 66,64 66,69 C 66,74 56,74 45,74 Z" />
     <path
-        android:fillColor="#FFFFFF"
-        android:pathData="M38,27h16c6.6,0 12,5.4 12,12 0,4.2 -2.2,7.9 -5.5,10 4.6,2.1 7.5,6.8 7.5,12 0,7.2 -5.8,13 -13,13H38V27z M46,35v12h7c2.8,0 5,-2.2 5,-5s-2.2,-5 -5,-5H46z M46,55v13h8c3.3,0 6,-2.7 6,-6s-2.7,-6 -6,-6H46z" />
+        android:fillColor="#38000000"
+        android:pathData="M 35,55 L 35,32 C 35,28 36,27 39,27 C 56,27 73,29 73,41 C 73,55 56,55 35,55 Z M 45,36 C 55,36 62,37 62,41 C 62,46 55,46 45,46 Z" />
+
+    <!-- Bottom Lobe / Manuscript Layer: Indigo -> Violet -> Rose Pink -->
+    <path
+        android:fillType="evenOdd"
+        android:pathData="M 33.75,52.95 C 59.06,52.95 77.52,54.84 77.52,66.97 C 77.52,81.21 56.95,81.21 37.97,81.21 C 34.8,81.21 33.75,80.16 33.75,76.99 Z M 44.3,61.38 C 55.37,61.38 65.39,62.44 65.39,66.97 C 65.39,71.72 55.37,71.72 44.3,71.72 Z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:startX="33.75"
+                android:startY="52.95"
+                android:endX="77.52"
+                android:endY="81.21"
+                android:type="linear">
+                <item android:offset="0.0" android:color="#FF4F46E5" />
+                <item android:offset="0.55" android:color="#FF8B5CF6" />
+                <item android:offset="1.0" android:color="#FFF43F5E" />
+            </gradient>
+        </aapt:attr>
+    </path>
+
+    <!-- Page Fold Overlap Shadow at Waist -->
+    <path
+        android:fillColor="#40000000"
+        android:pathData="M 38,53 C 58,53 74,54 74,58 C 74,62 58,63 38,63 Z" />
+
+    <!-- Top Lobe / Front Publication Page: Cyan -> Electric Azure -> Royal Indigo -->
+    <path
+        android:fillType="evenOdd"
+        android:pathData="M 33.75,53.58 L 33.75,30.59 C 33.75,26.89 34.8,25.84 37.97,25.84 C 54.84,25.84 71.72,27.42 71.72,39.55 C 71.72,53.58 54.84,53.58 33.75,53.58 Z M 44.3,34.28 C 54.32,34.28 60.64,35.33 60.64,39.55 C 60.64,44.3 54.32,44.3 44.3,44.3 Z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:startX="33.75"
+                android:startY="25.84"
+                android:endX="71.72"
+                android:endY="53.58"
+                android:type="linear">
+                <item android:offset="0.0" android:color="#FF38BDF8" />
+                <item android:offset="0.6" android:color="#FF2563EB" />
+                <item android:offset="1.0" android:color="#FF4F46E5" />
+            </gradient>
+        </aapt:attr>
+    </path>
+
+    <!-- Spine Reflection Highlight (left vertical edge) -->
+    <path
+        android:pathData="M 35.5,27.5 L 35.5,79.5"
+        android:strokeWidth="1.2"
+        android:strokeAlpha="0.45"
+        android:strokeColor="#FFFFFF" />
+
+    <!-- 4-point Writing Spark / Inspiration Star at upper-right crest -->
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M 74.8,24.8 L 76.2,28.6 L 80.0,30.0 L 76.2,31.4 L 74.8,35.2 L 73.4,31.4 L 69.6,30.0 L 73.4,28.6 Z" />
 </vector>

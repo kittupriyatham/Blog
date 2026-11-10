@@ -59,8 +59,8 @@ jobs:
       - name: Upload Debug APK Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: Potluri-Blog-v1.0.${{ github.run_number }}
-          path: Potluri-Blog-v1.0.${{ github.run_number }}.apk
+          name: Blog-v1.0.${{ github.run_number }}
+          path: Blog-v1.0.${{ github.run_number }}.apk
 
       - name: Publish Versioned GitHub Release
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
@@ -68,13 +68,13 @@ jobs:
         with:
           tag_name: android-v1.0.${{ github.run_number }}
           target_commitish: ${{ github.sha }}
-          name: Android v1.0.${{ github.run_number }}
+          name: Blog v1.0.${{ github.run_number }}
           generate_release_notes: true
           files: |
-            Potluri-Blog-v1.0.${{ github.run_number }}.apk
             Blog-v1.0.${{ github.run_number }}.apk
-            Potluri-Blog.apk
             Blog.apk
+            Potluri-Blog-v1.0.${{ github.run_number }}.apk
+            Potluri-Blog.apk
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -84,12 +84,12 @@ jobs:
         with:
           tag_name: latest
           target_commitish: ${{ github.sha }}
-          name: Potluri Blog (Latest)
+          name: Blog (Latest)
           make_latest: true
           body: |
-            ### 📱 Potluri Blog Android Companion App (Latest)
+            ### 📱 Blog Android App (Latest)
 
-            Native Android application for **Potluri Blog** ([blog.potluri-krishna-priyatham.tech](https://blog.potluri-krishna-priyatham.tech)).
+            Native Android application for **Blog** ([blog.potluri-krishna-priyatham.tech](https://blog.potluri-krishna-priyatham.tech)).
 
             #### ✨ Features:
             - **Native Android UI**: Built with Jetpack Compose & Material 3.
@@ -98,13 +98,12 @@ jobs:
             - **Deep Linking**: Direct handling of article and post URLs.
 
             #### 📦 Download:
-            - **[Potluri-Blog-v1.0.${{ github.run_number }}.apk](https://github.com/${{ github.repository }}/releases/download/latest/Potluri-Blog-v1.0.${{ github.run_number }}.apk)** (Versioned)
-            - **[Potluri-Blog.apk](https://github.com/${{ github.repository }}/releases/download/latest/Potluri-Blog.apk)** (Latest alias)
-            - **[Blog.apk](https://github.com/${{ github.repository }}/releases/download/latest/Blog.apk)** (Short alias)
+            - **[Blog-v1.0.${{ github.run_number }}.apk](https://github.com/${{ github.repository }}/releases/download/latest/Blog-v1.0.${{ github.run_number }}.apk)** (Versioned)
+            - **[Blog.apk](https://github.com/${{ github.repository }}/releases/download/latest/Blog.apk)** (Latest alias)
           files: |
-            Potluri-Blog-v1.0.${{ github.run_number }}.apk
             Blog-v1.0.${{ github.run_number }}.apk
-            Potluri-Blog.apk
             Blog.apk
+            Potluri-Blog-v1.0.${{ github.run_number }}.apk
+            Potluri-Blog.apk
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

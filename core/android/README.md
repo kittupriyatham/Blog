@@ -1,4 +1,4 @@
-# Potluri Blog — Native Android App
+# Blog — Native Android App
 
 Native Android client for [blog.potluri-krishna-priyatham.tech](https://blog.potluri-krishna-priyatham.tech) built using **Kotlin**, **Jetpack Compose (Material 3)**, and clean **MVVM architecture**.
 

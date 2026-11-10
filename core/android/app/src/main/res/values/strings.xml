@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">Potluri Blog</string>
+    <string name="app_name">Blog</string>
     <string name="feed_title">Recent Feed</string>
     <string name="articles_title">Articles</string>
     <string name="author_title">About Author</string>

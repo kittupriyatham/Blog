@@ -147,7 +147,7 @@ def get_latest_apk_info():
             assets = data.get("assets", [])
             for asset in assets:
                 name = asset.get("name", "")
-                if name.startswith("Potluri-Blog-v") and name.endswith(".apk"):
+                if (name.startswith("Blog-v") or name.startswith("Potluri-Blog-v")) and name.endswith(".apk"):
                     b_url = asset.get("browser_download_url")
                     _latest_apk_cache.update({"url": b_url, "name": name, "timestamp": now})
                     return b_url, name
@@ -159,8 +159,8 @@ def get_latest_apk_info():
                     return b_url, name
     except Exception:
         pass
-    fallback_url = "https://github.com/kittupriyatham/Blog/releases/download/latest/Potluri-Blog.apk"
-    return fallback_url, "Potluri-Blog.apk"
+    fallback_url = "https://github.com/kittupriyatham/Blog/releases/download/latest/Blog.apk"
+    return fallback_url, "Blog.apk"
 
 @app.route("/")
 @app.route("/home")
