@@ -50,12 +50,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.painterResource
+import androidx.compose.foundation.Canvas
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.PathFillType
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import tech.potluri.blog.R
 import tech.potluri.blog.ui.components.PostCard
 import tech.potluri.blog.ui.components.TagChipRow
 import tech.potluri.blog.ui.theme.AccentViolet
@@ -105,12 +107,8 @@ fun FeedScreen(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Image(
-                        painter = painterResource(id = R.drawable.app_logo),
-                        contentDescription = "Blog Logo",
-                        modifier = Modifier
-                            .size(38.dp)
-                            .clip(RoundedCornerShape(12.dp))
+                    BlogBrandLogo(
+                        modifier = Modifier.size(38.dp)
                     )
                     Spacer(modifier = Modifier.width(12.dp))
                     Column {
@@ -372,6 +370,131 @@ fun FeedScreen(
                     }
                 }
             }
+        }
+    }
+}
+
+@Composable
+fun BlogBrandLogo(
+    modifier: Modifier = Modifier
+) {
+    Box(
+        modifier = modifier
+            .clip(RoundedCornerShape(11.dp))
+            .background(
+                brush = Brush.linearGradient(
+                    colors = listOf(Color(0xFF0F172A), Color(0xFF020617))
+                )
+            ),
+        contentAlignment = Alignment.Center
+    ) {
+        Canvas(modifier = Modifier.fillMaxSize().padding(4.dp)) {
+            val scaleX = size.width / 108f
+            val scaleY = size.height / 108f
+
+            // Bottom Lobe / Manuscript Layer: Indigo -> Violet -> Rose Pink
+            val bottomPath = Path().apply {
+                fillType = PathFillType.EvenOdd
+                moveTo(33.75f * scaleX, 52.95f * scaleY)
+                cubicTo(
+                    59.06f * scaleX, 52.95f * scaleY,
+                    77.52f * scaleX, 54.84f * scaleY,
+                    77.52f * scaleX, 66.97f * scaleY
+                )
+                cubicTo(
+                    77.52f * scaleX, 81.21f * scaleY,
+                    56.95f * scaleX, 81.21f * scaleY,
+                    37.97f * scaleX, 81.21f * scaleY
+                )
+                cubicTo(
+                    34.80f * scaleX, 81.21f * scaleY,
+                    33.75f * scaleX, 80.16f * scaleY,
+                    33.75f * scaleX, 76.99f * scaleY
+                )
+                close()
+                // Inner counter hole for bottom lobe
+                moveTo(44.3f * scaleX, 61.38f * scaleY)
+                cubicTo(
+                    55.37f * scaleX, 61.38f * scaleY,
+                    65.39f * scaleX, 62.44f * scaleY,
+                    65.39f * scaleX, 66.97f * scaleY
+                )
+                cubicTo(
+                    65.39f * scaleX, 71.72f * scaleY,
+                    55.37f * scaleX, 71.72f * scaleY,
+                    44.3f * scaleX, 71.72f * scaleY
+                )
+                close()
+            }
+            drawPath(
+                path = bottomPath,
+                brush = Brush.linearGradient(
+                    colors = listOf(Color(0xFF4F46E5), Color(0xFF8B5CF6), Color(0xFFF43F5E)),
+                    start = Offset(33.75f * scaleX, 52.95f * scaleY),
+                    end = Offset(77.52f * scaleX, 81.21f * scaleY)
+                )
+            )
+
+            // Top Lobe / Front Publication Page: Cyan -> Electric Azure -> Royal Indigo
+            val topPath = Path().apply {
+                fillType = PathFillType.EvenOdd
+                moveTo(33.75f * scaleX, 53.58f * scaleY)
+                lineTo(33.75f * scaleX, 30.59f * scaleY)
+                cubicTo(
+                    33.75f * scaleX, 26.89f * scaleY,
+                    34.80f * scaleX, 25.84f * scaleY,
+                    37.97f * scaleX, 25.84f * scaleY
+                )
+                cubicTo(
+                    54.84f * scaleX, 25.84f * scaleY,
+                    71.72f * scaleX, 27.42f * scaleY,
+                    71.72f * scaleX, 39.55f * scaleY
+                )
+                cubicTo(
+                    71.72f * scaleX, 53.58f * scaleY,
+                    54.84f * scaleX, 53.58f * scaleY,
+                    33.75f * scaleX, 53.58f * scaleY
+                )
+                close()
+                // Inner counter hole for top lobe
+                moveTo(44.3f * scaleX, 34.28f * scaleY)
+                cubicTo(
+                    54.32f * scaleX, 34.28f * scaleY,
+                    60.64f * scaleX, 35.33f * scaleY,
+                    60.64f * scaleX, 39.55f * scaleY
+                )
+                cubicTo(
+                    60.64f * scaleX, 44.30f * scaleY,
+                    54.32f * scaleX, 44.30f * scaleY,
+                    44.3f * scaleX, 44.30f * scaleY
+                )
+                close()
+            }
+            drawPath(
+                path = topPath,
+                brush = Brush.linearGradient(
+                    colors = listOf(Color(0xFF38BDF8), Color(0xFF2563EB), Color(0xFF4F46E5)),
+                    start = Offset(33.75f * scaleX, 25.84f * scaleY),
+                    end = Offset(71.72f * scaleX, 53.58f * scaleY)
+                )
+            )
+
+            // Sparkle Star at upper right
+            val starPath = Path().apply {
+                moveTo(74.8f * scaleX, 24.8f * scaleY)
+                lineTo(76.2f * scaleX, 28.6f * scaleY)
+                lineTo(80.0f * scaleX, 30.0f * scaleY)
+                lineTo(76.2f * scaleX, 31.4f * scaleY)
+                lineTo(74.8f * scaleX, 35.2f * scaleY)
+                lineTo(73.4f * scaleX, 31.4f * scaleY)
+                lineTo(69.6f * scaleX, 30.0f * scaleY)
+                lineTo(73.4f * scaleX, 28.6f * scaleY)
+                close()
+            }
+            drawPath(
+                path = starPath,
+                color = Color.White
+            )
         }
     }
 }
